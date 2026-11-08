@@ -24,10 +24,10 @@ export function Footer() {
         <div className="text-sm">
           <p className="font-bold">Professionnels</p>
           <ul className="mt-3 space-y-2 text-muted-foreground">
-            <li><Link href="/pro">Devenir artisan partenaire</Link></li>
-            <li><Link href="/pro">Inscrire ma boutique</Link></li>
+            <li><Link href="/pro/inscription">Devenir artisan partenaire</Link></li>
+            <li><Link href="/pro/inscription?type=boutique">Inscrire ma boutique</Link></li>
             <li><Link href="/metiers#proposer">Proposer un métier</Link></li>
-            <li><Link href="/pro">Annoncer sur ArtisanBrazza</Link></li>
+            <li><Link href="/pro/espace">Mon espace pro</Link></li>
           </ul>
         </div>
       </div>
