@@ -408,6 +408,20 @@ export function Inscription() {
         )}
         {/* reCAPTCHA invisible exigé par Firebase pour l'envoi du SMS */}
         <div id="recaptcha-inscription" />
+        {etape === 0 && (
+          // Mention obligatoire quand le badge reCAPTCHA est masqué (voir globals.css)
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Protégé par reCAPTCHA :{" "}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline">
+              confidentialité
+            </a>{" "}
+            et{" "}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline">
+              conditions
+            </a>{" "}
+            de Google.
+          </p>
+        )}
 
         <div className="flex gap-3 pt-2">
           {etape > 1 && (

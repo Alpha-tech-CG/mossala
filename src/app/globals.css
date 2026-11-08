@@ -208,3 +208,8 @@
 .bg-primary .text-accent-ink {
   color: var(--accent);
 }
+
+/* Badge reCAPTCHA masqué : la mention exigée par Google est affichée sous le formulaire d'inscription */
+.grecaptcha-badge {
+  visibility: hidden;
+}
