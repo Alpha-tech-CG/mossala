@@ -260,20 +260,27 @@ export default function Home() {
       <div className="mx-auto max-w-6xl">
         <Reveal className="my-12 px-5 md:my-20">
           <div className="relative isolate flex flex-col gap-5 overflow-hidden rounded-[28px] bg-foreground p-7 text-white md:flex-row md:items-center md:justify-between md:p-12">
+            {/* Photo en pleine opacité ; le voile sombre ne couvre que la zone du texte */}
             <div
               aria-hidden
-              className="absolute inset-0 -z-10 bg-cover bg-center opacity-25"
+              className="absolute inset-0 -z-10 bg-cover bg-[center_30%] md:bg-right"
               style={{ backgroundImage: "url(/images/marcel.jpg)" }}
             />
+            {/* mobile : le texte est en haut, voile du haut vers le bas */}
             <div
               aria-hidden
-              className="absolute inset-0 -z-10 bg-gradient-to-r from-foreground via-foreground/90 to-foreground/30"
+              className="absolute inset-0 -z-10 bg-gradient-to-b from-foreground/90 via-foreground/70 to-foreground/25 md:hidden"
+            />
+            {/* desktop : le texte est à gauche, la photo reste nette à droite */}
+            <div
+              aria-hidden
+              className="absolute inset-0 -z-10 hidden bg-gradient-to-r from-foreground/95 via-foreground/65 to-transparent md:block"
             />
             <div>
               <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.3em] text-accent uppercase">
                 <Store className="size-4" /> Professionnels
               </p>
-              <h2 className="mt-3 font-serif text-3xl leading-tight md:text-5xl">
+              <h2 className="mt-3 font-serif text-3xl leading-tight [text-shadow:0_2px_14px_rgba(0,0,0,0.45)] md:text-5xl">
                 Artisan ou boutiquier ?<br />
                 <em className="text-accent">Rejoignez-nous gratuitement.</em>
               </h2>
