@@ -10,6 +10,15 @@ const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 
 export function MetiersExplorer() {
   const [q, setQ] = useState("");
+  // Mobile : chaque secteur montre 3 métiers, les autres s'affichent à la demande
+  const [ouverts, setOuverts] = useState<Set<string>>(new Set());
+  const basculer = (id: string) =>
+    setOuverts((o) => {
+      const n = new Set(o);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const n = norm(q.trim());
   const visibles = categories
     .map((c) => ({ ...c, metiers: n ? c.metiers.filter((m) => norm(m).includes(n)) : c.metiers }))
@@ -61,23 +70,49 @@ export function MetiersExplorer() {
               </div>
             </div>
             {/* Grille d'icônes, même style que l'accueil */}
-            <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-              {c.metiers.map((m) => (
-                <li key={m}>
+            <ul className="mt-4 grid grid-cols-4 gap-2 sm:gap-3 md:grid-cols-6">
+              {c.metiers.map((m, j) => (
+                <li key={m} className={!n && !ouverts.has(c.id) && j >= 3 ? "max-md:hidden" : ""}>
                   <Link
                     href={`/recherche?metier=${slug(m)}`}
                     className="group flex h-full flex-col items-center gap-2 rounded-2xl bg-card px-2 py-4 text-center shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97]"
                   >
-                    <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                      <MetierIcon id={slug(m)} className="size-6" />
+                    <span className="flex size-11 items-center justify-center rounded-full bg-secondary text-primary transition-colors group-hover:bg-primary group-hover:text-white sm:size-12">
+                      <MetierIcon id={slug(m)} className="size-5 sm:size-6" />
                     </span>
-                    <span className="line-clamp-3 text-[12px] leading-tight font-semibold md:text-[13px]">
+                    <span className="line-clamp-3 text-[11px] leading-tight font-semibold sm:text-[12px] md:text-[13px]">
                       {m}
                     </span>
                   </Link>
                 </li>
               ))}
+              {/* Case « Voir tout » (mobile uniquement) */}
+              {!n && c.metiers.length > 3 && !ouverts.has(c.id) && (
+                <li className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => basculer(c.id)}
+                    aria-expanded={false}
+                    className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-2xl bg-primary px-1.5 py-3.5 text-center text-white shadow-sm active:scale-[0.97]"
+                  >
+                    <span className="flex size-11 items-center justify-center rounded-full bg-white/15 text-sm font-bold">
+                      +{c.metiers.length - 3}
+                    </span>
+                    <span className="text-[11px] leading-tight font-semibold">Tout voir</span>
+                  </button>
+                </li>
+              )}
             </ul>
+            {!n && ouverts.has(c.id) && (
+              <button
+                type="button"
+                onClick={() => basculer(c.id)}
+                aria-expanded
+                className="mt-3 w-full rounded-xl border border-border py-2.5 text-sm font-semibold text-muted-foreground md:hidden"
+              >
+                Voir moins
+              </button>
+            )}
           </section>
         ))}
         {!visibles.length && (

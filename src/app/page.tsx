@@ -76,37 +76,40 @@ export default function Home() {
       </div>
 
       <div className="mx-auto max-w-6xl">
-        {/* Catégories de métiers — grille 3 colonnes comme la maquette */}
+        {/* Catégories de métiers. Mobile : une seule ligne (3 secteurs + « Tout voir »). */}
         <Reveal className="mt-8 px-5 md:mt-12">
           <SectionTitle
             eyebrow={`${metiers.length} métiers`}
             title={"De quoi avez-vous besoin ?"}
             href="/metiers"
           />
-          <div className="mt-4 grid grid-cols-3 gap-3 md:grid-cols-6">
-            {categories.map((c) => {
+          <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3 md:grid-cols-6">
+            {categories.map((c, i) => {
               const Icon = categorieIcons[c.id];
               return (
                 <Link
                   key={c.id}
                   href={`/recherche?categorie=${c.id}`}
-                  className="group flex flex-col items-center gap-2 rounded-2xl bg-card px-2 py-4 text-center shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97] md:py-5"
+                  className={`group flex-col items-center gap-2 rounded-2xl bg-card px-1.5 py-3.5 text-center shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97] sm:px-2 md:py-5 ${i < 3 ? "flex" : "hidden md:flex"}`}
                 >
-                  <span className="flex size-12 items-center justify-center rounded-full bg-secondary text-primary transition-colors group-hover:bg-primary group-hover:text-white">
-                    <Icon className="size-6" />
+                  <span className="flex size-11 items-center justify-center rounded-full bg-secondary text-primary transition-colors group-hover:bg-primary group-hover:text-white sm:size-12">
+                    <Icon className="size-5 sm:size-6" />
                   </span>
-                  <span className="text-[13px] leading-tight font-semibold md:text-sm">{c.court}</span>
+                  <span className="text-[11px] leading-tight font-semibold sm:text-[13px] md:text-sm">{c.court}</span>
                 </Link>
               );
             })}
             <Link
               href="/metiers"
-              className="group flex flex-col items-center gap-2 rounded-2xl bg-primary px-2 py-4 text-center text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97] md:py-5"
+              className="group flex flex-col items-center gap-2 rounded-2xl bg-primary px-1.5 py-3.5 text-center text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97] sm:px-2 md:py-5"
             >
-              <span className="flex size-12 items-center justify-center rounded-full bg-white/15">
-                <LayoutGrid className="size-6" />
+              <span className="flex size-11 items-center justify-center rounded-full bg-white/15 sm:size-12">
+                <LayoutGrid className="size-5 sm:size-6" />
               </span>
-              <span className="text-[13px] leading-tight font-semibold md:text-sm">Tous les métiers</span>
+              <span className="text-[11px] leading-tight font-semibold sm:text-[13px] md:text-sm">
+                <span className="md:hidden">Tout voir</span>
+                <span className="hidden md:inline">Tous les métiers</span>
+              </span>
             </Link>
           </div>
         </Reveal>
