@@ -22,7 +22,7 @@ export function Hero() {
       <div className="relative isolate overflow-hidden rounded-[28px] bg-cream shadow-[0_30px_80px_-40px_rgba(20,33,61,0.45)] ring-1 ring-sand/50">
         <HeroMosaic />
         {/* 1. voile crème uniforme : toutes les photos ont la même luminosité douce */}
-        <div aria-hidden className="absolute inset-0 -z-10 bg-cream/50" />
+        <div aria-hidden className="absolute inset-0 -z-10 bg-cream/25" />
         {/* 2. halo plus dense derrière le texte pour un contraste net */}
         {/*    (sur mobile le texte prend toute la largeur : halo plus large) */}
         <div
@@ -30,7 +30,7 @@ export function Hero() {
           className="absolute inset-0 -z-10 md:hidden"
           style={{
             background:
-              "radial-gradient(ellipse 95% 60% at 50% 45%, rgba(242,234,219,.94) 0%, rgba(242,234,219,.8) 55%, rgba(242,234,219,0) 100%)",
+              "radial-gradient(ellipse 95% 60% at 50% 45%, rgba(242,234,219,.92) 0%, rgba(242,234,219,.75) 50%, rgba(242,234,219,0) 95%)",
           }}
         />
         <div
@@ -38,7 +38,7 @@ export function Hero() {
           className="absolute inset-0 -z-10 hidden md:block"
           style={{
             background:
-              "radial-gradient(ellipse 58% 62% at 50% 48%, rgba(242,234,219,.92) 0%, rgba(242,234,219,.75) 45%, rgba(242,234,219,0) 100%)",
+              "radial-gradient(ellipse 58% 62% at 50% 48%, rgba(242,234,219,.9) 0%, rgba(242,234,219,.7) 40%, rgba(242,234,219,0) 85%)",
           }}
         />
         {/* 3. fondus haut et bas */}
@@ -57,7 +57,7 @@ export function Hero() {
             <TypedWord words={mots} />
           </h1>
 
-          <p className="fade-up fade-up-1 mx-auto mt-6 max-w-xl text-base leading-relaxed text-foreground/85 md:text-lg">
+          <p className="fade-up fade-up-1 mx-auto mt-6 max-w-xl text-base leading-relaxed font-medium text-foreground/90 [text-shadow:0_0_10px_rgba(242,234,219,1),0_0_3px_rgba(242,234,219,1)] md:text-lg">
             Appelez directement des artisans de confiance ou laissez-leur un message, et réservez
             vos matériaux au prix affiché.
           </p>
@@ -101,7 +101,7 @@ export function Hero() {
           </form>
 
           <div className="fade-up fade-up-2 mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-            <span className="text-muted-foreground">Populaire :</span>
+            <span className="font-semibold text-foreground/80 [text-shadow:0_0_10px_rgba(242,234,219,1),0_0_3px_rgba(242,234,219,1)]">Populaire :</span>
             {populaires.map((p) => (
               <Link
                 key={p.label}
