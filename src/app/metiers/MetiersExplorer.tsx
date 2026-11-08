@@ -132,7 +132,7 @@ function ProposerMetier({ initial }: { initial: string }) {
   const [envoye, setEnvoye] = useState(false);
   return (
     <section id="proposer" className="mt-10 rounded-2xl bg-foreground p-6 text-white md:p-8">
-      <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
+      <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
         Votre métier n’est pas dans la liste ?
       </p>
       <h2 className="mt-2 font-serif text-3xl">Proposez un métier</h2>
@@ -172,7 +172,7 @@ function ProposerMetier({ initial }: { initial: string }) {
               </option>
             ))}
           </select>
-          <button className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 font-bold sm:col-span-2 lg:col-span-1">
+          <button className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 font-bold text-accent-foreground sm:col-span-2 lg:col-span-1">
             <Plus className="size-5" /> Proposer
           </button>
         </form>

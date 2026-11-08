@@ -26,7 +26,7 @@ export default function EspaceAccueil() {
       <div className="flex items-center gap-4">
         <Avatar a={a} className="size-14 rounded-full ring-2 ring-white shadow" />
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Espace artisan</p>
+          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Espace artisan</p>
           <h1 className="font-serif text-3xl leading-tight">Bonjour, {a.nom.split(" ")[0].replace("-", "‑") /* trait d'union insécable */}</h1>
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function EspaceAccueil() {
           {/* Prochain chantier (maquette validée) */}
           <div className="rounded-2xl bg-foreground p-5 text-white shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Prochain chantier</p>
+              <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Prochain chantier</p>
               <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">Lun. · {prochain.heure}</span>
             </div>
             <p className="mt-3 font-serif text-2xl leading-tight">{prochain.titre}</p>
@@ -87,7 +87,7 @@ export default function EspaceAccueil() {
             className="block rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03] transition hover:shadow-md"
           >
             <p className="flex items-center gap-2 font-bold">
-              <Sparkles className="size-4 text-accent" /> Profil complété à 80 %
+              <Sparkles className="size-4 text-accent-ink" /> Profil complété à 80 %
             </p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
               <div className="h-full w-4/5 rounded-full bg-accent" />

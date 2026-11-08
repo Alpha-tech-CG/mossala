@@ -39,13 +39,13 @@ export default function ProPage() {
             className="absolute inset-0 -z-10 bg-gradient-to-b from-foreground/90 via-foreground/75 to-foreground/40 md:bg-gradient-to-r md:from-foreground/95 md:via-foreground/70 md:to-transparent"
           />
           <div className="mx-auto max-w-6xl px-5 py-14 md:px-8 md:py-24">
-            <p className="fade-up text-[10px] font-semibold tracking-[0.3em] text-accent uppercase md:text-[11px]">
+            <p className="fade-up text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
               Espace professionnels
             </p>
             <h1 className="fade-up mt-3 max-w-2xl font-serif text-4xl leading-[1.1] [text-shadow:0_2px_14px_rgba(0,0,0,0.4)] md:text-6xl">
               Plus de clients,
               <br />
-              <em className="text-accent">sans commission.</em>
+              <em className="text-accent-ink">sans commission.</em>
             </h1>
             <p className="fade-up fade-up-1 mt-4 max-w-lg text-white/80">
               Créez votre profil gratuit en 3 minutes. {metiers.length} métiers acceptés, de la
@@ -54,7 +54,7 @@ export default function ProPage() {
             <div className="fade-up fade-up-2 mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/pro/inscription"
-                className="group flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-4 font-bold transition hover:brightness-95"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-4 font-bold text-accent-foreground transition hover:brightness-95"
               >
                 <Hammer className="size-5" /> Je suis artisan
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
@@ -82,7 +82,7 @@ export default function ProPage() {
 
       <div className="mx-auto max-w-6xl px-5">
         <Reveal className="mt-12 md:mt-16">
-          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase md:text-[11px]">
+          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
             Pourquoi nous rejoindre
           </p>
           <h2 className="mt-2 text-xl font-bold md:text-2xl">Tout est fait pour vous faire travailler</h2>
@@ -114,12 +114,12 @@ export default function ProPage() {
             </ul>
           </div>
           <div className="rounded-2xl bg-foreground p-6 text-white shadow-sm">
-            <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Optionnel</p>
+            <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Optionnel</p>
             <p className="mt-2 font-serif text-3xl">Premium</p>
             <ul className="mt-4 space-y-2 text-sm text-white/85">
               {["Réalisations illimitées et mises en avant", "Badge Premium et statistiques détaillées", "Visibilité prioritaire (sans modifier votre note)"].map((x) => (
                 <li key={x} className="flex gap-2">
-                  <BadgeCheck className="size-4 shrink-0 text-accent" /> {x}
+                  <BadgeCheck className="size-4 shrink-0 text-accent-ink" /> {x}
                 </li>
               ))}
             </ul>

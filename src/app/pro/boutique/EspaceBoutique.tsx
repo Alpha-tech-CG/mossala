@@ -8,7 +8,7 @@ import { fcfa } from "@/lib/data";
 import type { ReservationBoutique } from "@/lib/pro-data";
 
 const statutStyle: Record<ReservationBoutique["statut"], [string, string]> = {
-  "a-confirmer": ["À confirmer", "bg-accent/10 text-accent"],
+  "a-confirmer": ["À confirmer", "bg-accent/10 text-accent-ink"],
   prete: ["Prête", "bg-secondary text-primary"],
   retiree: ["Retirée", "bg-success/10 text-success"],
   annulee: ["Rupture · annulée", "bg-muted text-muted-foreground"],
@@ -57,7 +57,7 @@ export function EspaceBoutique({
 
       {/* Validation du retrait au comptoir */}
       <section className="rounded-2xl bg-foreground p-5 text-white shadow-sm md:p-6">
-        <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
+        <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
           <ScanLine className="size-4" /> Au comptoir
         </p>
         <h2 className="mt-2 font-serif text-2xl">Valider un retrait</h2>
@@ -75,7 +75,7 @@ export function EspaceBoutique({
               className="w-full bg-transparent py-3.5 font-mono tracking-wider uppercase outline-none placeholder:normal-case placeholder:tracking-normal"
             />
           </label>
-          <button className="rounded-xl bg-accent px-5 font-bold">Vérifier</button>
+          <button className="rounded-xl bg-accent px-5 font-bold text-accent-foreground">Vérifier</button>
         </form>
         {verif && !verif.ok && <p className="mt-3 rounded-xl bg-white/10 p-3 text-sm">{verif.msg}</p>}
         {verif?.ok && verif.r && (
@@ -100,7 +100,7 @@ export function EspaceBoutique({
       </section>
 
       <section>
-        <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Clients</p>
+        <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Clients</p>
         <h2 className="mt-1 text-xl font-bold">Réservations</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {reservations.map((r) => {
@@ -142,7 +142,7 @@ export function EspaceBoutique({
       </section>
 
       <section>
-        <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Catalogue</p>
+        <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Catalogue</p>
         <h2 className="mt-1 text-xl font-bold">Mes produits</h2>
         <div className="mt-4 space-y-3">
           {produits.map((p) => (

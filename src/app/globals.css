@@ -1,27 +1,31 @@
 @import "tailwindcss";
 
-/* Palette validée par le client (maquettes de l'app) */
+/* Palette : bleu, beige et doré */
 :root {
-  --background: #faf8f5;
-  --foreground: #1b2a41;
-  --primary: #1d4e89;
+  /* beige */
+  --background: #f7f2e8;
+  --card: #fffdf8;
+  --muted: #eee6d6;
+  --border: #e3d7c1;
+  --cream: #f2eadb;
+  --cream-2: #e7d9bf;
+  --sand: #cbb48a;
+  /* bleu */
+  --foreground: #14213d; /* bleu nuit : textes et blocs sombres */
+  --primary: #1e4a85;
   --primary-foreground: #ffffff;
-  --secondary: #e9f0f8;
-  --secondary-foreground: #1d4e89;
-  --muted: #efebe5;
-  --muted-foreground: #5b6577;
-  --accent: #f26a1b;
-  --accent-foreground: #ffffff;
-  --destructive: #c62828;
-  --card: #ffffff;
-  --border: #e6e1d8;
-  --ring: #1d4e89;
+  --secondary: #e7edf6;
+  --secondary-foreground: #1e4a85;
+  --muted-foreground: #5e6676;
+  --ring: #1e4a85;
+  /* doré */
+  --accent: #c9a24b; /* fonds : boutons, pastilles, barres */
+  --accent-foreground: #14213d; /* texte bleu nuit sur fond doré (contraste suffisant) */
+  --accent-ink: #8c6a1c; /* texte doré sur fond clair */
+  --star: #c9a24b;
+  /* états */
+  --destructive: #b3261e;
   --success: #2e7d32;
-  --star: #c9a227;
-  /* Hero (style du site vitrine) */
-  --cream: #f5f1e8;
-  --cream-2: #e8dcc8;
-  --sand: #c9b8a0;
 }
 
 @theme inline {
@@ -35,6 +39,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-ink: var(--accent-ink);
   --color-destructive: var(--destructive);
   --color-card: var(--card);
   --color-border: var(--border);
@@ -63,7 +68,7 @@
   }
   ::selection {
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-foreground);
   }
 }
 
@@ -195,4 +200,11 @@
   .sheet-in {
     animation: none;
   }
+}
+
+/* Texte doré : foncé sur fond clair, doré vif sur les blocs bleu nuit */
+.bg-foreground .text-accent-ink,
+.bg-foreground.text-accent-ink,
+.bg-primary .text-accent-ink {
+  color: var(--accent);
 }

@@ -13,7 +13,7 @@ export default function BoutiquePage() {
     <div className="mx-auto max-w-4xl px-5 pt-5 pb-14 md:pt-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Espace boutique</p>
+          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Espace boutique</p>
           <h1 className="mt-1 font-serif text-3xl leading-tight">{b.nom}</h1>
           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="size-4" /> {b.adresse} · {b.horaires}

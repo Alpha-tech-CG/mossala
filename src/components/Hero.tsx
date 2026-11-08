@@ -19,7 +19,7 @@ const visages = ["/images/jean-claude.jpg", "/images/patrick.jpg", "/images/divi
 export function Hero() {
   return (
     <section className="px-2.5 pt-2.5 md:px-4 md:pt-4">
-      <div className="relative isolate overflow-hidden rounded-[28px] bg-cream shadow-[0_30px_80px_-40px_rgba(27,42,65,0.45)] ring-1 ring-sand/50">
+      <div className="relative isolate overflow-hidden rounded-[28px] bg-cream shadow-[0_30px_80px_-40px_rgba(20,33,61,0.45)] ring-1 ring-sand/50">
         <HeroMosaic />
         {/* 1. voile crème uniforme : toutes les photos ont la même luminosité douce */}
         <div aria-hidden className="absolute inset-0 -z-10 bg-cream/50" />
@@ -30,7 +30,7 @@ export function Hero() {
           className="absolute inset-0 -z-10 md:hidden"
           style={{
             background:
-              "radial-gradient(ellipse 95% 60% at 50% 45%, rgba(245,241,232,.94) 0%, rgba(245,241,232,.8) 55%, rgba(245,241,232,0) 100%)",
+              "radial-gradient(ellipse 95% 60% at 50% 45%, rgba(242,234,219,.94) 0%, rgba(242,234,219,.8) 55%, rgba(242,234,219,0) 100%)",
           }}
         />
         <div
@@ -38,7 +38,7 @@ export function Hero() {
           className="absolute inset-0 -z-10 hidden md:block"
           style={{
             background:
-              "radial-gradient(ellipse 58% 62% at 50% 48%, rgba(245,241,232,.92) 0%, rgba(245,241,232,.75) 45%, rgba(245,241,232,0) 100%)",
+              "radial-gradient(ellipse 58% 62% at 50% 48%, rgba(242,234,219,.92) 0%, rgba(242,234,219,.75) 45%, rgba(242,234,219,0) 100%)",
           }}
         />
         {/* 3. fondus haut et bas */}
@@ -46,7 +46,7 @@ export function Hero() {
         <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-t from-cream to-transparent" />
 
         <div className="mx-auto max-w-4xl px-5 pt-14 pb-12 text-center md:pt-24 md:pb-16">
-          <p className="fade-up inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.16em] whitespace-nowrap text-accent uppercase shadow-sm min-[380px]:tracking-[0.3em] ring-1 ring-sand/60 backdrop-blur md:text-[11px]">
+          <p className="fade-up inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.16em] whitespace-nowrap text-accent-ink uppercase shadow-sm min-[380px]:tracking-[0.3em] ring-1 ring-sand/60 backdrop-blur md:text-[11px]">
             <ShieldCheck className="size-3.5" />
             Brazzaville · Artisans vérifiés
           </p>
@@ -64,7 +64,7 @@ export function Hero() {
 
           <form
             action="/recherche"
-            className="fade-up fade-up-1 mx-auto mt-9 flex max-w-3xl flex-col overflow-hidden border border-sand bg-white text-left shadow-[0_20px_50px_-30px_rgba(27,42,65,0.5)] sm:flex-row"
+            className="fade-up fade-up-1 mx-auto mt-9 flex max-w-3xl flex-col overflow-hidden border border-sand bg-white text-left shadow-[0_20px_50px_-30px_rgba(20,33,61,0.5)] sm:flex-row"
           >
             <label className="flex min-w-0 flex-1 items-center gap-3 px-5">
               <Search className="size-5 shrink-0 text-primary" />

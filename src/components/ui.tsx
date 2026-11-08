@@ -152,7 +152,7 @@ export function Avatar({ a, className }: { a: Artisan; className: string }) {
 function AvatarFallback({ a, className }: { a: Artisan; className: string }) {
   return (
     <div
-      className={`${className} relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary to-[#2c6cb5] font-serif text-3xl text-white`}
+      className={`${className} relative flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary to-[#2f64a8] font-serif text-3xl text-white`}
     >
       <MetierIcon id={a.metier} className="absolute -right-3 -bottom-3 size-20 opacity-15" />
       {initiales(a.nom)}
@@ -174,7 +174,7 @@ export function SectionTitle({
     <div className="flex items-end justify-between gap-4">
       <div>
         {eyebrow && (
-          <p className="mb-1.5 text-[10px] font-semibold tracking-[0.3em] text-accent uppercase md:text-[11px]">
+          <p className="mb-1.5 text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
             {eyebrow}
           </p>
         )}
@@ -326,7 +326,7 @@ export function ProduitCard({ p, wide }: { p: Produit; wide?: boolean }) {
           <span className="text-xs font-medium text-muted-foreground"> / {p.unite}</span>
         </p>
         <p className="truncate text-xs text-muted-foreground">{b.nom}</p>
-        <p className={`mt-1.5 text-[11px] font-bold ${p.stock > 10 ? "text-success" : "text-accent"}`}>
+        <p className={`mt-1.5 text-[11px] font-bold ${p.stock > 10 ? "text-success" : "text-accent-ink"}`}>
           {p.stock > 10 ? "En stock" : `Plus que ${p.stock} en stock`}
         </p>
       </div>

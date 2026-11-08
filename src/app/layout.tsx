@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     "Contactez des artisans de confiance par appel ou message et réservez vos matériaux au prix affiché.",
 };
 
-export const viewport: Viewport = { themeColor: "#1d4e89" };
+export const viewport: Viewport = { themeColor: "#14213d" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

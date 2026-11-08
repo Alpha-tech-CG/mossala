@@ -24,7 +24,7 @@ const field =
 function Carte({ titre, eyebrow, children }: { titre: string; eyebrow?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03] md:p-6">
-      {eyebrow && <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">{eyebrow}</p>}
+      {eyebrow && <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">{eyebrow}</p>}
       <h2 className="mt-1 text-lg font-bold">{titre}</h2>
       <div className="mt-4">{children}</div>
     </section>
@@ -210,7 +210,7 @@ export function ProfilEditor(props: {
             }}
           >
             <p className="flex gap-2 rounded-xl bg-accent/10 p-3 text-xs text-foreground">
-              <AlertTriangle className="size-4 shrink-0 text-accent" />
+              <AlertTriangle className="size-4 shrink-0 text-accent-ink" />
               Ne publiez pas les informations personnelles, adresses, documents ou photos de clients sans
               autorisation.
             </p>

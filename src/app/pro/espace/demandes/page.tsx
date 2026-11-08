@@ -12,7 +12,7 @@ export default function Demandes() {
   ];
   return (
     <div>
-      <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Messages clients</p>
+      <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Messages clients</p>
       <h1 className="mt-1 font-serif text-3xl">Demandes reçues</h1>
       <p className="mt-3 flex gap-2 rounded-2xl bg-secondary p-4 text-sm text-primary">
         <BellRing className="mt-0.5 size-4 shrink-0" />

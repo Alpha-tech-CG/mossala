@@ -94,7 +94,7 @@ export function MobileMenu() {
               }`}
             >
               <div className="flex items-center justify-between px-5 pt-4">
-                <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
+                <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
                   Menu
                 </p>
                 <button

@@ -145,7 +145,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
         <div className="p-5">
           {etape === "choix" && (
             <div className="space-y-3">
-              <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
+              <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
                 Contactez {prenom}
               </p>
               <a
@@ -246,7 +246,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
           {etape === "paiement" && (
             <div>
               <div className="rounded-2xl bg-foreground p-5 text-white">
-                <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
+                <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
                   <InfinityIcon className="size-4" /> Messages illimités
                 </p>
                 <p className="mt-2 font-serif text-4xl">{fcfa(PRIX_ILLIMITE_FCFA)}</p>

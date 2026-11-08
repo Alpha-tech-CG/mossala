@@ -48,7 +48,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
         <div className="-mt-12 px-5 pb-5">
           <Avatar a={a} className="relative size-24 rounded-2xl shadow-md ring-4 ring-card" />
           <div className="mt-3">
-            <p className="text-[11px] font-semibold tracking-[0.3em] text-accent uppercase">
+            <p className="text-[11px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
               {m.artisan}
             </p>
             <h1 className="mt-1 font-serif text-3xl">{a.nom}</h1>

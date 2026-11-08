@@ -36,7 +36,7 @@ export function ProNav() {
               <Icon className="size-5 sm:size-4" />
               {label}
               {label === "Demandes" && nouvelles > 0 && (
-                <span className="absolute top-1.5 right-[calc(50%-22px)] flex size-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-white sm:static sm:size-5 sm:text-[10px]">
+                <span className="absolute top-1.5 right-[calc(50%-22px)] flex size-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground sm:static sm:size-5 sm:text-[10px]">
                   {nouvelles}
                 </span>
               )}

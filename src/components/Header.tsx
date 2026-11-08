@@ -9,7 +9,7 @@ export function Logo() {
         <Hammer className="size-5" />
       </span>
       <span className="text-lg font-bold leading-none">
-        Artisan<span className="text-accent">Brazza</span>
+        Artisan<span className="text-accent-ink">Brazza</span>
       </span>
     </Link>
   );

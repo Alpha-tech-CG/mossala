@@ -22,7 +22,7 @@ export default function ProfilPro() {
       <div className="flex flex-wrap items-center gap-4">
         <Avatar a={a} className="size-16 rounded-2xl shadow" />
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">Mon profil</p>
+          <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">Mon profil</p>
           <h1 className="font-serif text-3xl leading-tight">{a.nom}</h1>
         </div>
         <Link

@@ -146,7 +146,7 @@ export default function Home() {
               </div>
             </Reveal>
             <Reveal className="order-1 md:order-2" delay={120}>
-              <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase md:text-[11px]">
+              <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
                 Notre engagement
               </p>
               <h2 className="mt-3 font-serif text-4xl leading-[1.1] md:text-5xl">
@@ -217,7 +217,7 @@ export default function Home() {
       <section className="mt-16 bg-cream py-14 md:mt-24 md:py-20">
         <div className="mx-auto max-w-6xl px-5">
           <Reveal className="text-center">
-            <p className="text-[10px] font-semibold tracking-[0.3em] text-accent uppercase md:text-[11px]">
+            <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
               Ils nous font confiance
             </p>
             <h2 className="mt-3 font-serif text-4xl md:text-5xl">
@@ -232,7 +232,7 @@ export default function Home() {
                 className="w-[85%] shrink-0 snap-center md:w-auto"
               >
                 <figure className="flex h-full flex-col rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/[0.03]">
-                  <Quote className="size-8 text-accent" />
+                  <Quote className="size-8 text-accent-ink" />
                   <p className="mt-2 flex gap-0.5">
                     {Array.from({ length: 5 }, (_, k) => (
                       <Star key={k} className="size-4 fill-star text-star" />
@@ -277,12 +277,12 @@ export default function Home() {
               className="absolute inset-0 -z-10 hidden bg-gradient-to-r from-foreground/95 via-foreground/65 to-transparent md:block"
             />
             <div>
-              <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.3em] text-accent uppercase">
+              <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
                 <Store className="size-4" /> Professionnels
               </p>
               <h2 className="mt-3 font-serif text-3xl leading-tight [text-shadow:0_2px_14px_rgba(0,0,0,0.45)] md:text-5xl">
                 Artisan ou boutiquier ?<br />
-                <em className="text-accent">Rejoignez-nous gratuitement.</em>
+                <em className="text-accent-ink">Rejoignez-nous gratuitement.</em>
               </h2>
               <p className="mt-3 max-w-md text-sm text-white/75">
                 Profil gratuit, vos prix restent libres, aucune commission sur vos prestations.

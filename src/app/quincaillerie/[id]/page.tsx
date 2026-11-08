@@ -36,7 +36,7 @@ export default async function ProduitPage(props: PageProps<"/quincaillerie/[id]"
           )}
         </div>
         <div>
-          <p className="text-[11px] font-semibold tracking-[0.3em] text-accent uppercase">
+          <p className="text-[11px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
             {p.categorie} · {p.marque}
           </p>
           <h1 className="mt-2 font-serif text-4xl">{p.nom}</h1>

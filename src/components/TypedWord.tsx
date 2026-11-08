@@ -32,5 +32,5 @@ export function TypedWord({ words }: { words: string[] }) {
     t = setTimeout(tick, 2200);
     return () => clearTimeout(t);
   }, [words]);
-  return <span className="typed-cursor italic text-accent">{text}</span>;
+  return <span className="typed-cursor italic text-accent-ink">{text}</span>;
 }

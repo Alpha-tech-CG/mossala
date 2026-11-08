@@ -18,7 +18,7 @@ export function MessagesQuota() {
 
       {!q.illimite && (
         <div className="rounded-2xl bg-foreground p-5 text-white">
-          <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
+          <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
             <InfinityIcon className="size-4" /> Messages illimités
           </p>
           <p className="mt-2 font-serif text-4xl">{fcfa(PRIX_ILLIMITE_FCFA)}</p>
@@ -48,7 +48,7 @@ export function MessagesQuota() {
                 setEnCours(false);
               }, 1200);
             }}
-            className="mt-3 w-full rounded-xl bg-accent py-3.5 font-bold disabled:opacity-70"
+            className="mt-3 w-full rounded-xl bg-accent py-3.5 font-bold text-accent-foreground disabled:opacity-70"
           >
             {enCours ? "Confirmation sur votre téléphone…" : `Payer avec ${operateur}`}
           </button>

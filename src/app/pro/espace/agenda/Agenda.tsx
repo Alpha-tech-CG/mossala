@@ -7,7 +7,7 @@ import { JOUR_DEMO, type RendezVous, demandes, rendezVous, semaine } from "@/lib
 
 const statutStyle: Record<RendezVous["statut"], [string, string]> = {
   confirme: ["Confirmé", "bg-success/10 text-success"],
-  "en-cours": ["En cours", "bg-accent/10 text-accent"],
+  "en-cours": ["En cours", "bg-accent/10 text-accent-ink"],
   "a-preparer": ["À préparer", "bg-secondary text-primary"],
 };
 
@@ -47,11 +47,11 @@ export function Agenda() {
           href="/pro/espace/demandes"
           className="mt-5 flex items-center gap-3 rounded-2xl bg-accent/10 p-4 text-sm ring-1 ring-accent/30"
         >
-          <Inbox className="size-5 shrink-0 text-accent" />
+          <Inbox className="size-5 shrink-0 text-accent-ink" />
           <span className="flex-1">
             <strong>{aConfirmer} demande{aConfirmer > 1 ? "s" : ""} à traiter</strong> avant de compléter votre agenda
           </span>
-          <span className="font-bold text-accent">Voir</span>
+          <span className="font-bold text-accent-ink">Voir</span>
         </Link>
       )}
 
