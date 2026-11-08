@@ -253,14 +253,14 @@ export function ArtisanCardVertical({ a }: { a: Artisan }) {
 export function ArtisanCardRow({ a }: { a: Artisan }) {
   const m = metierLabel(a.metier);
   return (
-    <article className="relative flex gap-4 rounded-2xl bg-card p-4 shadow-sm ring-1 ring-black/[0.03] transition hover:shadow-md">
+    <article className="relative flex gap-3 rounded-2xl bg-card p-3 shadow-sm ring-1 ring-black/[0.03] transition hover:shadow-md min-[360px]:gap-4 min-[360px]:p-4">
       {a.sponsorise && (
         <span className="absolute top-3 right-3 rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground uppercase">
           Sponsorisé
         </span>
       )}
       <Link href={`/artisans/${a.id}`} className="shrink-0">
-        <Avatar a={a} className="size-24 rounded-xl" />
+        <Avatar a={a} className="size-20 rounded-xl min-[360px]:size-24" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">
         <Link href={`/artisans/${a.id}`} className="truncate text-base font-bold hover:underline">
@@ -270,7 +270,7 @@ export function ArtisanCardRow({ a }: { a: Artisan }) {
           <VerifiedBadge />
         </span>
         <p className="mt-1 text-sm text-muted-foreground">{m.artisan}</p>
-        <div className="mt-1 flex items-center gap-3 text-sm">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
           <Rating value={a.note} />
           <span className="flex items-center gap-1 text-muted-foreground">
             <MapPin className="size-4" />

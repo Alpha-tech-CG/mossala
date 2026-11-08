@@ -26,7 +26,7 @@ export function Header() {
     <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
         <Logo />
-        <nav className="hidden items-center gap-7 text-sm font-semibold md:flex">
+        <nav className="hidden items-center gap-7 text-sm font-semibold whitespace-nowrap lg:flex">
           {links.map((l) => (
             <Link
               key={l.href}
@@ -46,7 +46,7 @@ export function Header() {
           </button>
           <Link
             href="/recherche"
-            className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground hover:brightness-95 md:block"
+            className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold whitespace-nowrap text-accent-foreground hover:brightness-95 lg:block"
           >
             Contactez un artisan
           </Link>

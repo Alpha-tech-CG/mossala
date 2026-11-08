@@ -113,20 +113,20 @@ function ProposerMetier({ initial }: { initial: string }) {
             // TODO Supabase : enregistrer la proposition pour validation dans le back-office
             setEnvoye(true);
           }}
-          className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+          className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]"
         >
           <input
             required
             defaultValue={initial}
             placeholder="Nom du métier"
             aria-label="Nom du métier"
-            className="rounded-xl bg-white px-4 py-3.5 text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-accent"
+            className="w-full min-w-0 rounded-xl bg-white px-4 py-3.5 text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-accent"
           />
           <select
             required
             defaultValue=""
             aria-label="Catégorie"
-            className="rounded-xl bg-white px-4 py-3.5 text-foreground outline-none focus:ring-2 focus:ring-accent"
+            className="w-full min-w-0 rounded-xl bg-white px-4 py-3.5 text-foreground outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="" disabled>
               Catégorie
@@ -137,7 +137,7 @@ function ProposerMetier({ initial }: { initial: string }) {
               </option>
             ))}
           </select>
-          <button className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 font-bold">
+          <button className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 font-bold sm:col-span-2 lg:col-span-1">
             <Plus className="size-5" /> Proposer
           </button>
         </form>

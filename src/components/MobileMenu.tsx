@@ -63,7 +63,7 @@ export function MobileMenu() {
         aria-label="Ouvrir le menu"
         aria-expanded={open}
         aria-controls="menu-mobile"
-        className="flex size-10 flex-col items-center justify-center gap-[5px] rounded-full bg-card shadow-sm md:hidden"
+        className="flex size-10 flex-col items-center justify-center gap-[5px] rounded-full bg-card shadow-sm lg:hidden"
       >
         <span className="h-[2px] w-[18px] rounded-full bg-foreground" />
         <span className="h-[2px] w-[18px] rounded-full bg-foreground" />
@@ -77,7 +77,7 @@ export function MobileMenu() {
             <div
               onClick={() => setOpen(false)}
               aria-hidden
-              className={`fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 md:hidden ${
+              className={`fixed inset-0 z-50 bg-foreground/40 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
                 open ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
             />
@@ -89,7 +89,7 @@ export function MobileMenu() {
               aria-modal="true"
               aria-label="Menu"
               inert={!open}
-              className={`fixed inset-y-0 right-0 z-50 flex w-[86%] max-w-sm flex-col overflow-y-auto bg-cream shadow-2xl transition-transform duration-300 ease-out md:hidden ${
+              className={`fixed inset-y-0 right-0 z-50 flex w-[86%] max-w-sm flex-col overflow-y-auto bg-cream shadow-2xl transition-transform duration-300 ease-out lg:hidden ${
                 open ? "translate-x-0" : "translate-x-full"
               }`}
             >

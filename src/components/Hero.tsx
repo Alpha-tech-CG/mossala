@@ -46,7 +46,7 @@ export function Hero() {
         <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-28 bg-gradient-to-t from-cream to-transparent" />
 
         <div className="mx-auto max-w-4xl px-5 pt-14 pb-12 text-center md:pt-24 md:pb-16">
-          <p className="fade-up inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.3em] text-accent uppercase shadow-sm ring-1 ring-sand/60 backdrop-blur md:text-[11px]">
+          <p className="fade-up inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-1.5 text-[10px] font-semibold tracking-[0.16em] whitespace-nowrap text-accent uppercase shadow-sm min-[380px]:tracking-[0.3em] ring-1 ring-sand/60 backdrop-blur md:text-[11px]">
             <ShieldCheck className="size-3.5" />
             Brazzaville · Artisans vérifiés
           </p>
@@ -116,14 +116,14 @@ export function Hero() {
           {/* Preuve sociale */}
           <div className="fade-up fade-up-2 mx-auto mt-9 flex w-fit items-center gap-3 rounded-full bg-white/80 py-2 pr-5 pl-2 shadow-sm ring-1 ring-sand/60 backdrop-blur">
             <div className="flex -space-x-2.5">
-              {visages.map((v) => (
+              {visages.map((v, i) => (
                 <Image
                   key={v}
                   src={v}
                   alt=""
                   width={36}
                   height={36}
-                  className="size-9 rounded-full object-cover ring-2 ring-white"
+                  className={`size-9 rounded-full object-cover ring-2 ring-white ${i > 1 ? "max-[379px]:hidden" : ""}`}
                 />
               ))}
             </div>
@@ -148,9 +148,9 @@ export function Hero() {
               ["5", "Messages offerts / mois"],
               ["Prix fixe", "En quincaillerie"],
             ].map(([n, l], i) => (
-              <div key={l} className={`px-2 ${i > 0 ? "border-l border-sand" : ""}`}>
-                <p className="font-serif text-2xl text-primary sm:text-4xl">{n}</p>
-                <p className="mt-1.5 text-[10px] tracking-[0.2em] text-foreground/75 uppercase sm:text-xs">
+              <div key={l} className={`min-w-0 px-1.5 sm:px-2 ${i > 0 ? "border-l border-sand" : ""}`}>
+                <p className="font-serif text-xl whitespace-nowrap text-primary min-[380px]:text-2xl sm:text-4xl">{n}</p>
+                <p className="mt-1.5 text-[9px] leading-snug tracking-[0.08em] text-foreground/75 uppercase min-[380px]:text-[10px] min-[380px]:tracking-[0.14em] sm:text-xs sm:tracking-[0.2em]">
                   {l}
                 </p>
               </div>
