@@ -13,7 +13,11 @@ Plateforme de mise en relation entre les habitants de Brazzaville et des artisan
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · lucide-react. Backend prévu : Firebase.
+Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · lucide-react.
+
+**Backend** : Firebase pour la **démo** (projet `mossala-6f297` : connexion par SMS, Firestore).
+La production ira sur **Supabase ou Neon**. Toutes les pages passent par `src/lib/backend/` :
+pour changer de fournisseur, on écrit une nouvelle implémentation dans ce dossier sans toucher aux pages.
 
 ## Démarrer
 
@@ -31,10 +35,12 @@ Puis ouvrir http://localhost:3000.
 | `src/lib/metiers.ts` | Catalogue des secteurs et métiers (ajouter un métier ici) |
 | `src/lib/metierIcons.ts` | Icône de chaque métier |
 | `src/lib/data.ts` | Données de démonstration (artisans, boutiques, produits) et règles du quota |
-| `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté Firebase) |
+| `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté serveur) |
+| `src/lib/backend/` | Accès au backend (Firebase en démo) |
+| `firestore.rules` | Règles de sécurité de la démo — tests : `npm run test:rules` |
 | `src/components/Hero.tsx` | Hero de l'accueil et mur de photos |
 
-## À brancher (Firebase)
+## À brancher
 
 - Comptes clients/artisans par téléphone (OTP).
 - Messages, notifications WhatsApp et SMS aux artisans.

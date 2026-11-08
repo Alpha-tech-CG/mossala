@@ -2,11 +2,16 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import { type ConfirmationResult, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
-import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { useEffect, useState } from "react";
 import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Loader2, Lock, Phone, Search } from "lucide-react";
-import { firebaseAuth, firestore, messageErreur, versE164 } from "@/lib/firebase";
+import {
+  type VerificationTelephone,
+  creerProfilPro,
+  envoyerCodeSms,
+  messageErreur,
+  nettoyerVerification,
+  versE164,
+} from "@/lib/backend";
 import { MetierIcon } from "@/components/ui";
 import { quartiers } from "@/lib/data";
 import { categories, metiers } from "@/lib/metiers";
@@ -16,11 +21,9 @@ const field =
 const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
 
 /**
- * Inscription d'un professionnel en 3 étapes.
- * 1. Firebase Authentication par téléphone (code SMS, reCAPTCHA invisible).
- * 2-3. Profil enregistré dans Firestore :
- *    - pros/{uid}               : informations publiques
- *    - pros/{uid}/prive/contact : numéro et préférences d'alerte (lisibles par l'artisan seul)
+ * Inscription d'un professionnel en 3 étapes :
+ * 1. vérification du téléphone par code SMS ; 2. métier ou boutique ; 3. numéro public / privé.
+ * Le stockage passe par @/lib/backend (Firebase pour la démo, Supabase ou Neon ensuite).
  */
 export function Inscription() {
   const boutique = useSearchParams().get("type") === "boutique";
@@ -31,79 +34,51 @@ export function Inscription() {
   // étape 1
   const [tel, setTel] = useState("");
   const [code, setCode] = useState("");
-  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
-  const [uid, setUid] = useState<string | null>(null);
-  const [telVerifie, setTelVerifie] = useState("");
+  const [confirmation, setConfirmation] = useState<VerificationTelephone | null>(null);
+  const [compte, setCompte] = useState<{ id: string; telephone: string } | null>(null);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState("");
-  const recaptcha = useRef<RecaptchaVerifier | null>(null);
 
-  useEffect(() => () => recaptcha.current?.clear(), []);
+  useEffect(() => nettoyerVerification, []);
 
-  const envoyerCode = async () => {
+  /** Exécute une action du backend avec indicateur de chargement et message d'erreur. */
+  const executer = async (action: () => Promise<void>) => {
     setErreur("");
     setChargement(true);
     try {
-      const auth = firebaseAuth();
-      recaptcha.current?.clear();
-      recaptcha.current = new RecaptchaVerifier(auth, "recaptcha-inscription", { size: "invisible" });
-      const res = await signInWithPhoneNumber(auth, versE164(tel), recaptcha.current);
-      setConfirmation(res);
+      await action();
+    } catch (e) {
+      setErreur(messageErreur(e));
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  const envoyerCode = () =>
+    executer(async () => {
+      setConfirmation(await envoyerCodeSms(versE164(tel), "recaptcha-inscription"));
       setCode("");
-    } catch (e) {
-      setErreur(messageErreur(e));
-      recaptcha.current?.clear();
-      recaptcha.current = null;
-    } finally {
-      setChargement(false);
-    }
-  };
+    });
 
-  const verifierCode = async () => {
-    if (!confirmation) return;
-    setErreur("");
-    setChargement(true);
-    try {
-      const { user } = await confirmation.confirm(code);
-      setUid(user.uid);
-      setTelVerifie(user.phoneNumber ?? versE164(tel));
+  const verifierCode = () =>
+    executer(async () => {
+      if (!confirmation) return;
+      setCompte(await confirmation.confirmer(code));
       setEtape(1);
-    } catch (e) {
-      setErreur(messageErreur(e));
-    } finally {
-      setChargement(false);
-    }
-  };
+    });
 
-  const creerProfil = async () => {
-    if (!uid) return;
-    setErreur("");
-    setChargement(true);
-    try {
-      const db = firestore();
-      const lot = writeBatch(db);
-      lot.set(doc(db, "pros", uid), {
+  const creerProfil = () =>
+    executer(async () => {
+      if (!compte) return;
+      await creerProfilPro(compte.id, {
         type: boutique ? "boutique" : "artisan",
         nom: nom.trim(),
-        ...(boutique ? { adresse: adresse.trim(), quartier } : { metier, zones }),
+        telephone: compte.telephone,
         numeroPublic,
-        telephonePublic: numeroPublic ? telVerifie : null,
-        statut: "en_verification",
-        creeLe: serverTimestamp(),
+        ...(boutique ? { adresse: adresse.trim(), quartier } : { metier, zones }),
       });
-      lot.set(doc(db, "pros", uid, "prive", "contact"), {
-        telephone: telVerifie,
-        alerteWhatsapp: true,
-        alerteSms: true,
-      });
-      await lot.commit();
       setFini(true);
-    } catch (e) {
-      setErreur(messageErreur(e));
-    } finally {
-      setChargement(false);
-    }
-  };
+    });
   // étape 2 (artisan)
   const [nom, setNom] = useState("");
   const [recherche, setRecherche] = useState("");
