@@ -1,4 +1,4 @@
-// Données de démonstration de l'espace professionnel — à remplacer par Supabase.
+// Données de démonstration de l'espace professionnel — à remplacer par Firebase.
 // L'artisan connecté en démo est Jean-Claude Mbemba (plombier, Bacongo).
 
 export const ARTISAN_DEMO_ID = "jean-claude-mbemba";

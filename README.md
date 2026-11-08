@@ -13,7 +13,7 @@ Plateforme de mise en relation entre les habitants de Brazzaville et des artisan
 
 ## Stack
 
-Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · lucide-react. Backend prévu : Supabase.
+Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · lucide-react. Backend prévu : Firebase.
 
 ## Démarrer
 
@@ -31,10 +31,10 @@ Puis ouvrir http://localhost:3000.
 | `src/lib/metiers.ts` | Catalogue des secteurs et métiers (ajouter un métier ici) |
 | `src/lib/metierIcons.ts` | Icône de chaque métier |
 | `src/lib/data.ts` | Données de démonstration (artisans, boutiques, produits) et règles du quota |
-| `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté Supabase) |
+| `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté Firebase) |
 | `src/components/Hero.tsx` | Hero de l'accueil et mur de photos |
 
-## À brancher (Supabase)
+## À brancher (Firebase)
 
 - Comptes clients/artisans par téléphone (OTP).
 - Messages, notifications WhatsApp et SMS aux artisans.

@@ -145,7 +145,7 @@ function ProposerMetier({ initial }: { initial: string }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            // TODO Supabase : enregistrer la proposition pour validation dans le back-office
+            // TODO Firebase : enregistrer la proposition pour validation dans le back-office
             setEnvoye(true);
           }}
           className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]"

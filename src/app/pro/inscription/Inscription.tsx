@@ -14,7 +14,7 @@ const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 
 /**
  * Inscription d'un professionnel en 3 étapes.
- * MAQUETTE : le code SMS et l'enregistrement seront branchés sur Supabase (Auth OTP).
+ * MAQUETTE : le code SMS et l'enregistrement seront branchés sur Firebase (Authentication par téléphone).
  */
 export function Inscription() {
   const boutique = useSearchParams().get("type") === "boutique";
@@ -90,7 +90,7 @@ export function Inscription() {
           e.preventDefault();
           if (!valide) return;
           if (etape < etapes.length - 1) setEtape(etape + 1);
-          else setFini(true); // TODO Supabase : créer le profil professionnel
+          else setFini(true); // TODO Firebase : créer le profil professionnel
         }}
       >
         {etape === 0 && (

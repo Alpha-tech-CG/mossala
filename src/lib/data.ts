@@ -1,4 +1,4 @@
-// Données de démonstration — à remplacer par Supabase.
+// Données de démonstration — à remplacer par Firebase.
 
 /** Mise en relation : messages gratuits par mois, puis accès illimité payant. */
 export const MESSAGES_GRATUITS_PAR_MOIS = 5;

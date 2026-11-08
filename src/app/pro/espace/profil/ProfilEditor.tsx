@@ -80,7 +80,7 @@ export function ProfilEditor(props: {
   const [brouillons, setBrouillons] = useState<Record<string, string>>({});
 
   const sauver = () => {
-    // TODO Supabase : mettre à jour le profil
+    // TODO Firebase : mettre à jour le profil
     setEnregistre(true);
     setTimeout(() => setEnregistre(false), 2500);
   };
@@ -198,7 +198,7 @@ export function ProfilEditor(props: {
             className="mt-5 space-y-4 rounded-2xl bg-background p-4 ring-1 ring-border"
             onSubmit={(e) => {
               e.preventDefault();
-              // TODO Supabase : envoyer les photos (Storage) et créer la réalisation
+              // TODO Firebase : envoyer les photos (Cloud Storage) et créer la réalisation
               setRealisations([
                 ...realisations,
                 { titre, type: props.metier, quartier: zones[0] ?? "", description: desc, materiaux: "", duree: "", image: photos[0] ?? "/images/jean-claude.jpg", verifiee: false },

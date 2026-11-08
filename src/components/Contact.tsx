@@ -85,7 +85,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
   const envoyer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!q.peutEnvoyer) return setEtape("paiement");
-    // TODO Supabase : insérer le message + déclencher les notifications WhatsApp et SMS
+    // TODO Firebase : insérer le message + déclencher les notifications WhatsApp et SMS
     q.consommer();
     setEtape("envoye");
   };

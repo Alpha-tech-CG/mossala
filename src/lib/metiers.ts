@@ -4,7 +4,7 @@
  *
  * POUR AJOUTER UN MÉTIER : ajoutez simplement son nom dans la bonne catégorie.
  * Un métier peut figurer dans plusieurs catégories (ex. Charpentier).
- * Avec Supabase, cette liste deviendra une table gérée depuis le back-office.
+ * Avec Firebase, cette liste deviendra une collection Firestore gérée depuis le back-office.
  */
 
 export type CategorieId =

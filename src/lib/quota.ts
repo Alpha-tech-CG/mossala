@@ -5,7 +5,7 @@ import { DUREE_ILLIMITE_JOURS, MESSAGES_GRATUITS_PAR_MOIS } from "./data";
 
 /**
  * Quota de messages du client.
- * MAQUETTE : stocké dans le navigateur. Avec Supabase, le compteur et le pass
+ * MAQUETTE : stocké dans le navigateur. Avec Firebase, le compteur et le pass
  * vivront côté serveur (table par utilisateur), sinon un client pourrait le réinitialiser.
  */
 
