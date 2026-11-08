@@ -1,0 +1,58 @@
+import Link from "next/link";
+import { Bell, Hammer } from "lucide-react";
+import { MobileMenu } from "./MobileMenu";
+
+export function Logo() {
+  return (
+    <Link href="/" className="flex items-center gap-2.5" aria-label="ArtisanBrazza, accueil">
+      <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+        <Hammer className="size-5" />
+      </span>
+      <span className="text-lg font-bold leading-none">
+        Artisan<span className="text-accent">Brazza</span>
+      </span>
+    </Link>
+  );
+}
+
+const links = [
+  { href: "/recherche", label: "Trouver un artisan" },
+  { href: "/quincaillerie", label: "Quincaillerie" },
+  { href: "/messages", label: "Mes messages" },
+];
+
+export function Header() {
+  return (
+    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+        <Logo />
+        <nav className="hidden items-center gap-7 text-sm font-semibold md:flex">
+          {links.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="relative text-muted-foreground transition-colors after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:bg-accent after:transition-all hover:text-foreground hover:after:w-full"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex size-10 items-center justify-center rounded-full bg-card shadow-sm"
+            aria-label="Notifications"
+          >
+            <Bell className="size-5" />
+          </button>
+          <Link
+            href="/recherche"
+            className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-accent-foreground hover:brightness-95 md:block"
+          >
+            Contactez un artisan
+          </Link>
+          <MobileMenu />
+        </div>
+      </div>
+    </header>
+  );
+}

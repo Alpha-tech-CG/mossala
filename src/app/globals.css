@@ -1,26 +1,198 @@
 @import "tailwindcss";
 
+/* Palette validée par le client (maquettes de l'app) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f5;
+  --foreground: #1b2a41;
+  --primary: #1d4e89;
+  --primary-foreground: #ffffff;
+  --secondary: #e9f0f8;
+  --secondary-foreground: #1d4e89;
+  --muted: #efebe5;
+  --muted-foreground: #5b6577;
+  --accent: #f26a1b;
+  --accent-foreground: #ffffff;
+  --destructive: #c62828;
+  --card: #ffffff;
+  --border: #e6e1d8;
+  --ring: #1d4e89;
+  --success: #2e7d32;
+  --star: #c9a227;
+  /* Hero (style du site vitrine) */
+  --cream: #f5f1e8;
+  --cream-2: #e8dcc8;
+  --sand: #c9b8a0;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-star: var(--star);
+  --color-cream: var(--cream);
+  --color-cream-2: var(--cream-2);
+  --color-sand: var(--sand);
+  --font-sans: var(--font-figtree);
+  --font-heading: var(--font-figtree);
+  --font-serif: var(--font-playfair);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--accent);
+    color: #fff;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+.typed-cursor::after {
+  content: "|";
+  margin-left: 2px;
+  font-style: normal;
+  color: var(--accent);
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fade-up 1s ease-out both;
+}
+.fade-up-1 {
+  animation-delay: 0.2s;
+}
+.fade-up-2 {
+  animation-delay: 0.4s;
+}
+
+@keyframes scroll-line {
+  0% {
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  50% {
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+  51% {
+    transform-origin: bottom;
+  }
+  100% {
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+}
+.scroll-line {
+  animation: scroll-line 2s ease-in-out infinite;
+}
+
+/* Mosaïque du hero : chaque colonne contient 2 copies, on remonte d'une copie */
+@keyframes mosaic-up {
+  to {
+    transform: translateY(-50%);
+  }
+}
+.mosaic-col {
+  animation: mosaic-up linear infinite;
+  will-change: transform;
+}
+
+/* Apparition au défilement */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.8s ease,
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee {
+  animation: marquee 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .scroll-line,
+  .typed-cursor::after,
+  .mosaic-col,
+  .marquee {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Photos du mur du hero : tons harmonisés, contraste et saturation adoucis */
+.hero-photo {
+  filter: saturate(0.7) contrast(0.85) brightness(1.06) sepia(0.12);
+}
+
+/* Fenêtre « Contactez » : glisse depuis le bas */
+@keyframes sheet-in {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+.sheet-in {
+  animation: sheet-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in {
+    animation: none;
+  }
 }
