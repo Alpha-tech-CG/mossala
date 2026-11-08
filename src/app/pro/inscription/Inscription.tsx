@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { ArrowLeft, Check, CheckCircle2, Lock, Phone, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { type ConfirmationResult, RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Loader2, Lock, Phone, Search } from "lucide-react";
+import { firebaseAuth, firestore, messageErreur, versE164 } from "@/lib/firebase";
 import { MetierIcon } from "@/components/ui";
 import { quartiers } from "@/lib/data";
 import { categories, metiers } from "@/lib/metiers";
@@ -14,7 +17,10 @@ const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 
 /**
  * Inscription d'un professionnel en 3 étapes.
- * MAQUETTE : le code SMS et l'enregistrement seront branchés sur Firebase (Authentication par téléphone).
+ * 1. Firebase Authentication par téléphone (code SMS, reCAPTCHA invisible).
+ * 2-3. Profil enregistré dans Firestore :
+ *    - pros/{uid}               : informations publiques
+ *    - pros/{uid}/prive/contact : numéro et préférences d'alerte (lisibles par l'artisan seul)
  */
 export function Inscription() {
   const boutique = useSearchParams().get("type") === "boutique";
@@ -24,8 +30,80 @@ export function Inscription() {
 
   // étape 1
   const [tel, setTel] = useState("");
-  const [codeEnvoye, setCodeEnvoye] = useState(false);
   const [code, setCode] = useState("");
+  const [confirmation, setConfirmation] = useState<ConfirmationResult | null>(null);
+  const [uid, setUid] = useState<string | null>(null);
+  const [telVerifie, setTelVerifie] = useState("");
+  const [chargement, setChargement] = useState(false);
+  const [erreur, setErreur] = useState("");
+  const recaptcha = useRef<RecaptchaVerifier | null>(null);
+
+  useEffect(() => () => recaptcha.current?.clear(), []);
+
+  const envoyerCode = async () => {
+    setErreur("");
+    setChargement(true);
+    try {
+      const auth = firebaseAuth();
+      recaptcha.current?.clear();
+      recaptcha.current = new RecaptchaVerifier(auth, "recaptcha-inscription", { size: "invisible" });
+      const res = await signInWithPhoneNumber(auth, versE164(tel), recaptcha.current);
+      setConfirmation(res);
+      setCode("");
+    } catch (e) {
+      setErreur(messageErreur(e));
+      recaptcha.current?.clear();
+      recaptcha.current = null;
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  const verifierCode = async () => {
+    if (!confirmation) return;
+    setErreur("");
+    setChargement(true);
+    try {
+      const { user } = await confirmation.confirm(code);
+      setUid(user.uid);
+      setTelVerifie(user.phoneNumber ?? versE164(tel));
+      setEtape(1);
+    } catch (e) {
+      setErreur(messageErreur(e));
+    } finally {
+      setChargement(false);
+    }
+  };
+
+  const creerProfil = async () => {
+    if (!uid) return;
+    setErreur("");
+    setChargement(true);
+    try {
+      const db = firestore();
+      const lot = writeBatch(db);
+      lot.set(doc(db, "pros", uid), {
+        type: boutique ? "boutique" : "artisan",
+        nom: nom.trim(),
+        ...(boutique ? { adresse: adresse.trim(), quartier } : { metier, zones }),
+        numeroPublic,
+        telephonePublic: numeroPublic ? telVerifie : null,
+        statut: "en_verification",
+        creeLe: serverTimestamp(),
+      });
+      lot.set(doc(db, "pros", uid, "prive", "contact"), {
+        telephone: telVerifie,
+        alerteWhatsapp: true,
+        alerteSms: true,
+      });
+      await lot.commit();
+      setFini(true);
+    } catch (e) {
+      setErreur(messageErreur(e));
+    } finally {
+      setChargement(false);
+    }
+  };
   // étape 2 (artisan)
   const [nom, setNom] = useState("");
   const [recherche, setRecherche] = useState("");
@@ -44,7 +122,7 @@ export function Inscription() {
 
   const valide =
     etape === 0
-      ? codeEnvoye && /^\d{6}$/.test(code)
+      ? !!confirmation && /^\d{6}$/.test(code)
       : etape === 1
         ? boutique
           ? nom.trim() && adresse.trim() && quartier
@@ -88,9 +166,10 @@ export function Inscription() {
         className="mt-6 space-y-5 rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03] md:p-7"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!valide) return;
-          if (etape < etapes.length - 1) setEtape(etape + 1);
-          else setFini(true); // TODO Firebase : créer le profil professionnel
+          if (!valide || chargement) return;
+          if (etape === 0) verifierCode();
+          else if (etape < etapes.length - 1) setEtape(etape + 1);
+          else creerProfil();
         }}
       >
         {etape === 0 && (
@@ -108,19 +187,21 @@ export function Inscription() {
                   type="tel"
                   inputMode="tel"
                   value={tel}
+                  disabled={!!confirmation}
                   onChange={(e) => setTel(e.target.value)}
                   placeholder="06 000 00 00"
                   className={field}
                 />
               </div>
             </div>
-            {!codeEnvoye ? (
+            {!confirmation ? (
               <button
                 type="button"
-                disabled={tel.replace(/\D/g, "").length < 9}
-                onClick={() => setCodeEnvoye(true)}
-                className="w-full rounded-xl bg-primary py-4 font-bold text-primary-foreground disabled:opacity-40"
+                disabled={tel.replace(/\D/g, "").length < 9 || chargement}
+                onClick={envoyerCode}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-bold text-primary-foreground disabled:opacity-40"
               >
+                {chargement && <Loader2 className="size-5 animate-spin" />}
                 Recevoir le code par SMS
               </button>
             ) : (
@@ -139,9 +220,20 @@ export function Inscription() {
                   className={`${field} text-center font-mono text-2xl tracking-[0.5em]`}
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Démo : saisissez 6 chiffres au choix.{" "}
-                  <button type="button" onClick={() => setCode("")} className="font-semibold text-primary">
+                  Code envoyé au {versE164(tel)}.{" "}
+                  <button type="button" disabled={chargement} onClick={envoyerCode} className="font-semibold text-primary">
                     Renvoyer le code
+                  </button>{" "}
+                  ·{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setConfirmation(null);
+                      setCode("");
+                    }}
+                    className="font-semibold text-primary"
+                  >
+                    Changer de numéro
                   </button>
                 </p>
               </div>
@@ -309,8 +401,16 @@ export function Inscription() {
           </fieldset>
         )}
 
+        {erreur && (
+          <p role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {erreur}
+          </p>
+        )}
+        {/* reCAPTCHA invisible exigé par Firebase pour l'envoi du SMS */}
+        <div id="recaptcha-inscription" />
+
         <div className="flex gap-3 pt-2">
-          {etape > 0 && (
+          {etape > 1 && (
             <button
               type="button"
               onClick={() => setEtape(etape - 1)}
@@ -322,10 +422,11 @@ export function Inscription() {
           )}
           <button
             type="submit"
-            disabled={!valide}
-            className="flex-1 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition disabled:opacity-40"
+            disabled={!valide || chargement}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition disabled:opacity-40"
           >
-            {etape < etapes.length - 1 ? "Continuer" : "Créer mon profil"}
+            {chargement && etape > 0 && <Loader2 className="size-5 animate-spin" />}
+            {etape === 0 ? "Vérifier le code" : etape < etapes.length - 1 ? "Continuer" : "Créer mon profil"}
           </button>
         </div>
       </form>
