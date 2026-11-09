@@ -116,7 +116,7 @@ export function DispoChip({ a }: { a: Artisan }) {
   } as const;
   const [label, dot] = map[a.disponible];
   return (
-    <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+    <span className="flex w-fit items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-foreground/80">
       <span className={`size-2 rounded-full ${dot}`} />
       {label}
     </span>
@@ -218,9 +218,6 @@ export function ArtisanCardVertical({ a }: { a: Artisan }) {
           a={a}
           className="h-40 w-full transition-transform duration-500 group-hover:scale-105 md:h-48"
         />
-        <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 shadow-sm backdrop-blur">
-          <DispoChip a={a} />
-        </span>
       </Link>
       <div className="flex flex-1 flex-col p-4">
         <Link href={`/artisans/${a.id}`} className="truncate font-bold hover:underline">
@@ -229,9 +226,12 @@ export function ArtisanCardVertical({ a }: { a: Artisan }) {
         <p className="text-sm text-muted-foreground">
           {m.artisan} · {a.quartier}
         </p>
-        <div className="mt-2 flex items-center justify-between text-sm">
+        <div className="mt-2 text-sm">
           <Rating value={a.note} />
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <VerifiedBadge />
+          <DispoChip a={a} />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -266,9 +266,10 @@ export function ArtisanCardRow({ a }: { a: Artisan }) {
         <Link href={`/artisans/${a.id}`} className="truncate text-base font-bold hover:underline">
           {a.nom}
         </Link>
-        <span className="mt-1">
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <VerifiedBadge />
-        </span>
+          <DispoChip a={a} />
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">{m.artisan}</p>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
           <Rating value={a.note} />
@@ -282,7 +283,6 @@ export function ArtisanCardRow({ a }: { a: Artisan }) {
             <Clock className="size-3.5" />
             {a.reponse}
           </span>
-          <DispoChip a={a} />
         </div>
         <p className="mt-1 text-xs">
           <ModeContact a={a} />
