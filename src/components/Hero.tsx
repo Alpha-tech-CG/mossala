@@ -145,7 +145,7 @@ export function Hero() {
           <div className="mx-auto grid max-w-4xl grid-cols-3 py-6 text-center md:py-8">
             {[
               ["0 %", "Commission"],
-              ["5", "Messages offerts / mois"],
+              ["Gratuit", "Messages illimités"],
               ["Prix fixe", "En quincaillerie"],
             ].map(([n, l], i) => (
               <div key={l} className={`min-w-0 px-1.5 sm:px-2 ${i > 0 ? "border-l border-sand" : ""}`}>

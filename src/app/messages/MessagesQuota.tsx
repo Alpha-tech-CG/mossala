@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BellRing, Infinity as InfinityIcon, Phone } from "lucide-react";
 import { QuotaLine } from "@/components/Contact";
-import { DUREE_ILLIMITE_JOURS, PRIX_ILLIMITE_FCFA, fcfa } from "@/lib/data";
+import { DUREE_ILLIMITE_JOURS, PRIX_ILLIMITE_FCFA, QUOTA_ACTIF, fcfa } from "@/lib/data";
 import { useQuota } from "@/lib/quota";
 
 export function MessagesQuota() {
@@ -14,9 +14,16 @@ export function MessagesQuota() {
 
   return (
     <div className="mt-6 space-y-4">
-      <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={q.mois} />
+      {QUOTA_ACTIF ? (
+        <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={q.mois} />
+      ) : (
+        <p className="flex items-center gap-3 rounded-2xl bg-secondary p-4 text-sm font-semibold text-primary">
+          <InfinityIcon className="size-5 shrink-0" />
+          Messages gratuits et illimités : contactez autant d’artisans que vous voulez.
+        </p>
+      )}
 
-      {!q.illimite && (
+      {QUOTA_ACTIF && !q.illimite && (
         <div className="rounded-2xl bg-foreground p-5 text-white">
           <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
             <InfinityIcon className="size-4" /> Messages illimités

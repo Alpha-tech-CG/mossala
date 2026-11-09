@@ -1,6 +1,12 @@
 // Données de démonstration — à remplacer par Firebase.
 
-/** Mise en relation : messages gratuits par mois, puis accès illimité payant. */
+/**
+ * Pilote : messages gratuits et illimités, aucun paiement (décision du 2026-11-09).
+ * Passer à true pour la version pro : 5 messages/mois puis pass illimité payant.
+ */
+export const QUOTA_ACTIF = false;
+
+/** Version pro : messages gratuits par mois, puis accès illimité payant. */
 export const MESSAGES_GRATUITS_PAR_MOIS = 5;
 export const PRIX_ILLIMITE_FCFA = 500;
 export const DUREE_ILLIMITE_JOURS = 30; // validé par le client

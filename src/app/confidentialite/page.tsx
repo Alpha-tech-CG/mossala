@@ -145,8 +145,8 @@ export default function Confidentialite() {
               rows={[
                 [
                   "Client",
-                  "Contenu de vos messages, numéro de téléphone laissé pour être rappelé, avis et notes publiés, achat du pass messages (montant, date, référence de transaction Mobile Money).",
-                  "Vous, lorsque vous contactez un artisan, notez une prestation ou achetez un pass.",
+                  "Contenu de vos messages, numéro de téléphone laissé pour être rappelé, avis et notes publiés.",
+                  "Vous, lorsque vous contactez un artisan ou notez une prestation.",
                 ],
                 [
                   "Artisan ou boutique",
@@ -175,8 +175,6 @@ export default function Confidentialite() {
                 ["Afficher publiquement le numéro d’un artisan", "Consentement de l’artisan, retirable à tout moment dans son profil"],
                 ["Vérifier votre numéro par code SMS et bloquer les robots (reCAPTCHA)", "Intérêt légitime : sécurité du service et lutte contre la fraude"],
                 ["Vérifier l’identité et les références des professionnels (badges)", "Consentement du professionnel, qui choisit de demander un badge"],
-                ["Compter vos 5 messages gratuits et gérer le pass illimité", "Exécution du contrat"],
-                ["Conserver les preuves de paiement", "Obligation légale (comptabilité OHADA)"],
                 ["Publier les avis et permettre d’y répondre", "Intérêt légitime : informer les clients sur la qualité des prestations"],
                 ["Assurer le bon fonctionnement technique et la sécurité du site", "Intérêt légitime"],
               ]}
@@ -204,12 +202,12 @@ export default function Confidentialite() {
                 hébergée en Belgique ; reCAPTCHA : protection anti-robot), et le prestataire d’envoi des alertes
                 WhatsApp et SMS.
               </li>
-              <li>
-                <strong>Les opérateurs Mobile Money</strong> (MTN, Airtel) traitent votre paiement en tant que
-                responsables de traitement distincts, selon leur propre politique.
-              </li>
               <li>Les autorités, uniquement sur demande légale.</li>
             </ul>
+            <p>
+              Le service est gratuit : aucun paiement n’est collecté. Si des options payantes sont ajoutées, cette
+              politique sera mise à jour avant leur lancement.
+            </p>
             <p>Vos données ne sont jamais vendues ni louées.</p>
           </Section>
 
@@ -231,9 +229,7 @@ export default function Confidentialite() {
                 ["Messages entre client et artisan", "12 mois après l’envoi"],
                 ["Numéro laissé pour être rappelé", "Avec le message, 12 mois"],
                 ["Avis publiés", "Tant que la fiche de l’artisan existe, sauf suppression à votre demande"],
-                ["Preuves de paiement", "10 ans (obligation comptable OHADA)"],
                 ["Journaux techniques du serveur", "12 mois maximum"],
-                ["Compteur de messages gratuits", "Dans votre navigateur, remis à zéro chaque mois"],
               ]}
             />
           </Section>
@@ -241,10 +237,6 @@ export default function Confidentialite() {
           <Section id="traceurs" n={7}>
             <p>Artico n’utilise que des traceurs strictement nécessaires au service, exemptés de consentement :</p>
             <ul className="list-disc space-y-2 pl-5">
-              <li>
-                <strong>Stockage local du navigateur</strong> : compteur de vos messages gratuits du mois et date de fin
-                de votre pass. Ces informations restent sur votre appareil.
-              </li>
               <li>
                 <strong>Session de connexion</strong> des professionnels (Firebase Authentication), pour rester connecté
                 à l’espace pro.

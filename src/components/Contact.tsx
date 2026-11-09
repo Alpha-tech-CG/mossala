@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import {
   DUREE_ILLIMITE_JOURS,
+  QUOTA_ACTIF,
   MESSAGES_GRATUITS_PAR_MOIS,
   PRIX_ILLIMITE_FCFA,
   fcfa,
@@ -85,9 +86,9 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
 
   const envoyer = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!q.peutEnvoyer) return setEtape("paiement");
-    // TODO Firebase : insérer le message + déclencher les notifications WhatsApp et SMS
-    q.consommer();
+    if (QUOTA_ACTIF && !q.peutEnvoyer) return setEtape("paiement");
+    // TODO backend : insérer le message + déclencher les notifications WhatsApp et SMS
+    if (QUOTA_ACTIF) q.consommer();
     setEtape("envoye");
   };
 
@@ -223,7 +224,9 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
                 />
               </div>
 
-              <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
+              {QUOTA_ACTIF && (
+                <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
+              )}
               <p className="text-[11px] leading-snug text-muted-foreground">
                 Votre message et votre numéro sont transmis à {prenom} pour qu’il vous rappelle, puis conservés 12
                 mois.{" "}
@@ -237,7 +240,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition hover:brightness-95 active:scale-[0.98]"
               >
                 <Send className="size-5" />
-                {q.peutEnvoyer ? "Envoyer le message" : `Débloquer pour ${fcfa(PRIX_ILLIMITE_FCFA)}`}
+                {!QUOTA_ACTIF || q.peutEnvoyer ? "Envoyer le message" : `Débloquer pour ${fcfa(PRIX_ILLIMITE_FCFA)}`}
               </button>
               {a.numeroPublic && (
                 <button
@@ -306,9 +309,11 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
                 {prenom} vient d’être prévenu par WhatsApp et SMS. Il vous rappellera au{" "}
                 <strong className="text-foreground">{tel}</strong>.
               </p>
-              <div className="mt-5">
-                <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
-              </div>
+              {QUOTA_ACTIF && (
+                <div className="mt-5">
+                  <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
+                </div>
+              )}
               <button
                 onClick={onClose}
                 className="mt-5 w-full rounded-xl bg-primary py-4 font-bold text-primary-foreground"
