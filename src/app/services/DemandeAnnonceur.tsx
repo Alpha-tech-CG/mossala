@@ -8,7 +8,7 @@ const field =
   "w-full rounded-xl border border-border bg-white px-4 py-3.5 text-base outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
 
 const TYPES = ["Artisan", "Boutique / quincaillerie", "Marque ou entreprise"];
-const INTERETS = ["Bannières", "Annonces sponsorisées", "Mise en avant locale", "Premium boutique"];
+const INTERETS = ["Vidéo sur l’accueil", "Image sur l’accueil", "Bannière sur tout le site", "Annonces sponsorisées", "Mise en avant locale", "Premium boutique"];
 
 export function DemandeAnnonceur() {
   const [envoye, setEnvoye] = useState(false);

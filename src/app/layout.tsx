@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { AccesModal } from "@/components/Acces";
 import { SplashLoader } from "@/components/Loader";
+import { PubPages } from "@/components/EspacePub";
 import { Footer } from "@/components/Footer";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SplashLoader />
         <Header />
         <main className="flex-1">{children}</main>
+        <PubPages />
         <Footer />
         <AccesModal />
       </body>

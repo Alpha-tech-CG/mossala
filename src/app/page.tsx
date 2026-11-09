@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
+import { EspacePub } from "@/components/EspacePub";
 import { ArtisanCardVertical, ProduitCard, SectionTitle, categorieIcons } from "@/components/ui";
 import { artisans, categories, metiers, produits, quartiers } from "@/lib/data";
 
@@ -124,6 +125,8 @@ export default function Home() {
           </div>
         </Reveal>
 
+        <EspacePub emplacement="accueil-1" className="mt-12 block px-5 md:mt-16" />
+
         {/* Confiance */}
         <section className="mt-14 px-5 md:mt-24">
           <div className="grid items-center gap-10 md:grid-cols-2 md:gap-14">
@@ -175,6 +178,8 @@ export default function Home() {
             ))}
           </div>
         </Reveal>
+
+        <EspacePub emplacement="accueil-2" className="mt-12 block px-5 md:mt-16" />
 
         <Reveal className="mt-12 px-5 md:mt-20">
           <SectionTitle eyebrow="Simple et sans commission" title="Comment ça marche" />

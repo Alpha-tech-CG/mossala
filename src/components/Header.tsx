@@ -23,6 +23,7 @@ const links = [
   { href: "/recherche", label: "Trouver un artisan" },
   { href: "/quincaillerie", label: "Quincaillerie" },
   { href: "/messages", label: "Mes messages" },
+  { href: "/services", label: "Nos services" },
 ];
 
 export function Header() {

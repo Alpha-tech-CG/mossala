@@ -29,7 +29,7 @@ export function Footer() {
             <li><Link href="/pro/inscription?type=boutique">Inscrire ma boutique</Link></li>
             <li><Link href="/metiers#proposer">Proposer un métier</Link></li>
             <li><Link href="/pro/espace">Mon espace pro</Link></li>
-            <li><Link href="/annonceurs">Annoncer sur Artico</Link></li>
+            <li><Link href="/services">Nos services</Link></li>
           </ul>
         </div>
       </div>

@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Home,
   LayoutGrid,
+  Megaphone,
   MessageCircle,
   Search,
   Store,
@@ -22,6 +23,7 @@ const liens = [
   { href: "/metiers", label: "Tous les métiers", Icon: LayoutGrid },
   { href: "/quincaillerie", label: "Quincaillerie", Icon: Wrench },
   { href: "/messages", label: "Mes messages", Icon: MessageCircle },
+  { href: "/services", label: "Nos services", Icon: Megaphone },
   { href: "/profil", label: "Mon compte", Icon: User },
 ];
 

@@ -116,7 +116,7 @@ export function EspaceBoutique() {
                 <span className="text-white/65">Votre fiche et vos réservations restent gratuites.</span>
               </p>
               <div className="flex flex-wrap gap-2">
-                <Link href="/annonceurs#contact" className="rounded-xl border border-white/30 px-4 py-2.5 text-sm font-bold">
+                <Link href="/services#contact" className="rounded-xl border border-white/30 px-4 py-2.5 text-sm font-bold">
                   Être recontacté
                 </Link>
                 {/* MAQUETTE : activation directe pour la démonstration, sans paiement */}
