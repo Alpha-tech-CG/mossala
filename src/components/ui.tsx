@@ -39,12 +39,26 @@ import {
   note,
 } from "@/lib/data";
 import { ContactButton, type ContactArtisan } from "./Contact";
+import { ProfilLink, type Apercu } from "./Acces";
 import { iconeDuMetier } from "@/lib/metierIcons";
 
 /**
  * Données envoyées au navigateur pour la fenêtre « Contactez ».
  * Un numéro privé n'est JAMAIS transmis : le contact passe par la messagerie.
  */
+/** Infos publiques d'un artisan, affichées dans la fenêtre d'inscription. */
+export function toApercu(a: Artisan): Apercu {
+  return {
+    id: a.id,
+    nom: a.nom,
+    metier: metierLabel(a.metier).artisan,
+    quartier: a.quartier,
+    image: a.image,
+    note: a.note,
+    nbAvis: a.nbAvis,
+  };
+}
+
 export function toContact(a: Artisan): ContactArtisan {
   return {
     id: a.id,
@@ -53,6 +67,9 @@ export function toContact(a: Artisan): ContactArtisan {
     image: a.image,
     telephone: a.numeroPublic ? a.telephone : "",
     numeroPublic: a.numeroPublic,
+    quartier: a.quartier,
+    note: a.note,
+    nbAvis: a.nbAvis,
   };
 }
 
@@ -213,16 +230,16 @@ export function ArtisanCardVertical({ a }: { a: Artisan }) {
   const m = metierLabel(a.metier);
   return (
     <article className="group flex w-64 shrink-0 flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-1 hover:shadow-lg md:w-auto">
-      <Link href={`/artisans/${a.id}`} className="relative block overflow-hidden">
+      <ProfilLink a={toApercu(a)} className="relative block overflow-hidden">
         <Avatar
           a={a}
           className="h-40 w-full transition-transform duration-500 group-hover:scale-105 md:h-48"
         />
-      </Link>
+      </ProfilLink>
       <div className="flex flex-1 flex-col p-4">
-        <Link href={`/artisans/${a.id}`} className="truncate font-bold hover:underline">
+        <ProfilLink a={toApercu(a)} className="truncate font-bold hover:underline">
           {a.nom}
-        </Link>
+        </ProfilLink>
         <p className="text-sm text-muted-foreground">
           {m.artisan} · {a.quartier}
         </p>
@@ -259,13 +276,13 @@ export function ArtisanCardRow({ a }: { a: Artisan }) {
           Sponsorisé
         </span>
       )}
-      <Link href={`/artisans/${a.id}`} className="shrink-0">
+      <ProfilLink a={toApercu(a)} className="shrink-0">
         <Avatar a={a} className="size-20 rounded-xl min-[360px]:size-24" />
-      </Link>
+      </ProfilLink>
       <div className="flex min-w-0 flex-1 flex-col">
-        <Link href={`/artisans/${a.id}`} className="truncate text-base font-bold hover:underline">
+        <ProfilLink a={toApercu(a)} className="truncate text-base font-bold hover:underline">
           {a.nom}
-        </Link>
+        </ProfilLink>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <VerifiedBadge />
           <DispoChip a={a} />

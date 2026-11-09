@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Figtree, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
+import { AccesModal } from "@/components/Acces";
 import { Footer } from "@/components/Footer";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <AccesModal />
       </body>
     </html>
   );

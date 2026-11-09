@@ -22,8 +22,8 @@ import {
   fcfa,
 } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
+import { demanderAcces } from "./Acces";
 import { useQuota } from "@/lib/quota";
-import { useRouter } from "next/navigation";
 
 export type ContactArtisan = {
   id: string;
@@ -32,6 +32,9 @@ export type ContactArtisan = {
   image?: string;
   telephone: string;
   numeroPublic: boolean;
+  quartier: string;
+  note: number;
+  nbAvis: number;
 };
 
 type Etape = "choix" | "message" | "paiement" | "envoye";
@@ -51,7 +54,6 @@ export function ContactButton({
 }) {
   const [open, setOpen] = useState(false);
   const compte = useCompte();
-  const router = useRouter();
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -63,7 +65,8 @@ export function ContactButton({
         type="button"
         onClick={() => {
           // Contacter = accéder au profil : sans compte ou sans profil restant, on passe par la fiche
-          if (!compte.peutVoir(artisan.id)) return router.push(`/artisans/${artisan.id}`);
+          if (!compte.peutVoir(artisan.id))
+            return demanderAcces(artisan, () => setOpen(true));
           compte.consulter(artisan.id);
           setOpen(true);
         }}
