@@ -9,7 +9,6 @@ import {
   PhoneCall,
   Quote,
   Search,
-  ShieldCheck,
   Star,
   Store,
 } from "lucide-react";
@@ -134,15 +133,6 @@ export default function Home() {
               </div>
               <div className="absolute bottom-6 left-0 w-[46%] overflow-hidden rounded-2xl shadow-xl ring-4 ring-background">
                 <Image src="/images/peinture.jpg" alt="" width={400} height={400} className="aspect-square w-full object-cover" />
-              </div>
-              <div className="absolute top-6 left-2 rounded-2xl bg-white/95 p-3.5 shadow-lg ring-1 ring-black/5 backdrop-blur md:left-0">
-                <p className="flex items-center gap-1.5 text-xs font-bold text-success">
-                  <ShieldCheck className="size-4" /> Profil vérifié
-                </p>
-                <p className="mt-1 text-sm font-bold">Patrick Nzambi</p>
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Star className="size-3.5 fill-star text-star" /> 4,9 · 81 avis
-                </p>
               </div>
             </Reveal>
             <Reveal className="order-1 md:order-2" delay={120}>
