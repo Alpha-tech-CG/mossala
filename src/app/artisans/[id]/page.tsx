@@ -1,9 +1,12 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { BellRing, CheckCircle2, Clock, Flag, Lock, MapPin, MessageCircle, Phone, Star } from "lucide-react";
+import Link from "next/link";
+import { Award, BellRing, CheckCircle2, Clock, Lock, MapPin, MessageCircle, Phone, PenLine, Star } from "lucide-react";
+import { ProfilVerrou } from "@/components/Acces";
 import { ContactButton } from "@/components/Contact";
+import { FavoriButton, Signaler } from "@/components/Engagement";
 import { Avatar, BackHeader, Rating, toContact } from "@/components/ui";
-import { artisans, getArtisan, metierLabel } from "@/lib/data";
+import { artisans, badgesReputation, getArtisan, metierLabel } from "@/lib/data";
 
 // Toutes les fiches sont pré-générées : la navigation peut attendre le rendu.
 export const instant = false;
@@ -27,6 +30,10 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
   return (
     <div className="mx-auto max-w-4xl px-5 pt-4 pb-24 md:pt-8 md:pb-16">
       <BackHeader title="Profil artisan" href="/recherche" />
+
+      <ProfilVerrou
+        a={{ id: a.id, nom: a.nom, metier: m.artisan, quartier: a.quartier, image: a.image, note: a.note, nbAvis: a.nbAvis }}
+      >
 
       <section className="mt-5 overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03]">
         {/* Couverture : sa meilleure réalisation, sinon le crème du hero */}
@@ -65,6 +72,15 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
             </span>
           </div>
           <ul className="mt-4 flex flex-wrap gap-2">
+            {badgesReputation(a).map((b) => (
+              <li
+                key={b}
+                title="Attribué automatiquement à partir des avis clients"
+                className="flex items-center gap-1 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-bold text-accent-ink"
+              >
+                <Award className="size-3.5" /> {b}
+              </li>
+            ))}
             {a.badges.map((b) => (
               <li
                 key={b}
@@ -74,6 +90,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
               </li>
             ))}
           </ul>
+          <FavoriButton id={a.id} className="mt-4" />
           {a.numeroPublic ? (
             <div className="mt-5 grid grid-cols-2 gap-3">
               <a
@@ -153,8 +170,19 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
           {a.avis.length ? (
             a.avis.map((v) => (
               <article key={v.auteur} className="rounded-2xl bg-card p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <p className="font-bold">{v.auteur}</p>
+                <div className="flex flex-wrap items-center justify-between gap-x-3">
+                  <p className="flex flex-wrap items-center gap-2 font-bold">
+                    {v.auteur}
+                    {v.experience === "prestation" ? (
+                      <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] text-success">
+                        Prestation confirmée
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        Avis non vérifié
+                      </span>
+                    )}
+                  </p>
                   <span className="text-xs text-muted-foreground">{v.date}</span>
                 </div>
                 <p className="mt-1 flex gap-0.5" aria-label={`${v.note} sur 5`}>
@@ -169,9 +197,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
                     {v.reponse}
                   </p>
                 )}
-                <button className="mt-3 flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-destructive">
-                  <Flag className="size-3.5" /> Signaler un avis
-                </button>
+                <Signaler cible="avis" label="Signaler cet avis" />
               </article>
             ))
           ) : (
@@ -180,6 +206,13 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
             </p>
           )}
         </div>
+        <Link
+          href={`/artisans/${a.id}/evaluer`}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-primary py-3 text-sm font-bold text-primary"
+        >
+          <PenLine className="size-4" /> Évaluer {a.nom.split(" ")[0]}
+        </Link>
+        <Signaler cible="profil" label="Signaler ce profil" />
       </section>
 
       {/* Bouton fixe orange */}
@@ -190,6 +223,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
           className="block w-full rounded-xl bg-accent py-4 text-center text-base font-bold text-accent-foreground shadow-lg md:shadow-none"
         />
       </div>
+      </ProfilVerrou>
     </div>
   );
 }

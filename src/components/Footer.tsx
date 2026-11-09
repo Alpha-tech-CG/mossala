@@ -8,8 +8,8 @@ export function Footer() {
         <div className="md:col-span-2">
           <Logo className="h-20" />
           <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-            Contactez directement des artisans de confiance et réservez vos matériaux au prix affiché.
-            Aucune commission sur les prestations.
+            Les bonnes adresses, les vrais avis, les bons professionnels. Gratuit pour les particuliers et
+            les professionnels dans sa version de base.
           </p>
         </div>
         <div className="text-sm">
@@ -19,6 +19,8 @@ export function Footer() {
             <li><Link href="/metiers">Tous les métiers</Link></li>
             <li><Link href="/messages">Mes messages</Link></li>
             <li><Link href="/quincaillerie">Quincaillerie</Link></li>
+            <li><Link href="/premium">Artico Premium</Link></li>
+            <li><Link href="/profil">Mon compte</Link></li>
           </ul>
         </div>
         <div className="text-sm">
@@ -28,6 +30,7 @@ export function Footer() {
             <li><Link href="/pro/inscription?type=boutique">Inscrire ma boutique</Link></li>
             <li><Link href="/metiers#proposer">Proposer un métier</Link></li>
             <li><Link href="/pro/espace">Mon espace pro</Link></li>
+            <li><Link href="/annonceurs">Annoncer sur Artico</Link></li>
           </ul>
         </div>
       </div>

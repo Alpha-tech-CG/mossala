@@ -21,7 +21,9 @@ import {
   PRIX_ILLIMITE_FCFA,
   fcfa,
 } from "@/lib/data";
+import { useCompte } from "@/lib/compte";
 import { useQuota } from "@/lib/quota";
+import { useRouter } from "next/navigation";
 
 export type ContactArtisan = {
   id: string;
@@ -48,6 +50,8 @@ export function ContactButton({
   label?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const compte = useCompte();
+  const router = useRouter();
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -55,7 +59,16 @@ export function ContactButton({
   );
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={className}>
+      <button
+        type="button"
+        onClick={() => {
+          // Contacter = accéder au profil : sans compte ou sans profil restant, on passe par la fiche
+          if (!compte.peutVoir(artisan.id)) return router.push(`/artisans/${artisan.id}`);
+          compte.consulter(artisan.id);
+          setOpen(true);
+        }}
+        className={className}
+      >
         {label}
       </button>
       {mounted && open && createPortal(<ContactSheet a={artisan} onClose={() => setOpen(false)} />, document.body)}

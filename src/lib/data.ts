@@ -11,6 +11,15 @@ export const MESSAGES_GRATUITS_PAR_MOIS = 5;
 export const PRIX_ILLIMITE_FCFA = 500;
 export const DUREE_ILLIMITE_JOURS = 30; // validé par le client
 
+/**
+ * Accès aux profils (décision client du 2026-11-09) : la liste des résultats est publique,
+ * mais voir un profil complet demande un compte. Un compte gratuit ouvre 5 profils par mois,
+ * ensuite le client passe Premium. Les messages, eux, restent gratuits et illimités.
+ */
+export const PROFILS_GRATUITS_PAR_MOIS = 5;
+export const PRIX_PREMIUM_CLIENT_FCFA = 500;
+export const DUREE_PREMIUM_JOURS = 30;
+
 import { getCategorie, getMetier } from "./metiers";
 
 export { categories, metiers, getMetier, getCategorie } from "./metiers";
@@ -56,6 +65,8 @@ export type Avis = {
   date: string;
   texte: string;
   reponse?: string;
+  /** Ce que l'auteur a réellement vécu : seule une prestation confirmée compte comme avis vérifié. */
+  experience?: "prestation" | "devis" | "contact";
 };
 
 export type Artisan = {
@@ -122,6 +133,7 @@ export const artisans: Artisan[] = [
     avis: [
       {
         auteur: "Grâce N.",
+        experience: "prestation",
         note: 5,
         date: "Octobre 2026",
         texte:
@@ -130,6 +142,7 @@ export const artisans: Artisan[] = [
       },
       {
         auteur: "Hervé K.",
+        experience: "prestation",
         note: 4,
         date: "Septembre 2026",
         texte: "Bon travail, un peu de retard le premier jour mais il a prévenu.",
@@ -167,6 +180,7 @@ export const artisans: Artisan[] = [
     avis: [
       {
         auteur: "Sandrine M.",
+        experience: "prestation",
         note: 5,
         date: "Octobre 2026",
         texte: "Très professionnel, il a expliqué chaque étape. Devis clair.",
@@ -204,6 +218,7 @@ export const artisans: Artisan[] = [
     avis: [
       {
         auteur: "Junior B.",
+        experience: "prestation",
         note: 5,
         date: "Août 2026",
         texte: "Finitions impeccables et chantier laissé propre.",
@@ -240,6 +255,7 @@ export const artisans: Artisan[] = [
     avis: [
       {
         auteur: "Prisca O.",
+        experience: "prestation",
         note: 4,
         date: "Juillet 2026",
         texte: "Beau travail, délai un peu plus long que prévu.",
@@ -389,6 +405,8 @@ export type Produit = {
   boutique: string;
   image?: string;
   description: string;
+  /** Prix promotionnel en cours, affiché à la place du prix habituel. */
+  promo?: number;
 };
 
 export const categoriesProduits = [
@@ -413,6 +431,7 @@ export const produits: Produit[] = [
     boutique: "total-bacongo",
     image: "/images/ciment.jpg",
     description: "Ciment Portland CPJ 42,5 pour maçonnerie, dalles et enduits.",
+    promo: 7900,
   },
   {
     id: "peinture-blanche-20l",
@@ -472,3 +491,16 @@ export const initiales = (nom: string) =>
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+/** Nombre minimum d'avis avant d'attribuer un badge de réputation. */
+export const AVIS_MIN_REPUTATION = 5;
+
+/**
+ * Badges de réputation (grille d'évaluation MOSALA 242) : attribués automatiquement
+ * à partir des avis, jamais achetables. « Très ponctuel », « Excellent rapport qualité-prix »
+ * et « Qualité reconnue » viendront avec les notes par critère stockées en base.
+ */
+export function badgesReputation(a: Pick<Artisan, "note" | "nbAvis">): string[] {
+  if (a.nbAvis < AVIS_MIN_REPUTATION) return ["Nouveau professionnel"];
+  return a.note >= 4.5 && a.nbAvis >= 10 ? ["Professionnel recommandé"] : [];
+}

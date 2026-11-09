@@ -318,13 +318,19 @@ export function ProduitCard({ p, wide }: { p: Produit; wide?: boolean }) {
         <span className="absolute top-2.5 left-2.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold tracking-wide text-foreground uppercase backdrop-blur">
           {p.categorie}
         </span>
+        {p.promo && (
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
+            Promo
+          </span>
+        )}
       </div>
       <div className="p-3.5">
         <h3 className="text-sm font-bold leading-snug">{p.nom}</h3>
         <p className="mt-1 text-lg font-bold text-primary">
-          {fcfa(p.prix)}
+          {fcfa(p.promo ?? p.prix)}
           <span className="text-xs font-medium text-muted-foreground"> / {p.unite}</span>
         </p>
+        {p.promo && <p className="text-xs text-muted-foreground line-through">{fcfa(p.prix)}</p>}
         <p className="truncate text-xs text-muted-foreground">{b.nom}</p>
         <p className={`mt-1.5 text-[11px] font-bold ${p.stock > 10 ? "text-success" : "text-accent-ink"}`}>
           {p.stock > 10 ? "En stock" : `Plus que ${p.stock} en stock`}

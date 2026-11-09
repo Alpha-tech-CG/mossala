@@ -41,9 +41,20 @@ export default async function ProduitPage(props: PageProps<"/quincaillerie/[id]"
           </p>
           <h1 className="mt-2 font-serif text-4xl">{p.nom}</h1>
           <p className="mt-3 text-3xl font-bold text-primary">
-            {fcfa(p.prix)} <span className="text-base font-medium text-muted-foreground">/ {p.unite}</span>
+            {fcfa(p.promo ?? p.prix)}{" "}
+            <span className="text-base font-medium text-muted-foreground">/ {p.unite}</span>
           </p>
-          <p className="mt-1 text-xs font-bold tracking-wide text-success uppercase">Prix fixe affiché</p>
+          {p.promo && (
+            <p className="mt-1 flex items-center gap-2 text-sm">
+              <span className="rounded-full bg-destructive px-2 py-0.5 text-[11px] font-bold text-white uppercase">
+                Promotion
+              </span>
+              <span className="text-muted-foreground line-through">{fcfa(p.prix)}</span>
+            </p>
+          )}
+          <p className="mt-1 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+            Prix indicatif, à confirmer en boutique
+          </p>
           <p className="mt-4 text-sm">{p.description}</p>
           <p className="mt-3 flex items-center gap-2 text-sm">
             <Package className="size-4 text-muted-foreground" />
@@ -66,7 +77,7 @@ export default async function ProduitPage(props: PageProps<"/quincaillerie/[id]"
             </a>
           </div>
 
-          <Reservation prix={p.prix} stock={p.stock} unite={p.unite} boutique={b.nom} />
+          <Reservation prix={p.promo ?? p.prix} stock={p.stock} unite={p.unite} boutique={b.nom} />
         </div>
       </div>
     </div>

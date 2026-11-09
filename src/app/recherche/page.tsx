@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { SearchX } from "lucide-react";
+import { Megaphone, SearchX } from "lucide-react";
+import { BandeauAcces } from "@/components/Acces";
 import { ArtisanCardRow } from "@/components/ui";
 import { type CategorieId, artisans, getMetier, metierLabel } from "@/lib/data";
 import { FilterChips, SearchBar } from "./Filters";
@@ -63,6 +64,9 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
           {resultats.length} artisan{resultats.length > 1 ? "s" : ""} disponible
           {resultats.length > 1 ? "s" : ""} à {quartier || "Brazzaville"}
         </p>
+        <div className="mt-3 md:max-w-2xl">
+          <BandeauAcces />
+        </div>
       </section>
 
       <div className="mt-4">
@@ -76,6 +80,20 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
           {resultats.map((a) => (
             <ArtisanCardRow key={a.id} a={a} />
           ))}
+          {/* Emplacement publicitaire (bannière vendue aux annonceurs) */}
+          <Link
+            href="/annonceurs"
+            className="flex items-center gap-4 rounded-2xl border border-dashed border-accent-ink/40 bg-cream/60 p-4 text-sm md:col-span-2"
+          >
+            <Megaphone className="size-6 shrink-0 text-accent-ink" />
+            <span className="flex-1">
+              <span className="block text-[10px] font-bold tracking-wide text-muted-foreground uppercase">
+                Espace publicitaire
+              </span>
+              <span className="font-bold">Votre boutique ou votre marque ici</span>
+            </span>
+            <span className="font-bold text-accent-ink">Annoncer</span>
+          </Link>
         </section>
       ) : (
         <div className="mx-5 mt-8 mb-10 flex flex-col items-center rounded-2xl bg-card p-8 text-center shadow-sm">
