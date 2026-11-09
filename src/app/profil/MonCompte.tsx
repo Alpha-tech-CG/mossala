@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Crown, Heart, LogOut } from "lucide-react";
-import { CompteurProfils, InscriptionClient } from "@/components/Acces";
+import { ChoixFormules, CompteurProfils, InscriptionClient } from "@/components/Acces";
 import { useCompte } from "@/lib/compte";
 
 type Fiche = { id: string; nom: string; metier: string; quartier: string; image?: string };
@@ -46,16 +46,10 @@ export function MonCompte({ annuaire }: { annuaire: Fiche[] }) {
 
       <CompteurProfils />
       {!c.premium && (
-        <Link
-          href="/premium"
-          className="flex items-center justify-between rounded-2xl bg-foreground px-5 py-4 text-white"
-        >
-          <span>
-            <span className="block font-bold">Passez Premium</span>
-            <span className="text-sm text-white/70">Profils illimités et mise en relation accompagnée</span>
-          </span>
-          <Crown className="size-6 text-accent" />
-        </Link>
+        <section id="formules" className="scroll-mt-24">
+          <h2 className="mb-3 text-xl font-bold">Les formules</h2>
+          <ChoixFormules actuelle="gratuit" />
+        </section>
       )}
 
       <section>

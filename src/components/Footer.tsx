@@ -19,7 +19,6 @@ export function Footer() {
             <li><Link href="/metiers">Tous les métiers</Link></li>
             <li><Link href="/messages">Mes messages</Link></li>
             <li><Link href="/quincaillerie">Quincaillerie</Link></li>
-            <li><Link href="/premium">Artico Premium</Link></li>
             <li><Link href="/profil">Mon compte</Link></li>
           </ul>
         </div>

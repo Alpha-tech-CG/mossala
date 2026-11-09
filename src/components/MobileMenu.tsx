@@ -6,7 +6,6 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowRight,
-  Crown,
   Home,
   LayoutGrid,
   MessageCircle,
@@ -23,7 +22,6 @@ const liens = [
   { href: "/metiers", label: "Tous les métiers", Icon: LayoutGrid },
   { href: "/quincaillerie", label: "Quincaillerie", Icon: Wrench },
   { href: "/messages", label: "Mes messages", Icon: MessageCircle },
-  { href: "/premium", label: "Premium", Icon: Crown },
   { href: "/profil", label: "Mon compte", Icon: User },
 ];
 
