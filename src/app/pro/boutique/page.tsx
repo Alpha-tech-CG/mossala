@@ -5,7 +5,7 @@ import { getBoutique, produits } from "@/lib/data";
 import { BOUTIQUE_DEMO_ID, reservationsBoutique } from "@/lib/pro-data";
 import { EspaceBoutique } from "./EspaceBoutique";
 
-export const metadata: Metadata = { title: "Mon espace boutique — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Mon espace boutique — Artico" };
 
 export default function BoutiquePage() {
   const b = getBoutique(BOUTIQUE_DEMO_ID);

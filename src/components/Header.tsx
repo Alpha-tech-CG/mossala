@@ -1,16 +1,19 @@
 import Link from "next/link";
-import { Bell, Hammer } from "lucide-react";
+import Image from "next/image";
+import { Bell } from "lucide-react";
 import { MobileMenu } from "./MobileMenu";
 
-export function Logo() {
+export function Logo({ className = "h-11 md:h-12" }: { className?: string }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5" aria-label="ArtisanBrazza, accueil">
-      <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <Hammer className="size-5" />
-      </span>
-      <span className="text-lg font-bold leading-none">
-        Artisan<span className="text-accent-ink">Brazza</span>
-      </span>
+    <Link href="/" className="flex shrink-0 items-center" aria-label="Artico, accueil">
+      <Image
+        src="/images/artico-logo.png"
+        alt="Artico"
+        width={1175}
+        height={661}
+        priority
+        className={`w-auto ${className}`}
+      />
     </Link>
   );
 }

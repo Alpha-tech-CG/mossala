@@ -5,7 +5,7 @@ import { Clock, MapPin, Phone } from "lucide-react";
 import { BackHeader, ProduitCard, SectionTitle } from "@/components/ui";
 import { boutiques, categoriesProduits, produits } from "@/lib/data";
 
-export const metadata: Metadata = { title: "Quincaillerie — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Quincaillerie — Artico" };
 
 export default function QuincailleriePage(props: PageProps<"/quincaillerie">) {
   return (

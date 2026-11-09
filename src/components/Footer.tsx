@@ -6,7 +6,7 @@ export function Footer() {
     <footer className="border-t border-border bg-card">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-4">
         <div className="md:col-span-2">
-          <Logo />
+          <Logo className="h-20" />
           <p className="mt-4 max-w-sm text-sm text-muted-foreground">
             Contactez directement des artisans de confiance et réservez vos matériaux au prix affiché.
             Aucune commission sur les prestations.
@@ -31,8 +31,12 @@ export function Footer() {
           </ul>
         </div>
       </div>
-      <p className="border-t border-border py-5 text-center text-xs text-muted-foreground">
-        © 2026 ArtisanBrazza · Brazzaville, République du Congo
+      <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border px-5 py-5 text-center text-xs text-muted-foreground">
+        <span>© 2026 Artico · Brazzaville, République du Congo</span>
+        <span aria-hidden>·</span>
+        <Link href="/confidentialite" className="font-semibold underline-offset-2 hover:text-foreground hover:underline">
+          Politique de confidentialité
+        </Link>
       </p>
     </footer>
   );

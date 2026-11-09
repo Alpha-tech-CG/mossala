@@ -397,6 +397,15 @@ export function Inscription() {
             de Google.
           </p>
         )}
+        {etape === etapes.length - 1 && (
+          <p className="text-xs leading-snug text-muted-foreground">
+            En créant votre profil, vos informations sont utilisées pour publier votre fiche et vous transmettre les
+            demandes des clients. Vous pouvez les modifier ou les supprimer à tout moment.{" "}
+            <Link href="/confidentialite" target="_blank" className="font-semibold text-primary underline">
+              Politique de confidentialité
+            </Link>
+          </p>
+        )}
 
         <div className="flex gap-3 pt-2">
           {etape > 1 && (

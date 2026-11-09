@@ -3,7 +3,7 @@ import { BellRing } from "lucide-react";
 import { demandes } from "@/lib/pro-data";
 import { DemandeCard } from "../shared";
 
-export const metadata: Metadata = { title: "Demandes reçues — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Demandes reçues — Artico" };
 
 export default function Demandes() {
   const groupes = [

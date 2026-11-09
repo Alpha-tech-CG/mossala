@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -223,6 +224,13 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
               </div>
 
               <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                Votre message et votre numéro sont transmis à {prenom} pour qu’il vous rappelle, puis conservés 12
+                mois.{" "}
+                <Link href="/confidentialite" target="_blank" className="underline">
+                  En savoir plus
+                </Link>
+              </p>
 
               <button
                 type="submit"

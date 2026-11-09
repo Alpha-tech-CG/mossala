@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BackHeader } from "@/components/ui";
 import { MessagesQuota } from "./MessagesQuota";
 
-export const metadata: Metadata = { title: "Mes messages — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Mes messages — Artico" };
 
 export default function Messages() {
   return (

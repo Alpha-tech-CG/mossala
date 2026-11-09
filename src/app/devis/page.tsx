@@ -4,7 +4,7 @@ import { Check, X } from "lucide-react";
 import { Avatar, BackHeader, Rating, VerifiedBadge } from "@/components/ui";
 import { fcfa, getArtisan, metierLabel } from "@/lib/data";
 
-export const metadata: Metadata = { title: "Devis reçus — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Devis reçus — Artico" };
 
 const devis = [
   { artisan: "jean-claude-mbemba", total: 45000, delai: "Sous 24 h", duree: "½ journée", materiaux: true, paiement: "50 % à l’arrivée", recommande: true },

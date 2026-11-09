@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BackHeader } from "@/components/ui";
 import { DevisForm } from "./DevisForm";
 
-export const metadata: Metadata = { title: "Demander un devis — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Demander un devis — Artico" };
 
 export default function NouveauDevis() {
   return (

@@ -6,7 +6,7 @@ import { getArtisan, metierLabel } from "@/lib/data";
 import { ARTISAN_DEMO_ID } from "@/lib/pro-data";
 import { ProfilEditor } from "./ProfilEditor";
 
-export const metadata: Metadata = { title: "Mon profil pro — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Mon profil pro — Artico" };
 
 const verifications = [
   ["Téléphone vérifié", "Téléphone"],

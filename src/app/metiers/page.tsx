@@ -3,7 +3,7 @@ import { BackHeader } from "@/components/ui";
 import { categories, metiers } from "@/lib/metiers";
 import { MetiersExplorer } from "./MetiersExplorer";
 
-export const metadata: Metadata = { title: "Tous les métiers — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Tous les métiers — Artico" };
 
 export default function MetiersPage() {
   return (

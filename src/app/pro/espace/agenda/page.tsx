@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Agenda } from "./Agenda";
 
-export const metadata: Metadata = { title: "Mon agenda — ArtisanBrazza" };
+export const metadata: Metadata = { title: "Mon agenda — Artico" };
 
 export default function AgendaPage() {
   return (
