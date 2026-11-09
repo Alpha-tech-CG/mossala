@@ -3,6 +3,7 @@ import { Figtree, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { AccesModal } from "@/components/Acces";
+import { SplashLoader } from "@/components/Loader";
 import { Footer } from "@/components/Footer";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
@@ -25,8 +26,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="fr" className={`${figtree.variable} ${playfair.variable} antialiased`}>
       <body className="flex min-h-screen flex-col font-sans">
         <noscript>
-          <style>{`.reveal{opacity:1;transform:none}`}</style>
+          <style>{`.reveal{opacity:1;transform:none}.splash{display:none}`}</style>
         </noscript>
+        <SplashLoader />
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
