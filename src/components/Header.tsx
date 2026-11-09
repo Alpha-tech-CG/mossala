@@ -19,6 +19,7 @@ export function Logo({ className = "h-11 md:h-12" }: { className?: string }) {
 }
 
 const links = [
+  { href: "/", label: "Accueil" },
   { href: "/recherche", label: "Trouver un artisan" },
   { href: "/quincaillerie", label: "Quincaillerie" },
   { href: "/messages", label: "Mes messages" },
