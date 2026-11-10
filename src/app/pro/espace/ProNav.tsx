@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Home, Inbox, User } from "lucide-react";
-import { demandes } from "@/lib/pro-data";
+import { CalendarDays, Home, Inbox, MessagesSquare, User } from "lucide-react";
+import { ARTISAN_DEMO_ID, demandes } from "@/lib/pro-data";
+import { nonLus, useConversations } from "@/lib/messagerie";
 
 const onglets = [
   { href: "/pro/espace", label: "Accueil", Icon: Home },
   { href: "/pro/espace/demandes", label: "Demandes", Icon: Inbox },
+  { href: "/pro/espace/messages", label: "Messages", Icon: MessagesSquare },
   { href: "/pro/espace/agenda", label: "Agenda", Icon: CalendarDays },
   { href: "/pro/espace/profil", label: "Profil", Icon: User },
 ];
@@ -16,12 +18,15 @@ const onglets = [
 export function ProNav() {
   const path = usePathname();
   const nouvelles = demandes.filter((d) => d.statut === "nouvelle").length;
+  const conversations = useConversations(ARTISAN_DEMO_ID);
+  const messages = (conversations ?? []).reduce((n, c) => n + nonLus(c, "artisan"), 0);
+  const badges: Record<string, number> = { Demandes: nouvelles, Messages: messages };
   return (
     <nav
       aria-label="Espace artisan"
       className="sticky top-16 z-30 border-b border-border bg-background/90 backdrop-blur-md"
     >
-      <div className="mx-auto grid max-w-5xl grid-cols-4 px-1 sm:flex sm:gap-1 sm:px-3">
+      <div className="mx-auto grid max-w-5xl grid-cols-5 px-1 sm:flex sm:gap-1 sm:px-3">
         {onglets.map(({ href, label, Icon }) => {
           const actif = href === "/pro/espace" ? path === href : path.startsWith(href);
           return (
@@ -35,9 +40,9 @@ export function ProNav() {
             >
               <Icon className="size-5 sm:size-4" />
               {label}
-              {label === "Demandes" && nouvelles > 0 && (
+              {badges[label] > 0 && (
                 <span className="absolute top-1.5 right-[calc(50%-22px)] flex size-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground sm:static sm:size-5 sm:text-[10px]">
-                  {nouvelles}
+                  {badges[label]}
                 </span>
               )}
               {actif && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}

@@ -24,6 +24,7 @@ import {
 import { useCompte } from "@/lib/compte";
 import { demanderAcces } from "./Acces";
 import { useQuota } from "@/lib/quota";
+import { envoyerMessage } from "@/lib/messagerie";
 
 export type ContactArtisan = {
   id: string;
@@ -81,9 +82,10 @@ export function ContactButton({
 
 function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }) {
   const q = useQuota();
+  const compte = useCompte();
   const [etape, setEtape] = useState<Etape>(a.numeroPublic ? "choix" : "message");
   const [texte, setTexte] = useState("");
-  const [tel, setTel] = useState("");
+  const [tel, setTel] = useState(compte.compte?.telephone ?? "");
   const [operateur, setOperateur] = useState<"MTN MoMo" | "Airtel Money">("MTN MoMo");
   const [paiementEnCours, setPaiementEnCours] = useState(false);
   const prenom = a.nom.split(" ")[0];
@@ -104,6 +106,14 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
     e.preventDefault();
     if (QUOTA_ACTIF && !q.peutEnvoyer) return setEtape("paiement");
     // TODO backend : insérer le message + déclencher les notifications WhatsApp et SMS
+    envoyerMessage(
+      {
+        artisan: { id: a.id, nom: a.nom, metier: a.metier, image: a.image, telephone: a.telephone, numeroPublic: a.numeroPublic },
+        client: { prenom: compte.compte?.prenom ?? "Client", telephone: tel },
+      },
+      "client",
+      texte,
+    );
     if (QUOTA_ACTIF) q.consommer();
     setEtape("envoye");
   };
@@ -194,7 +204,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
                 onClick={() => setEtape("message")}
                 className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-left font-bold transition hover:border-primary"
               >
-                <Send className="size-5 text-primary" /> Laisser un message sur la plateforme
+                <Send className="size-5 text-primary" /> Écrire sur Artico
               </button>
             </div>
           )}
@@ -322,18 +332,22 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
               <CheckCircle2 className="mx-auto size-14 text-success" />
               <p className="mt-3 font-serif text-2xl">Message envoyé</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {prenom} vient d’être prévenu par WhatsApp et SMS. Il vous rappellera au{" "}
-                <strong className="text-foreground">{tel}</strong>.
+                {prenom} vient d’être prévenu par WhatsApp et SMS. Sa réponse arrivera dans vos messages
+                Artico, et il peut aussi vous rappeler au <strong className="text-foreground">{tel}</strong>.
               </p>
               {QUOTA_ACTIF && (
                 <div className="mt-5">
                   <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
                 </div>
               )}
-              <button
+              <Link
+                href={`/messages?c=${a.id}`}
                 onClick={onClose}
-                className="mt-5 w-full rounded-xl bg-primary py-4 font-bold text-primary-foreground"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-bold text-primary-foreground"
               >
+                <MessageCircle className="size-5" /> Voir la conversation
+              </Link>
+              <button onClick={onClose} className="mt-3 w-full text-center text-sm font-semibold text-muted-foreground">
                 Fermer
               </button>
             </div>

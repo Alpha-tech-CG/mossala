@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { BackHeader } from "@/components/ui";
-import { MessagesQuota } from "./MessagesQuota";
+import { BoiteClient } from "./BoiteClient";
 
 export const metadata: Metadata = { title: "Mes messages — Artico" };
 
 export default function Messages() {
   return (
-    <div className="mx-auto max-w-xl px-5 pt-4 pb-12 md:pt-8">
+    <div className="mx-auto max-w-5xl px-5 pt-4 pb-12 md:pt-8">
       <BackHeader title="Mes messages" />
       <p className="mt-3 text-sm text-muted-foreground">
-        L’historique de vos échanges apparaîtra ici une fois votre compte connecté.
+        Échangez directement avec les artisans sur Artico. Chaque nouveau message les prévient par WhatsApp et SMS.
       </p>
-      <MessagesQuota />
+      <Suspense fallback={<div className="mt-6 h-96 animate-pulse rounded-2xl bg-card" />}>
+        <BoiteClient />
+      </Suspense>
     </div>
   );
 }

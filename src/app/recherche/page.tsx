@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { SearchX } from "lucide-react";
 import { BandeauAcces } from "@/components/Acces";
 import { ArtisanCardRow } from "@/components/ui";
-import { type CategorieId, artisans, getMetier, metierLabel } from "@/lib/data";
+import { type CategorieId, artisans, getMetier, metierLabel, villeArtisan } from "@/lib/data";
 import { FilterChips, SearchBar } from "./Filters";
 
 export const metadata: Metadata = { title: "Rechercher un artisan — Artico" };
@@ -26,6 +26,7 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
   const q = norm(get("q"));
   const metier = get("metier");
   const categorie = get("categorie");
+  const ville = get("ville");
   const quartier = get("quartier");
   const dispo = get("dispo");
   const minNote = parseFloat(get("note")) || 0;
@@ -34,13 +35,14 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
     .filter((a) => {
       const m = metierLabel(a.metier);
       if (q) {
-        const hay = norm([a.nom, m.label, m.categorie.label, a.quartier, a.description].join(" "));
+        const hay = norm([a.nom, m.label, m.categorie.label, a.quartier, villeArtisan(a), a.description].join(" "));
         // « plombier » doit trouver « plomberie » : on compare aussi le radical
         const words = q.split(/\s+/);
         if (!words.every((w) => hay.includes(w) || hay.includes(w.slice(0, 5)))) return false;
       }
       if (metier && a.metier !== metier) return false;
       if (categorie && !getMetier(a.metier)?.categories.includes(categorie as CategorieId)) return false;
+      if (ville && villeArtisan(a) !== ville) return false;
       if (quartier && !a.zones.includes(quartier)) return false;
       if (dispo === "aujourdhui" && a.disponible !== "aujourdhui") return false;
       if (dispo === "semaine" && a.disponible === "plus-tard") return false;
@@ -62,7 +64,7 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
         <h1 className="text-2xl font-bold">Résultats</h1>
         <p className="text-sm text-muted-foreground">
           {resultats.length} artisan{resultats.length > 1 ? "s" : ""} disponible
-          {resultats.length > 1 ? "s" : ""} à {quartier || "Brazzaville"}
+          {resultats.length > 1 ? "s" : ""} {quartier ? `à ${quartier}, ${ville || "Brazzaville"}` : ville ? `à ${ville}` : "au Congo"}
         </p>
         <div className="mt-3 md:max-w-2xl">
           <BandeauAcces />

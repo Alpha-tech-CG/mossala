@@ -42,6 +42,7 @@ import {
   resumeProduit,
   getMetier,
   initiales,
+  lieuArtisan,
   metierLabel,
   note,
 } from "@/lib/data";
@@ -251,7 +252,7 @@ export function ArtisanCardVertical({ a }: { a: Artisan }) {
           {a.nom}
         </ProfilLink>
         <p className="text-sm text-muted-foreground">
-          {m.artisan} · {a.quartier}
+          {m.artisan} · {lieuArtisan(a)}
         </p>
         <div className="mt-2 text-sm">
           <Rating value={a.note} />
@@ -302,7 +303,7 @@ export function ArtisanCardRow({ a }: { a: Artisan }) {
           <Rating value={a.note} />
           <span className="flex items-center gap-1 text-muted-foreground">
             <MapPin className="size-4" />
-            {a.quartier}
+            {lieuArtisan(a)}
           </span>
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">

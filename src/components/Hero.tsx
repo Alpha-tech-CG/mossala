@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Search, ShieldCheck, Star } from "lucide-react";
-import { quartiers } from "@/lib/data";
+import { villes } from "@/lib/data";
 import { HeroMosaic } from "./HeroMosaic";
 import { TypedWord } from "./TypedWord";
 
@@ -76,19 +76,19 @@ export function Hero() {
                 className="w-full bg-transparent py-5 text-[15px] outline-none placeholder:text-muted-foreground"
               />
             </label>
-            <label className="sr-only" htmlFor="hero-quartier">
-              Quartier
+            <label className="sr-only" htmlFor="hero-ville">
+              Ville
             </label>
             <select
-              id="hero-quartier"
-              name="quartier"
+              id="hero-ville"
+              name="ville"
               defaultValue=""
               className="border-t border-sand bg-transparent px-5 py-5 text-[15px] outline-none sm:w-52 sm:border-t-0 sm:border-l"
             >
-              <option value="">Tous les quartiers</option>
-              {quartiers.map((q) => (
-                <option key={q} value={q}>
-                  {q}
+              <option value="">Tout le Congo</option>
+              {villes.map((v) => (
+                <option key={v.nom} value={v.nom}>
+                  {v.nom}
                 </option>
               ))}
             </select>

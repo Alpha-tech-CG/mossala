@@ -73,6 +73,8 @@ export type Artisan = {
   id: string;
   nom: string;
   metier: MetierId;
+  /** Ville de l'artisan (Brazzaville si non précisée). */
+  ville?: string;
   quartier: string;
   zones: string[];
   note: number;
@@ -364,6 +366,78 @@ export const artisans: Artisan[] = [
     realisations: [],
     avis: [],
   },
+  {
+    id: "serge-malonga",
+    nom: "Serge Malonga",
+    metier: "electricien-batiment",
+    ville: "Pointe-Noire",
+    quartier: "Mvou-Mvou",
+    zones: ["Mvou-Mvou", "Lumumba", "Tié-Tié"],
+    note: 4.7,
+    nbAvis: 22,
+    reponse: "Répond en 1 h",
+    disponible: "aujourdhui",
+    badges: ["Téléphone vérifié", "Identité vérifiée"],
+    description: "Installations électriques, tableaux, dépannages et mise aux normes.",
+    telephone: "+242 06 640 12 77",
+    numeroPublic: false,
+    realisations: [],
+    avis: [],
+  },
+  {
+    id: "prisca-tchicaya",
+    nom: "Prisca Tchicaya",
+    metier: "couturier",
+    ville: "Pointe-Noire",
+    quartier: "Lumumba",
+    zones: ["Lumumba", "Mvou-Mvou"],
+    note: 4.9,
+    nbAvis: 31,
+    reponse: "Répond en 30 min",
+    disponible: "semaine",
+    badges: ["Téléphone vérifié", "Réponse rapide"],
+    description: "Tenues en pagne, retouches et confection sur mesure.",
+    telephone: "+242 05 641 33 08",
+    numeroPublic: true,
+    realisations: [],
+    avis: [],
+  },
+  {
+    id: "fabrice-moukala",
+    nom: "Fabrice Moukala",
+    metier: "plombier",
+    ville: "Dolisie",
+    quartier: "Centre-ville",
+    zones: ["Centre-ville"],
+    note: 4.6,
+    nbAvis: 12,
+    reponse: "Répond en 2 h",
+    disponible: "semaine",
+    badges: ["Téléphone vérifié"],
+    description: "Plomberie, forages et installation de réservoirs.",
+    telephone: "+242 06 652 90 14",
+    numeroPublic: false,
+    realisations: [],
+    avis: [],
+  },
+  {
+    id: "herve-ngakosso",
+    nom: "Hervé Ngakosso",
+    metier: "menuisier-bois",
+    ville: "Ouesso",
+    quartier: "Centre-ville",
+    zones: ["Centre-ville"],
+    note: 4.8,
+    nbAvis: 9,
+    reponse: "Répond en 3 h",
+    disponible: "plus-tard",
+    badges: ["Téléphone vérifié"],
+    description: "Meubles et portes en bois, sur mesure.",
+    telephone: "+242 05 663 47 21",
+    numeroPublic: false,
+    realisations: [],
+    avis: [],
+  },
 ];
 
 /* ------------------------------------------------------------------ *
@@ -398,6 +472,13 @@ export const villes: Ville[] = [
 
 export const VILLE_DEFAUT = "Brazzaville";
 export const getVille = (nom?: string) => villes.find((v) => v.nom === nom);
+
+/** Ville d'un artisan (les fiches sans ville sont à Brazzaville). */
+export const villeArtisan = (a: { ville?: string }) => a.ville ?? VILLE_DEFAUT;
+
+/** « Bacongo » à Brazzaville, « Lumumba, Pointe-Noire » ailleurs. */
+export const lieuArtisan = (a: { ville?: string; quartier: string }) =>
+  villeArtisan(a) === VILLE_DEFAUT ? a.quartier : `${a.quartier}, ${villeArtisan(a)}`;
 
 /** Quartiers limitrophes, pour proposer d'abord les boutiques les plus proches. */
 const voisins: Record<string, string[]> = {

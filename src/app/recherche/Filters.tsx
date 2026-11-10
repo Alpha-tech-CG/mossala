@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, ChevronDown, Search } from "lucide-react";
-import { categories, getMetier, metiers, quartiers } from "@/lib/data";
+import { categories, getMetier, getVille, metiers, villes } from "@/lib/data";
 
 type Opt = { value: string; label: string; group?: string };
 
@@ -18,7 +18,6 @@ const optionsMetier = (categorie: string): Opt[] =>
     );
 
 const filtresFixes: { key: string; label: string; options: Opt[] }[] = [
-  { key: "quartier", label: "Quartier", options: quartiers.map((q) => ({ value: q, label: q })) },
   {
     key: "dispo",
     label: "Disponibilité",
@@ -58,7 +57,7 @@ export function SearchBar() {
           placeholder="Quel artisan cherchez-vous ?"
           className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
         />
-        {["categorie", "metier", "quartier", "dispo", "note"].map((k) =>
+        {["categorie", "metier", "ville", "quartier", "dispo", "note"].map((k) =>
           params.get(k) ? <input key={k} type="hidden" name={k} value={params.get(k)!} /> : null,
         )}
       </label>
@@ -79,11 +78,19 @@ export function FilterChips() {
       const m = getMetier(p.get("metier")!);
       if (value && !m?.categories.includes(value as never)) p.delete("metier");
     }
+    // changer de ville efface le quartier
+    if (key === "ville") p.delete("quartier");
     router.replace(`/recherche?${p.toString()}`, { scroll: false });
   };
 
   const categorie = params.get("categorie") ?? "";
+  const ville = params.get("ville") ?? "";
+  const quartiers = getVille(ville)?.quartiers ?? [];
   const filtres = [
+    { key: "ville", label: "Ville", options: villes.map((v) => ({ value: v.nom, label: v.nom })) },
+    ...(quartiers.length
+      ? [{ key: "quartier", label: "Quartier", options: quartiers.map((q) => ({ value: q, label: q })) }]
+      : []),
     {
       key: "categorie",
       label: "Catégorie",
