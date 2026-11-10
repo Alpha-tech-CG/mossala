@@ -18,9 +18,6 @@ export const DUREE_ILLIMITE_JOURS = 30; // validé par le client
  */
 /** Profils complets qu'un visiteur peut ouvrir sans compte, avant de devoir s'inscrire. */
 export const PROFILS_SANS_COMPTE = 3;
-export const PROFILS_GRATUITS_PAR_MOIS = 5;
-export const PRIX_PREMIUM_CLIENT_FCFA = 500;
-export const DUREE_PREMIUM_JOURS = 30;
 
 import { getCategorie, getMetier } from "./metiers";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { DUREE_PREMIUM_JOURS, PROFILS_GRATUITS_PAR_MOIS, PROFILS_SANS_COMPTE } from "./data";
+import { PROFILS_SANS_COMPTE } from "./data";
 import type { Identite } from "@/components/Identite";
 
 /**
@@ -74,7 +74,6 @@ export function useCompte() {
   );
   const e = etat ?? SERVEUR;
   const premium = e.premiumJusqua !== null;
-  const restants = Math.max(0, PROFILS_GRATUITS_PAR_MOIS - e.consultes.length);
   const vusSansCompte = e.vusSansCompte ?? [];
   const restantsSansCompte = Math.max(0, PROFILS_SANS_COMPTE - vusSansCompte.length);
   return {
@@ -84,35 +83,25 @@ export function useCompte() {
     inscrit: e.compte !== null,
     mois: e.mois ? NOMS_MOIS[Number(e.mois.slice(5, 7)) - 1] : "",
     consultes: e.consultes,
-    restants,
     /** visiteur sans compte : profils encore ouvrables avant de devoir s'inscrire */
     restantsSansCompte,
     premium,
     premiumJusqua: premium ? new Date(e.premiumJusqua!) : null,
     favoris: e.favoris,
-    /** profil déjà ouvert ce mois-ci, ou encore ouvrable */
-    peutVoir: (id: string) =>
-      e.compte === null
-        ? vusSansCompte.includes(id) || restantsSansCompte > 0
-        : premium || e.consultes.includes(id) || restants > 0,
-    /** compte une consultation (sans effet si déjà vu ce mois-ci ou Premium) */
+    /** inscrit : tous les profils ; sans compte : 3 profils au maximum */
+    peutVoir: (id: string) => e.compte !== null || vusSansCompte.includes(id) || restantsSansCompte > 0,
+    /** compte un profil ouvert sans compte (rien à compter une fois inscrit) */
     consulter: (id: string) => {
       const x = lire();
-      if (!x.compte) {
-        const vus = x.vusSansCompte ?? [];
-        if (vus.includes(id) || vus.length >= PROFILS_SANS_COMPTE) return;
-        return ecrire({ ...x, vusSansCompte: [...vus, id] });
-      }
-      if (x.consultes.includes(id)) return;
-      if (x.premiumJusqua === null && x.consultes.length >= PROFILS_GRATUITS_PAR_MOIS) return;
-      ecrire({ ...x, consultes: [...x.consultes, id] });
+      if (x.compte) return;
+      const vus = x.vusSansCompte ?? [];
+      if (vus.includes(id) || vus.length >= PROFILS_SANS_COMPTE) return;
+      ecrire({ ...x, vusSansCompte: [...vus, id] });
     },
     // TODO backend : envoyerCodeSms + vérification OTP (Supabase Auth téléphone)
     inscrire: (i: Identite) =>
       ecrire({ ...lire(), compte: { ...i, telephone: i.telephones[0]?.numero ?? "", creeLe: Date.now() } }),
     deconnecter: () => ecrire({ ...lire(), compte: null }),
-    /** MAQUETTE : le paiement Mobile Money (MTN MoMo / Airtel Money) sera branché plus tard */
-    activerPremium: () => ecrire({ ...lire(), premiumJusqua: Date.now() + DUREE_PREMIUM_JOURS * 86_400_000 }),
     basculerFavori: (id: string) => {
       const x = lire();
       ecrire({ ...x, favoris: x.favoris.includes(id) ? x.favoris.filter((f) => f !== id) : [...x.favoris, id] });

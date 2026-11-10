@@ -35,7 +35,7 @@ const EMPLACEMENTS = [
 const PROS = [
   [LayoutDashboard, "Boutique Premium", "Tableau de bord, caisse, stock, fichier clients et promotions pour les quincailleries.", "/pro/boutique"],
   [Store, "Fiche gratuite", "Artisans et commerces créent gratuitement leur fiche et reçoivent des clients.", "/pro/inscription"],
-  [Crown, "Premium particuliers", "Profils illimités et mise en relation accompagnée avec des artisans sélectionnés.", "/profil#formules"],
+  [Crown, "Artisan Premium", "Soyez mieux référencé : votre fiche remonte dans les résultats de votre métier et de votre quartier.", "/services#contact"],
 ] as const;
 
 export default function ServicesPage() {

@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Crown, Heart, LogOut } from "lucide-react";
-import { ChoixFormules, CompteurProfils, InscriptionClient } from "@/components/Acces";
+import { Heart, LogOut } from "lucide-react";
+import { InscriptionClient } from "@/components/Acces";
 import { useCompte } from "@/lib/compte";
 
 type Fiche = { id: string; nom: string; metier: string; quartier: string; image?: string };
@@ -17,7 +17,7 @@ export function MonCompte({ annuaire }: { annuaire: Fiche[] }) {
       <div className="mt-6 rounded-2xl bg-card p-5 shadow-sm">
         <h2 className="font-serif text-2xl">Créez votre compte gratuit</h2>
         <p className="mt-1 mb-4 text-sm text-muted-foreground">
-          Consultez les profils complets des artisans, gardez vos favoris et donnez votre avis.
+          Consultez tous les profils des artisans sans limite, gardez vos favoris et donnez votre avis.
         </p>
         <InscriptionClient />
       </div>
@@ -45,22 +45,7 @@ export function MonCompte({ annuaire }: { annuaire: Fiche[] }) {
             )}
           </p>
         </div>
-        <span
-          className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
-            c.premium ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {c.premium && <Crown className="size-3.5" />} {c.premium ? "Premium" : "Gratuit"}
-        </span>
       </section>
-
-      <CompteurProfils />
-      {!c.premium && (
-        <section id="formules" className="scroll-mt-24">
-          <h2 className="mb-3 text-xl font-bold">Les formules</h2>
-          <ChoixFormules actuelle="gratuit" />
-        </section>
-      )}
 
       <section>
         <h2 className="flex items-center gap-2 text-xl font-bold">
