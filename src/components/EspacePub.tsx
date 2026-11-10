@@ -66,38 +66,31 @@ const PUBS: Partial<Record<Emplacement, Pub>> = {
 };
 
 /**
- * Barre latérale publicitaire (format portrait).
- * - « rail » : colonne collante à gauche ou à droite du contenu, sur grand écran ;
- * - « carte » : la même publicité réinsérée dans le fil de la page (mobile et tablette).
- * Le contenu du site garde toujours la place principale : la pub ne recouvre jamais rien.
+ * Bloc publicitaire de la colonne de droite, au format des encarts LinkedIn :
+ * carte de 300 px de large, visuel 300 × 250 (IAB « medium rectangle »), texte court dessous.
  */
-export function PubLaterale({
+export function BlocPub({
   emplacement,
-  variante,
   className = "",
 }: {
   emplacement: "laterale-gauche" | "laterale-droite";
-  variante: "rail" | "carte";
   className?: string;
 }) {
   const pub = PUBS[emplacement];
-  const rail = variante === "rail";
-
   return (
-    <aside aria-label="Publicité" className={className}>
-      <p className="mb-1.5 text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">Publicité</p>
+    <aside
+      aria-label="Publicité"
+      className={`overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-black/[0.06] ${className}`}
+    >
+      <p className="flex items-center justify-between px-3 py-1.5 text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">
+        Publicité
+        <Link href="/services" className="font-semibold tracking-normal normal-case hover:underline">
+          Annoncer ici
+        </Link>
+      </p>
       {pub ? (
-        <Link
-          href={pub.href}
-          className={`group flex flex-1 overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.04] transition hover:shadow-md ${
-            rail ? "min-h-0 flex-col" : "flex-row"
-          }`}
-        >
-          <span
-            className={`relative block shrink-0 overflow-hidden bg-foreground ${
-              rail ? "min-h-0 flex-1" : "min-h-36 w-2/5 sm:min-h-44"
-            }`}
-          >
+        <Link href={pub.href} className="group block">
+          <span className="relative block aspect-[6/5] overflow-hidden bg-foreground">
             {pub.type === "video" ? (
               <video src={pub.src} poster={pub.poster} autoPlay muted loop playsInline className="absolute inset-0 size-full object-cover" />
             ) : (
@@ -105,20 +98,19 @@ export function PubLaterale({
                 src={pub.src}
                 alt=""
                 fill
-                sizes={rail ? "570px" : "40vw"}
+                sizes="(min-width: 1280px) 300px, 50vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
             )}
           </span>
-          <span className={`flex shrink-0 flex-col ${rail ? "gap-2 p-5 2xl:p-6" : "flex-1 justify-center gap-1 p-4 sm:gap-1.5 sm:p-5"}`}>
-            <span className="text-[9px] font-semibold tracking-[0.2em] text-accent-ink uppercase sm:text-[10px]">
-              {pub.annonceur}
+          <span className="flex items-center justify-between gap-2 px-3 py-2.5">
+            <span className="min-w-0">
+              <span className="block truncate text-[9px] font-semibold tracking-[0.15em] text-accent-ink uppercase sm:text-[10px]">
+                {pub.annonceur}
+              </span>
+              <span className="mt-0.5 line-clamp-2 font-serif text-sm leading-tight sm:text-base xl:line-clamp-1">{pub.titre}</span>
             </span>
-            <span className={`font-serif leading-tight ${rail ? "text-3xl" : "text-lg sm:text-2xl"}`}>{pub.titre}</span>
-            {pub.texte && (
-              <span className={`text-muted-foreground ${rail ? "text-sm" : "text-xs sm:text-sm"}`}>{pub.texte}</span>
-            )}
-            <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground sm:mt-2">
+            <span className="hidden shrink-0 items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs font-bold text-accent-foreground sm:inline-flex">
               {pub.cta} <ArrowRight className="size-3" />
             </span>
           </span>
@@ -126,22 +118,25 @@ export function PubLaterale({
       ) : (
         <Link
           href="/services#contact"
-          className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-accent-ink/30 bg-cream/60 p-4 text-center transition hover:border-accent-ink/60 ${
-            rail ? "" : "min-h-36"
-          }`}
+          className="mx-3 mb-3 flex aspect-[6/5] flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-accent-ink/30 bg-cream/60 text-center"
         >
           <ImageIcon className="size-6 text-accent-ink" />
           <span className="font-serif text-lg leading-tight">Votre publicité ici</span>
-          <span className="text-xs text-muted-foreground">Espace disponible</span>
+          <span className="text-xs text-muted-foreground">300 × 250 px</span>
         </Link>
       )}
     </aside>
   );
 }
 
-/** Sous 1280 px, la barre latérale est réinsérée dans le fil de la page. */
+/** Sous 1280 px, les deux blocs de la colonne de droite sont réinsérés côte à côte dans la page. */
 export function PubsLateralesFil({ className = "" }: { className?: string }) {
-  return <PubLaterale emplacement="laterale-gauche" variante="carte" className={`flex flex-col xl:hidden ${className}`} />;
+  return (
+    <div className={`grid grid-cols-2 gap-3 sm:gap-4 xl:hidden ${className}`}>
+      <BlocPub emplacement="laterale-gauche" />
+      <BlocPub emplacement="laterale-droite" />
+    </div>
+  );
 }
 
 export function EspacePub({ emplacement, className = "" }: { emplacement: Emplacement; className?: string }) {
@@ -238,22 +233,22 @@ export function PubPages() {
 }
 
 /**
- * Grand écran (≥ 1280 px) : une large barre publicitaire collante à gauche, le site à droite.
+ * Grand écran (≥ 1280 px) : colonne de droite de 300 px avec deux blocs publicitaires empilés,
+ * comme la colonne de droite de LinkedIn. Elle reste visible pendant le défilement.
  * Sur l'accueil, le cadre commence après le hero (voir app/page.tsx) ; ailleurs, sous le header.
  */
 export function CadrePub({ children, accueil = false }: { children: React.ReactNode; accueil?: boolean }) {
   const path = usePathname();
   if (path === "/" && !accueil) return <>{children}</>;
   return (
-    <div className="xl:grid xl:grid-cols-[450px_minmax(0,1fr)] xl:gap-6 xl:pl-5 2xl:grid-cols-[570px_minmax(0,1fr)]">
-      <div className="hidden xl:block">
-        <PubLaterale
-          emplacement="laterale-gauche"
-          variante="rail"
-          className="sticky top-20 flex h-[calc(100vh-6rem)] flex-col pt-6"
-        />
-      </div>
+    <div className="xl:mx-auto xl:grid xl:max-w-[1500px] xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-6 xl:pr-6">
       <div className="min-w-0">{children}</div>
+      <div className="hidden xl:block">
+        <div className="sticky top-[72px] space-y-2.5 pt-3">
+          <BlocPub emplacement="laterale-gauche" />
+          <BlocPub emplacement="laterale-droite" />
+        </div>
+      </div>
     </div>
   );
 }

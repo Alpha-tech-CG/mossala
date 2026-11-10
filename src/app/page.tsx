@@ -77,8 +77,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Grand écran : la barre publicitaire est à gauche (CadrePub).
-          Sous 1280 px, elle est réinsérée dans le fil (PubsLateralesFil). */}
+      {/* Grand écran : deux blocs publicitaires dans la colonne de droite (CadrePub).
+          Sous 1280 px, ils sont réinsérés dans le fil (PubsLateralesFil). */}
       <div className="mx-auto max-w-6xl">
         {/* Catégories de métiers. Mobile : une seule ligne (3 secteurs + « Tout voir »). */}
         <Reveal className="mt-8 px-5 md:mt-12">
