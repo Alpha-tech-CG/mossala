@@ -510,6 +510,8 @@ export type Boutique = {
   adresse: string;
   telephone: string;
   horaires: string;
+  /** Photo de la devanture ou de l'intérieur (envoyée par le boutiquier). */
+  image?: string;
 };
 
 export const boutiques: Boutique[] = [
@@ -521,6 +523,7 @@ export const boutiques: Boutique[] = [
     adresse: "Av. Matsoua, près du marché Total",
     telephone: "+242 06 700 11 22",
     horaires: "Lun–Sam · 7h30–18h30",
+    image: "/images/ciment.jpg",
   },
   {
     id: "batiplus-poto-poto",
@@ -530,6 +533,7 @@ export const boutiques: Boutique[] = [
     adresse: "Rue Mbochis, face à la pharmacie",
     telephone: "+242 05 700 33 44",
     horaires: "Lun–Sam · 8h–19h",
+    image: "/images/peinture.jpg",
   },
   {
     id: "moungali-materiaux",

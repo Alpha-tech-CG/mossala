@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import {
   type Artisan,
+  type Boutique,
   type CategorieId,
   type MetierId,
   type Lieu,
@@ -379,6 +380,36 @@ export function ProduitCard({ p, wide, lieu = { ville: VILLE_DEFAUT } }: { p: Pr
         )}
       </div>
     </Link>
+  );
+}
+
+/**
+ * Photo d'une quincaillerie. Sans photo, une vignette à ses couleurs avec ses initiales,
+ * pour qu'on la reconnaisse quand même d'un coup d'œil.
+ */
+const TEINTES = [
+  "from-primary to-[#163A6B]",
+  "from-accent-ink to-[#6E5214]",
+  "from-[#2F6B4F] to-[#1F4A36]",
+  "from-[#8A3B2E] to-[#5E271E]",
+];
+
+export function BoutiquePhoto({ b, className = "", sizes = "160px" }: { b: Boutique; className?: string; sizes?: string }) {
+  if (b.image)
+    return (
+      <span className={`relative block shrink-0 overflow-hidden bg-cream ${className}`}>
+        <Image src={b.image} alt={`Quincaillerie ${b.nom}`} fill sizes={sizes} className="object-cover" />
+      </span>
+    );
+  const teinte = TEINTES[[...b.id].reduce((n, c) => n + c.charCodeAt(0), 0) % TEINTES.length];
+  return (
+    <span
+      aria-hidden
+      className={`relative flex shrink-0 items-center justify-center overflow-hidden bg-gradient-to-br text-white ${teinte} ${className}`}
+    >
+      <Store className="absolute -right-2 -bottom-2 size-[60%] opacity-15" strokeWidth={1.4} />
+      <span className="relative font-serif text-[clamp(0.9rem,2.2vw,1.6rem)] leading-none tracking-wide">{initiales(b.nom)}</span>
+    </span>
   );
 }
 
