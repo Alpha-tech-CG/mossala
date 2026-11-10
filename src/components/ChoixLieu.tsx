@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, MapPin } from "lucide-react";
+import { ChevronDown, MapPin, Navigation, Package } from "lucide-react";
 import { VILLE_DEFAUT, getVille, lieuDepuis, villes, type Lieu } from "@/lib/data";
 
 const CLE = "artico-lieu";
@@ -14,10 +14,19 @@ export function useLieu(): Lieu {
 }
 
 /**
- * Sélecteur ville + quartier (quartier facultatif). Le choix est gardé dans l'URL, pour que
+ * Sélecteur ville + quartier (quartier facultatif), et type de produit en option. Le choix est gardé dans l'URL, pour que
  * les liens et le partage conservent le lieu, et retenu sur l'appareil pour la visite suivante.
  */
-export function ChoixLieu({ className = "", compact = false }: { className?: string; compact?: boolean }) {
+export function ChoixLieu({
+  className = "",
+  compact = false,
+  types,
+}: {
+  className?: string;
+  compact?: boolean;
+  /** si fourni : ajoute le filtre « Type de produit » (paramètre ?cat=) */
+  types?: string[];
+}) {
   const router = useRouter();
   const path = usePathname();
   const sp = useSearchParams();
@@ -49,34 +58,42 @@ export function ChoixLieu({ className = "", compact = false }: { className?: str
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const cat = sp.get("cat") ?? "";
+  const choisirType = (t: string) => {
+    const q = new URLSearchParams(sp.toString());
+    if (t) q.set("cat", t);
+    else q.delete("cat");
+    const qs = q.toString();
+    router.replace(qs ? `${path}?${qs}` : path, { scroll: false });
+  };
+
   const select =
-    "w-full appearance-none rounded-xl border border-border bg-card py-3 pr-9 pl-3 text-sm font-semibold shadow-sm focus:border-primary focus:outline-none";
+    "w-full appearance-none rounded-xl border border-border bg-background py-3 pr-9 pl-3 text-sm font-semibold focus:border-primary focus:ring-2 focus:ring-ring/30 focus:outline-none";
+  const chevron = (
+    <ChevronDown className="pointer-events-none absolute right-3 bottom-3.5 size-4 text-muted-foreground" />
+  );
+  const etiquette = "mb-1.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-muted-foreground uppercase";
 
   return (
-    <div className={className}>
-      {!compact && (
-        <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold">
-          <MapPin className="size-4 text-primary" /> Où êtes-vous ?
-        </p>
-      )}
-      <div className="grid grid-cols-2 gap-2.5">
-        <label className="relative">
-          <span className="sr-only">Ville</span>
-          <select
-            value={lieu.ville}
-            onChange={(e) => aller({ ville: e.target.value })}
-            className={select}
-          >
+    <div className={`${types && !compact ? "rounded-2xl bg-card p-4 shadow-sm ring-1 ring-black/[0.04] sm:p-5" : ""} ${className}`}>
+      <div className={`grid gap-2.5 sm:gap-3 ${types ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2"}`}>
+        <label className="relative block">
+          <span className={compact ? "sr-only" : etiquette}>
+            <MapPin className="size-3.5 text-primary" /> Ville
+          </span>
+          <select value={lieu.ville} onChange={(e) => aller({ ville: e.target.value })} className={select}>
             {villes.map((v) => (
               <option key={v.nom} value={v.nom}>
                 {v.nom}
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          {chevron}
         </label>
-        <label className="relative">
-          <span className="sr-only">Quartier</span>
+        <label className="relative block">
+          <span className={compact ? "sr-only" : etiquette}>
+            <Navigation className="size-3.5 text-primary" /> Quartier
+          </span>
           <select
             value={lieu.quartier ?? ""}
             onChange={(e) => aller({ ville: lieu.ville, quartier: e.target.value || undefined })}
@@ -90,8 +107,24 @@ export function ChoixLieu({ className = "", compact = false }: { className?: str
               </option>
             ))}
           </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          {chevron}
         </label>
+        {types && (
+          <label className="relative col-span-2 block sm:col-span-1">
+            <span className={etiquette}>
+              <Package className="size-3.5 text-primary" /> Type de produit
+            </span>
+            <select value={types.includes(cat) ? cat : ""} onChange={(e) => choisirType(e.target.value)} className={select}>
+              <option value="">Tous les produits</option>
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            {chevron}
+          </label>
+        )}
       </div>
     </div>
   );

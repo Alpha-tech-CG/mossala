@@ -59,27 +59,8 @@ async function Quincaillerie(props: Pick<PageProps<"/quincaillerie">, "searchPar
           Comparez les prix des quincailleries de votre ville, choisissez la plus proche ou la moins chère, et
           réservez : vous payez le montant exact au retrait.
         </p>
-        <ChoixLieu className="mt-5 max-w-xl" />
+        <ChoixLieu types={categoriesProduits} className="mt-5" />
       </div>
-
-      {/* Types de produits */}
-      <nav aria-label="Types de produits" className="no-scrollbar mt-6 flex gap-2.5 overflow-x-auto px-5 pb-1">
-        {["Tout", ...categoriesProduits].map((c) => {
-          const active = c === "Tout" ? !cat : cat === c;
-          return (
-            <Link
-              key={c}
-              href={lienLieu("/quincaillerie", lieu, { cat: c === "Tout" ? undefined : c })}
-              scroll={false}
-              className={`shrink-0 rounded-full border px-4 py-2.5 text-sm font-semibold ${
-                active ? "border-primary bg-secondary text-primary" : "border-border bg-card"
-              }`}
-            >
-              {c}
-            </Link>
-          );
-        })}
-      </nav>
 
       {/* Produits classés par type */}
       {types.map((t) => {
