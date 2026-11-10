@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Loader2, Lock, Phone, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Loader2,
+  Lock,
+  Phone,
+  Search,
+} from "lucide-react";
 import {
   type VerificationTelephone,
   creerProfilPro,
@@ -13,29 +22,52 @@ import {
   versE164,
 } from "@/lib/backend";
 import { MetierIcon } from "@/components/ui";
-import { quartiers } from "@/lib/data";
+import { getVille } from "@/lib/data";
+import {
+  ChampsIdentite,
+  ChoixProfil,
+  identitePropre,
+  identiteValide,
+  identiteVide,
+  type Identite,
+} from "@/components/Identite";
 import { categories, metiers } from "@/lib/metiers";
 
 const field =
   "w-full rounded-xl border border-border bg-white px-4 py-3.5 text-base outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
-const norm = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+const norm = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
 
 /**
- * Inscription d'un professionnel en 3 étapes :
- * 1. vérification du téléphone par code SMS ; 2. métier ou boutique ; 3. numéro public / privé.
+ * Inscription d'un professionnel (artisan ou magasin) en 4 étapes :
+ * 1. vérification du téléphone par code SMS ; 2. coordonnées (nom, prénom, adresse, ville, quartier,
+ * email, jusqu'à 3 téléphones) ; 3. métier ou boutique ; 4. numéro public / privé.
  * Le stockage passe par @/lib/backend (Firebase pour la démo, Supabase ou Neon ensuite).
  */
 export function Inscription() {
+  const router = useRouter();
   const boutique = useSearchParams().get("type") === "boutique";
-  const etapes = boutique ? ["Téléphone", "Ma boutique", "Contact"] : ["Téléphone", "Mon métier", "Contact"];
+  const etapes = [
+    "Téléphone",
+    "Coordonnées",
+    boutique ? "Ma boutique" : "Mon métier",
+    "Contact",
+  ];
   const [etape, setEtape] = useState(0);
   const [fini, setFini] = useState(false);
 
   // étape 1
   const [tel, setTel] = useState("");
   const [code, setCode] = useState("");
-  const [confirmation, setConfirmation] = useState<VerificationTelephone | null>(null);
-  const [compte, setCompte] = useState<{ id: string; telephone: string } | null>(null);
+  const [confirmation, setConfirmation] =
+    useState<VerificationTelephone | null>(null);
+  const [compte, setCompte] = useState<{
+    id: string;
+    telephone: string;
+  } | null>(null);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState("");
 
@@ -56,62 +88,94 @@ export function Inscription() {
 
   const envoyerCode = () =>
     executer(async () => {
-      setConfirmation(await envoyerCodeSms(versE164(tel), "recaptcha-inscription"));
+      setConfirmation(
+        await envoyerCodeSms(versE164(tel), "recaptcha-inscription"),
+      );
       setCode("");
     });
 
   const verifierCode = () =>
     executer(async () => {
       if (!confirmation) return;
-      setCompte(await confirmation.confirmer(code));
+      const c = await confirmation.confirmer(code);
+      setCompte(c);
+      // le numéro vérifié devient le 1er téléphone des coordonnées
+      setIdentite((i) => ({
+        ...i,
+        telephones: [
+          { ...i.telephones[0], numero: c.telephone },
+          ...i.telephones.slice(1),
+        ],
+      }));
       setEtape(1);
     });
 
   const creerProfil = () =>
     executer(async () => {
       if (!compte) return;
+      const i = identitePropre(identite);
       await creerProfilPro(compte.id, {
         type: boutique ? "boutique" : "artisan",
-        nom: nom.trim(),
+        nom: boutique ? nom.trim() : `${i.prenom} ${i.nom}`,
         telephone: compte.telephone,
         numeroPublic,
-        ...(boutique ? { adresse: adresse.trim(), quartier } : { metier, zones }),
+        responsable: {
+          nom: i.nom,
+          prenom: i.prenom,
+          ...(i.email ? { email: i.email } : {}),
+        },
+        adresse: i.adresse,
+        ville: i.ville,
+        quartier: i.quartier,
+        telephones: i.telephones,
+        ...(boutique
+          ? {}
+          : { metier, zones: zonesPossibles.length ? zones : [i.quartier] }),
       });
       setFini(true);
     });
-  // étape 2 (artisan)
+  // étape 2 : coordonnées
+  const [identite, setIdentite] = useState<Identite>(() => identiteVide());
+  // étape 3 : nom de la boutique (magasin) ou métier et zones (artisan)
   const [nom, setNom] = useState("");
   const [recherche, setRecherche] = useState("");
   const [metier, setMetier] = useState("");
   const [zones, setZones] = useState<string[]>([]);
-  // étape 2 (boutique)
-  const [adresse, setAdresse] = useState("");
-  const [quartier, setQuartier] = useState("");
-  // étape 3
+  // étape 4
   const [numeroPublic, setNumeroPublic] = useState(true);
 
   const metierChoisi = metiers.find((m) => m.id === metier);
   const suggestions = recherche.trim()
-    ? metiers.filter((m) => norm(m.label).includes(norm(recherche.trim()))).slice(0, 8)
+    ? metiers
+        .filter((m) => norm(m.label).includes(norm(recherche.trim())))
+        .slice(0, 8)
     : [];
+
+  /** quartiers d'intervention proposés : ceux de la ville choisie dans les coordonnées */
+  const zonesPossibles = getVille(identite.ville)?.quartiers ?? [];
 
   const valide =
     etape === 0
       ? !!confirmation && /^\d{6}$/.test(code)
       : etape === 1
-        ? boutique
-          ? nom.trim() && adresse.trim() && quartier
-          : nom.trim() && metier && zones.length > 0
-        : true;
+        ? identiteValide(identite)
+        : etape === 2
+          ? boutique
+            ? !!nom.trim()
+            : !!metier && (zonesPossibles.length === 0 || zones.length > 0)
+          : true;
 
   if (fini) {
     return (
       <div className="mt-8 rounded-2xl bg-card p-8 text-center shadow-sm ring-1 ring-black/[0.03]">
         <CheckCircle2 className="mx-auto size-14 text-success" />
-        <h2 className="mt-4 font-serif text-3xl">Bienvenue, {nom.split(" ")[0]} !</h2>
+        <h2 className="mt-4 font-serif text-3xl">
+          Bienvenue, {identite.prenom.trim()} !
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Votre profil est créé. Notre équipe vérifie votre identité sous 48 h ; en attendant, vous
-          pouvez compléter votre profil{boutique ? " et ajouter vos produits" : " et vos réalisations"}.
+          Votre profil est créé. Notre équipe vérifie votre identité sous 48 h ;
+          en attendant, vous pouvez compléter votre profil
+          {boutique ? " et ajouter vos produits" : " et vos réalisations"}.
         </p>
         <Link
           href={boutique ? "/pro/boutique" : "/pro/espace"}
@@ -125,12 +189,31 @@ export function Inscription() {
 
   return (
     <div className="mt-6">
+      <div className="mb-6 rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03]">
+        <ChoixProfil
+          actuel={boutique ? "magasin" : "artisan"}
+          onChoisir={(t) => {
+            if (t === "client") return router.push("/profil");
+            router.replace(
+              t === "magasin"
+                ? "/pro/inscription?type=boutique"
+                : "/pro/inscription",
+              { scroll: false },
+            );
+            if (etape > 1) setEtape(1);
+          }}
+        />
+      </div>
       {/* Progression */}
       <ol className="flex gap-2">
         {etapes.map((e, i) => (
           <li key={e} className="flex-1">
-            <span className={`block h-1.5 rounded-full ${i <= etape ? "bg-accent" : "bg-muted"}`} />
-            <span className={`mt-2 block text-xs font-semibold ${i === etape ? "text-foreground" : "text-muted-foreground"}`}>
+            <span
+              className={`block h-1.5 rounded-full ${i <= etape ? "bg-accent" : "bg-muted"}`}
+            />
+            <span
+              className={`mt-2 block text-xs font-semibold ${i === etape ? "text-foreground" : "text-muted-foreground"}`}
+            >
               {i + 1}. {e}
             </span>
           </li>
@@ -181,7 +264,10 @@ export function Inscription() {
               </button>
             ) : (
               <div>
-                <label htmlFor="code" className="mb-2 block text-sm font-semibold">
+                <label
+                  htmlFor="code"
+                  className="mb-2 block text-sm font-semibold"
+                >
                   Code reçu par SMS
                 </label>
                 <input
@@ -196,7 +282,12 @@ export function Inscription() {
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
                   Code envoyé au {versE164(tel)}.{" "}
-                  <button type="button" disabled={chargement} onClick={envoyerCode} className="font-semibold text-primary">
+                  <button
+                    type="button"
+                    disabled={chargement}
+                    onClick={envoyerCode}
+                    className="font-semibold text-primary"
+                  >
                     Renvoyer le code
                   </button>{" "}
                   ·{" "}
@@ -216,21 +307,31 @@ export function Inscription() {
           </>
         )}
 
-        {etape === 1 && !boutique && (
+        {etape === 1 && (
+          <ChampsIdentite
+            id="pro"
+            value={identite}
+            onChange={setIdentite}
+            adresseLabel={boutique ? "Adresse de la boutique" : "Adresse"}
+            premierVerrouille
+          />
+        )}
+
+        {etape === 2 && !boutique && (
           <>
-            <div>
-              <label htmlFor="nom" className="mb-2 block text-sm font-semibold">
-                Nom professionnel
-              </label>
-              <input id="nom" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex. Jean-Claude Mbemba" className={field} />
-            </div>
             <div>
               <p className="mb-2 text-sm font-semibold">Votre métier</p>
               {metierChoisi ? (
                 <div className="flex items-center gap-3 rounded-xl border-2 border-primary bg-secondary px-4 py-3 text-primary">
                   <MetierIcon id={metierChoisi.id} className="size-5" />
-                  <span className="flex-1 font-semibold">{metierChoisi.label}</span>
-                  <button type="button" onClick={() => setMetier("")} className="text-sm font-semibold underline">
+                  <span className="flex-1 font-semibold">
+                    {metierChoisi.label}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMetier("")}
+                    className="text-sm font-semibold underline"
+                  >
                     Changer
                   </button>
                 </div>
@@ -254,8 +355,13 @@ export function Inscription() {
                             onClick={() => setMetier(m.id)}
                             className="flex h-full w-full flex-col items-center gap-1.5 rounded-xl bg-background px-2 py-3 text-center ring-1 ring-border hover:ring-primary"
                           >
-                            <MetierIcon id={m.id} className="size-5 text-primary" />
-                            <span className="text-xs font-semibold">{m.label}</span>
+                            <MetierIcon
+                              id={m.id}
+                              className="size-5 text-primary"
+                            />
+                            <span className="text-xs font-semibold">
+                              {m.label}
+                            </span>
                           </button>
                         </li>
                       ))}
@@ -264,7 +370,10 @@ export function Inscription() {
                   {recherche.trim() && !suggestions.length && (
                     <p className="mt-2 text-sm text-muted-foreground">
                       Introuvable ?{" "}
-                      <Link href="/metiers#proposer" className="font-semibold text-primary">
+                      <Link
+                        href="/metiers#proposer"
+                        className="font-semibold text-primary"
+                      >
                         Proposez votre métier
                       </Link>
                     </p>
@@ -277,63 +386,69 @@ export function Inscription() {
                 </>
               )}
             </div>
-            <fieldset>
-              <legend className="mb-2 text-sm font-semibold">Quartiers où vous intervenez</legend>
-              <div className="flex flex-wrap gap-2">
-                {quartiers.map((q) => {
-                  const on = zones.includes(q);
-                  return (
-                    <button
-                      type="button"
-                      key={q}
-                      aria-pressed={on}
-                      onClick={() => setZones(on ? zones.filter((z) => z !== q) : [...zones, q])}
-                      className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-semibold ring-1 ${
-                        on ? "bg-primary text-white ring-primary" : "bg-white ring-border"
-                      }`}
-                    >
-                      {on && <Check className="size-3.5" />} {q}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+            {zonesPossibles.length > 0 && (
+              <fieldset>
+                <legend className="mb-2 text-sm font-semibold">
+                  Quartiers où vous intervenez à {identite.ville}
+                </legend>
+                <div className="flex flex-wrap gap-2">
+                  {zonesPossibles.map((q) => {
+                    const on = zones.includes(q);
+                    return (
+                      <button
+                        type="button"
+                        key={q}
+                        aria-pressed={on}
+                        onClick={() =>
+                          setZones(
+                            on ? zones.filter((z) => z !== q) : [...zones, q],
+                          )
+                        }
+                        className={`flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-semibold ring-1 ${
+                          on
+                            ? "bg-primary text-white ring-primary"
+                            : "bg-white ring-border"
+                        }`}
+                      >
+                        {on && <Check className="size-3.5" />} {q}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+            )}
           </>
         )}
 
-        {etape === 1 && boutique && (
+        {etape === 2 && boutique && (
           <>
             <div>
-              <label htmlFor="bnom" className="mb-2 block text-sm font-semibold">
+              <label
+                htmlFor="bnom"
+                className="mb-2 block text-sm font-semibold"
+              >
                 Nom de la boutique
               </label>
-              <input id="bnom" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex. Quincaillerie du Marché" className={field} />
+              <input
+                id="bnom"
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                placeholder="Ex. Quincaillerie du Marché"
+                className={field}
+              />
             </div>
-            <div>
-              <label htmlFor="badr" className="mb-2 block text-sm font-semibold">
-                Adresse
-              </label>
-              <input id="badr" value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="Rue, repère connu" className={field} />
-            </div>
-            <div>
-              <label htmlFor="bq" className="mb-2 block text-sm font-semibold">
-                Quartier
-              </label>
-              <select id="bq" value={quartier} onChange={(e) => setQuartier(e.target.value)} className={field}>
-                <option value="" disabled>
-                  Choisissez
-                </option>
-                {quartiers.map((q) => (
-                  <option key={q}>{q}</option>
-                ))}
-              </select>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              Adresse : {identite.adresse}, {identite.quartier},{" "}
+              {identite.ville}.
+            </p>
           </>
         )}
 
-        {etape === 2 && (
+        {etape === 3 && (
           <fieldset>
-            <legend className="mb-3 text-sm font-semibold">Comment les clients vous contactent-ils ?</legend>
+            <legend className="mb-3 text-sm font-semibold">
+              Comment les clients vous contactent-ils ?
+            </legend>
             <div className="grid gap-3">
               {[
                 {
@@ -355,29 +470,40 @@ export function Inscription() {
                   aria-pressed={numeroPublic === v}
                   onClick={() => setNumeroPublic(v)}
                   className={`flex gap-4 rounded-2xl border-2 p-4 text-left transition ${
-                    numeroPublic === v ? "border-primary bg-secondary" : "border-border bg-white"
+                    numeroPublic === v
+                      ? "border-primary bg-secondary"
+                      : "border-border bg-white"
                   }`}
                 >
                   <span
                     className={`flex size-11 shrink-0 items-center justify-center rounded-full ${
-                      numeroPublic === v ? "bg-primary text-white" : "bg-muted text-foreground"
+                      numeroPublic === v
+                        ? "bg-primary text-white"
+                        : "bg-muted text-foreground"
                     }`}
                   >
                     <Icon className="size-5" />
                   </span>
                   <span>
                     <span className="block font-bold">{t}</span>
-                    <span className="mt-0.5 block text-sm text-muted-foreground">{d}</span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">
+                      {d}
+                    </span>
                   </span>
                 </button>
               ))}
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Vous pourrez changer ce choix à tout moment dans votre profil.</p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Vous pourrez changer ce choix à tout moment dans votre profil.
+            </p>
           </fieldset>
         )}
 
         {erreur && (
-          <p role="alert" className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+          <p
+            role="alert"
+            className="flex gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive"
+          >
             <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {erreur}
           </p>
         )}
@@ -387,11 +513,21 @@ export function Inscription() {
           // Mention obligatoire quand le badge reCAPTCHA est masqué (voir globals.css)
           <p className="text-[11px] leading-snug text-muted-foreground">
             Protégé par reCAPTCHA :{" "}
-            <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer" className="underline">
+            <a
+              href="https://policies.google.com/privacy"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
               confidentialité
             </a>{" "}
             et{" "}
-            <a href="https://policies.google.com/terms" target="_blank" rel="noreferrer" className="underline">
+            <a
+              href="https://policies.google.com/terms"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
               conditions
             </a>{" "}
             de Google.
@@ -399,9 +535,14 @@ export function Inscription() {
         )}
         {etape === etapes.length - 1 && (
           <p className="text-xs leading-snug text-muted-foreground">
-            En créant votre profil, vos informations sont utilisées pour publier votre fiche et vous transmettre les
-            demandes des clients. Vous pouvez les modifier ou les supprimer à tout moment.{" "}
-            <Link href="/confidentialite" target="_blank" className="font-semibold text-primary underline">
+            En créant votre profil, vos informations sont utilisées pour publier
+            votre fiche et vous transmettre les demandes des clients. Vous
+            pouvez les modifier ou les supprimer à tout moment.{" "}
+            <Link
+              href="/confidentialite"
+              target="_blank"
+              className="font-semibold text-primary underline"
+            >
               Politique de confidentialité
             </Link>
           </p>
@@ -423,8 +564,14 @@ export function Inscription() {
             disabled={!valide || chargement}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition disabled:opacity-40"
           >
-            {chargement && etape > 0 && <Loader2 className="size-5 animate-spin" />}
-            {etape === 0 ? "Vérifier le code" : etape < etapes.length - 1 ? "Continuer" : "Créer mon profil"}
+            {chargement && etape > 0 && (
+              <Loader2 className="size-5 animate-spin" />
+            )}
+            {etape === 0
+              ? "Vérifier le code"
+              : etape < etapes.length - 1
+                ? "Continuer"
+                : "Créer mon profil"}
           </button>
         </div>
       </form>

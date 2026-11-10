@@ -176,7 +176,7 @@ export default function Home() {
 
         <Reveal className="mt-16 md:mt-24">
           <div className="px-5">
-            <SectionTitle eyebrow="Prix fixes affichés" title="Quincaillerie" href="/quincaillerie" />
+            <SectionTitle eyebrow="Une meilleure connaissance des prix" title="Quincaillerie" href="/quincaillerie" />
           </div>
           <div className="no-scrollbar mt-4 flex gap-4 overflow-x-auto px-5 pt-1 pb-3 md:grid md:grid-cols-4 md:overflow-visible">
             {produits.slice(0, 4).map((p) => (

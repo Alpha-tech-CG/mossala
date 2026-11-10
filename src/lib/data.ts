@@ -449,7 +449,7 @@ export const artisans: Artisan[] = [
 export type Ville = { nom: string; quartiers: string[] };
 
 /** Grandes villes du Congo. Les quartiers (arrondissements) sont renseignés pour les deux métropoles. */
-export const villes: Ville[] = [
+const villesBrutes: Ville[] = [
   {
     nom: "Brazzaville",
     quartiers: ["Bacongo", "Makélékélé", "Poto-Poto", "Moungali", "Ouenzé", "Talangaï", "Mfilou", "Madibou", "Djiri", "Centre-ville"],
@@ -469,6 +469,9 @@ export const villes: Ville[] = [
   { nom: "Mossendjo", quartiers: [] },
   { nom: "Ewo", quartiers: [] },
 ];
+
+/** Les villes, classées par ordre alphabétique. */
+export const villes: Ville[] = [...villesBrutes].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 
 export const VILLE_DEFAUT = "Brazzaville";
 export const getVille = (nom?: string) => villes.find((v) => v.nom === nom);

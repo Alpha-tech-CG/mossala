@@ -13,31 +13,32 @@ import {
   fcfa,
 } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
+import { ChampsIdentite, ChoixProfil, identitePropre, identiteValide, identiteVide, type Identite } from "./Identite";
 
-const field =
-  "w-full rounded-xl border border-border bg-white px-4 py-3.5 text-base outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
 
 /**
- * Inscription du client en deux temps : prénom + téléphone, puis choix de la formule
+ * Inscription en deux temps : type de compte + identité, puis choix de la formule
  * (Gratuit ou Premium). Le compte n'est créé qu'une fois la formule choisie.
+ * Artisans et magasins sont envoyés vers l'inscription professionnelle.
  */
 export function InscriptionClient({ titre, intro }: { titre?: string; intro?: string }) {
   const c = useCompte();
-  const [prenom, setPrenom] = useState("");
-  const [tel, setTel] = useState("");
+  const router = useRouter();
+  const [identite, setIdentite] = useState<Identite>(() => identiteVide());
   const [etape, setEtape] = useState<"coordonnees" | "formule">("coordonnees");
+  const valide = identiteValide(identite);
 
   if (etape === "formule")
     return (
       <div>
         <h2 id="acces-titre" className="mb-1 font-serif text-2xl leading-tight">
-          Bienvenue {prenom.trim()} !
+          Bienvenue {identite.prenom.trim()} !
         </h2>
         <p className="mb-4 text-sm text-muted-foreground">Choisissez votre formule. Vous pourrez changer à tout moment.</p>
         <ChoixFormules
-          onGratuit={() => c.inscrire(prenom, tel)}
+          onGratuit={() => c.inscrire(identitePropre(identite))}
           onPremium={() => {
-            c.inscrire(prenom, tel);
+            c.inscrire(identitePropre(identite));
             c.activerPremium();
           }}
         />
@@ -55,9 +56,9 @@ export function InscriptionClient({ titre, intro }: { titre?: string; intro?: st
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        setEtape("formule");
+        if (valide) setEtape("formule");
       }}
-      className="space-y-3"
+      className="space-y-4"
     >
       {titre && (
         <h2 id="acces-titre" className="text-center font-serif text-2xl leading-tight">
@@ -65,44 +66,23 @@ export function InscriptionClient({ titre, intro }: { titre?: string; intro?: st
         </h2>
       )}
       {intro && <p className={`text-sm text-muted-foreground ${titre ? "text-center" : ""}`}>{intro}</p>}
-      <div>
-        <label htmlFor="ins-prenom" className="mb-1.5 block text-sm font-semibold">
-          Votre prénom
-        </label>
-        <input
-          id="ins-prenom"
-          required
-          autoComplete="given-name"
-          value={prenom}
-          onChange={(e) => setPrenom(e.target.value)}
-          placeholder="Ex. Grâce"
-          className={field}
-        />
-      </div>
-      <div>
-        <label htmlFor="ins-tel" className="mb-1.5 block text-sm font-semibold">
-          Votre numéro de téléphone
-        </label>
-        <input
-          id="ins-tel"
-          type="tel"
-          required
-          autoComplete="tel"
-          pattern="[0-9 +]{9,}"
-          value={tel}
-          onChange={(e) => setTel(e.target.value)}
-          placeholder="06 000 00 00"
-          className={field}
-        />
-      </div>
+      <ChoixProfil
+        actuel="client"
+        onChoisir={(t) => {
+          if (t !== "client") router.push(`/pro/inscription${t === "magasin" ? "?type=boutique" : ""}`);
+        }}
+      />
+      <ChampsIdentite id="ins" value={identite} onChange={setIdentite} />
       <button
         type="submit"
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition hover:brightness-95 active:scale-[0.98]"
+        disabled={!valide}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition hover:brightness-95 active:scale-[0.98] disabled:opacity-40"
       >
         <UserPlus className="size-5" /> Continuer
       </button>
       <p className="text-[11px] leading-snug text-muted-foreground">
-        Votre numéro sert à vous connecter et n’est jamais affiché.{" "}
+        Vos coordonnées servent à vous connecter et à être rappelé par les artisans ; elles ne sont jamais affichées
+        publiquement.{" "}
         <Link href="/confidentialite" target="_blank" className="underline">
           Politique de confidentialité
         </Link>

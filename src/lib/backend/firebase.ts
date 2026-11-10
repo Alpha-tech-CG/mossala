@@ -73,7 +73,9 @@ export async function creerProfilPro(id: string, p: NouveauProfilPro): Promise<v
   lot.set(doc(base, "pros", id), {
     type: p.type,
     nom: p.nom,
-    ...(p.type === "boutique" ? { adresse: p.adresse, quartier: p.quartier } : { metier: p.metier, zones: p.zones }),
+    ville: p.ville,
+    quartier: p.quartier,
+    ...(p.type === "boutique" ? { adresse: p.adresse } : { metier: p.metier, zones: p.zones }),
     numeroPublic: p.numeroPublic,
     telephonePublic: p.numeroPublic ? p.telephone : null,
     statut: "en_verification",
@@ -81,6 +83,9 @@ export async function creerProfilPro(id: string, p: NouveauProfilPro): Promise<v
   });
   lot.set(doc(base, "pros", id, "prive", "contact"), {
     telephone: p.telephone,
+    telephones: p.telephones,
+    responsable: p.responsable,
+    adresse: p.adresse,
     alerteWhatsapp: true,
     alerteSms: true,
   });

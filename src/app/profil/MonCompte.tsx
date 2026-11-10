@@ -32,8 +32,18 @@ export function MonCompte({ annuaire }: { annuaire: Fiche[] }) {
           {c.compte!.prenom[0]?.toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-serif text-2xl">{c.compte!.prenom}</p>
-          <p className="text-sm text-muted-foreground">{c.compte!.telephone}</p>
+          <p className="truncate font-serif text-2xl">
+            {c.compte!.prenom} {c.compte!.nom ?? ""}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {c.compte!.telephone}
+            {c.compte!.ville && (
+              <>
+                {" · "}
+                {c.compte!.quartier}, {c.compte!.ville}
+              </>
+            )}
+          </p>
         </div>
         <span
           className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${

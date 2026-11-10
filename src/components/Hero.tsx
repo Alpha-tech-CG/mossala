@@ -146,7 +146,7 @@ export function Hero() {
             {[
               ["0 %", "Commission"],
               ["Gratuit", "Messages illimités"],
-              ["Prix fixe", "En quincaillerie"],
+              ["Meilleure", "Connaissance des prix"],
             ].map(([n, l], i) => (
               <div key={l} className={`min-w-0 px-1.5 sm:px-2 ${i > 0 ? "border-l border-sand" : ""}`}>
                 <p className="font-serif text-xl whitespace-nowrap text-primary min-[380px]:text-2xl sm:text-4xl">{n}</p>

@@ -15,7 +15,11 @@ export type NouveauProfilPro = {
   // artisan
   metier?: string;
   zones?: string[];
-  // boutique
-  adresse?: string;
-  quartier?: string;
+  /** responsable du compte et coordonnées (communs artisan et magasin) */
+  responsable: { nom: string; prenom: string; email?: string };
+  adresse: string;
+  ville: string;
+  quartier: string;
+  /** de 1 à 3 numéros, avec ceux qui ont WhatsApp */
+  telephones: { numero: string; whatsapp: boolean }[];
 };

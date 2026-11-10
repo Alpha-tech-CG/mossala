@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { DUREE_PREMIUM_JOURS, PROFILS_GRATUITS_PAR_MOIS } from "./data";
+import type { Identite } from "@/components/Identite";
 
 /**
  * Compte client : inscription, profils consultés dans le mois, Premium et favoris.
@@ -10,7 +11,8 @@ import { DUREE_PREMIUM_JOURS, PROFILS_GRATUITS_PAR_MOIS } from "./data";
  * sinon un client pourrait les réinitialiser.
  */
 
-export type Compte = { prenom: string; telephone: string; creeLe: number };
+/** Identité complète du client (+ `telephone` : son numéro principal, utilisé pour le rappel). */
+export type Compte = Partial<Omit<Identite, "prenom">> & { prenom: string; telephone: string; creeLe: number };
 
 type Etat = {
   compte: Compte | null;
@@ -92,8 +94,8 @@ export function useCompte() {
       ecrire({ ...x, consultes: [...x.consultes, id] });
     },
     // TODO backend : envoyerCodeSms + vérification OTP (Supabase Auth téléphone)
-    inscrire: (prenom: string, telephone: string) =>
-      ecrire({ ...lire(), compte: { prenom: prenom.trim(), telephone: telephone.trim(), creeLe: Date.now() } }),
+    inscrire: (i: Identite) =>
+      ecrire({ ...lire(), compte: { ...i, telephone: i.telephones[0]?.numero ?? "", creeLe: Date.now() } }),
     deconnecter: () => ecrire({ ...lire(), compte: null }),
     /** MAQUETTE : le paiement Mobile Money (MTN MoMo / Airtel Money) sera branché plus tard */
     activerPremium: () => ecrire({ ...lire(), premiumJusqua: Date.now() + DUREE_PREMIUM_JOURS * 86_400_000 }),
