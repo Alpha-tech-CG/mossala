@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
-import { EspacePub, PubLaterale, PubsLateralesFil } from "@/components/EspacePub";
+import { EspacePub, PubsLateralesFil } from "@/components/EspacePub";
 import { ArtisanCardVertical, ProduitCard, SectionTitle, categorieIcons } from "@/components/ui";
 import { artisans, categories, metiers, produits, quartiers } from "@/lib/data";
 
@@ -75,13 +75,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Grand écran : deux barres publicitaires collantes encadrent le contenu.
+      {/* Les barres publicitaires sont fixées aux bords de l'écran (layout, BarresLaterales).
           Sous 1280 px, elles sont réinsérées dans le fil (PubsLateralesFil). */}
-      <div className="mx-auto max-w-6xl xl:grid xl:max-w-[1560px] xl:grid-cols-[150px_minmax(0,1fr)_150px] xl:gap-4 xl:px-4 2xl:grid-cols-[180px_minmax(0,1fr)_180px] 2xl:gap-8">
-        <div className="hidden xl:block">
-          <PubLaterale emplacement="laterale-gauche" variante="rail" className="sticky top-24 mt-8 md:mt-12" />
-        </div>
-        <div className="min-w-0">
+      <div className="mx-auto max-w-6xl">
         {/* Catégories de métiers. Mobile : une seule ligne (3 secteurs + « Tout voir »). */}
         <Reveal className="mt-8 px-5 md:mt-12">
           <SectionTitle
@@ -214,10 +210,6 @@ export default function Home() {
             ))}
           </ol>
         </Reveal>
-        </div>
-        <div className="hidden xl:block">
-          <PubLaterale emplacement="laterale-droite" variante="rail" className="sticky top-24 mt-8 md:mt-12" />
-        </div>
       </div>
 
       {/* Témoignages, sur fond crème pleine largeur */}

@@ -90,12 +90,12 @@ export function PubLaterale({
         <Link
           href={pub.href}
           className={`group flex flex-1 overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.04] transition hover:shadow-md ${
-            rail ? "flex-col" : "flex-col sm:flex-row"
+            rail ? "min-h-0 flex-col" : "flex-col sm:flex-row"
           }`}
         >
           <span
             className={`relative block shrink-0 overflow-hidden bg-foreground ${
-              rail ? "aspect-[3/4] 2xl:aspect-[3/5]" : "aspect-[4/3] sm:aspect-auto sm:w-2/5"
+              rail ? "min-h-0 flex-1" : "aspect-[4/3] sm:aspect-auto sm:w-2/5"
             }`}
           >
             {pub.type === "video" ? (
@@ -105,12 +105,12 @@ export function PubLaterale({
                 src={pub.src}
                 alt=""
                 fill
-                sizes={rail ? "180px" : "(min-width: 640px) 25vw, 50vw"}
+                sizes={rail ? "190px" : "(min-width: 640px) 25vw, 50vw"}
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
             )}
           </span>
-          <span className={`flex flex-1 flex-col ${rail ? "gap-1.5 p-3.5" : "gap-1 p-3 sm:justify-center sm:gap-1.5 sm:p-5"}`}>
+          <span className={`flex shrink-0 flex-col ${rail ? "gap-1.5 p-3.5" : "gap-1 p-3 sm:justify-center sm:gap-1.5 sm:p-5"}`}>
             <span className="text-[9px] font-semibold tracking-[0.2em] text-accent-ink uppercase sm:text-[10px]">
               {pub.annonceur}
             </span>
@@ -237,5 +237,19 @@ export function PubPages() {
     <div className="mx-auto w-full max-w-6xl px-5 pt-4 pb-10">
       <EspacePub emplacement="pages" />
     </div>
+  );
+}
+
+/**
+ * Grand écran (≥ 1280 px) : deux barres fixées aux bords gauche et droit de l'écran, du haut au bas.
+ * Le site reste centré entre les deux (le <body> réserve leur largeur avec un padding).
+ */
+export function BarresLaterales() {
+  const cote = "fixed inset-y-0 z-30 hidden w-[150px] flex-col p-2.5 xl:flex 2xl:w-[190px] 2xl:p-3";
+  return (
+    <>
+      <PubLaterale emplacement="laterale-gauche" variante="rail" className={`${cote} left-0 border-r border-border bg-cream/70`} />
+      <PubLaterale emplacement="laterale-droite" variante="rail" className={`${cote} right-0 border-l border-border bg-cream/70`} />
+    </>
   );
 }
