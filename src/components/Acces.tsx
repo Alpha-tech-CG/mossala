@@ -10,6 +10,7 @@ import {
   DUREE_PREMIUM_JOURS,
   PRIX_PREMIUM_CLIENT_FCFA,
   PROFILS_GRATUITS_PAR_MOIS,
+  PROFILS_SANS_COMPTE,
   fcfa,
 } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
@@ -232,10 +233,26 @@ export function ChoixFormules({
   );
 }
 
-/** Compteur « Profils consultés en novembre : 2 / 5 ». */
+/** Compteur « Profils consultés en novembre : 2 / 5 » (ou « sans compte : 1 / 3 »). */
 export function CompteurProfils() {
   const c = useCompte();
-  if (!c.pret || !c.inscrit) return null;
+  if (!c.pret) return null;
+  if (!c.inscrit) {
+    const vus = PROFILS_SANS_COMPTE - c.restantsSansCompte;
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm text-primary">
+        <span className="flex items-center gap-2">
+          <Eye className="size-4 shrink-0" /> Profils vus sans compte :{" "}
+          <strong className={c.restantsSansCompte ? "" : "text-destructive"}>
+            {vus} / {PROFILS_SANS_COMPTE}
+          </strong>
+        </span>
+        <Link href="/profil" className="font-bold underline-offset-2 hover:underline">
+          Créer mon compte
+        </Link>
+      </div>
+    );
+  }
   if (c.premium)
     return (
       <p className="flex items-center gap-2 rounded-xl bg-success/10 px-4 py-2.5 text-sm font-semibold text-success">
@@ -424,8 +441,8 @@ export function AccesDialog({
             <ChoixFormules gratuitEpuise />
           ) : (
             <InscriptionClient
-              titre="Inscrivez-vous pour voir ce profil"
-              intro={`Gratuit et rapide : ${PROFILS_GRATUITS_PAR_MOIS} profils complets chaque mois, messages illimités.`}
+              titre={`Vous avez vu vos ${PROFILS_SANS_COMPTE} profils gratuits`}
+              intro={`Créez votre compte gratuit pour continuer : ${PROFILS_GRATUITS_PAR_MOIS} profils complets chaque mois, messages illimités.`}
             />
           )}</div>
       </div>
@@ -507,11 +524,12 @@ export function ProfilVerrou({ a, children }: { a: Apercu; children: React.React
 export function BandeauAcces() {
   const c = useCompte();
   if (!c.pret) return null;
-  if (c.inscrit) return <CompteurProfils />;
+  if (c.inscrit || c.restantsSansCompte < PROFILS_SANS_COMPTE) return <CompteurProfils />;
   return (
     <p className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary px-4 py-2.5 text-sm text-primary">
       <span className="flex items-center gap-2">
-        <Lock className="size-4 shrink-0" /> Compte gratuit : {PROFILS_GRATUITS_PAR_MOIS} profils complets par mois.
+        <Lock className="size-4 shrink-0" /> {PROFILS_SANS_COMPTE} profils offerts sans compte, puis{" "}
+        {PROFILS_GRATUITS_PAR_MOIS} par mois avec un compte gratuit.
       </span>
       <Link href="/profil" className="font-bold underline-offset-2 hover:underline">
         Je m’inscris

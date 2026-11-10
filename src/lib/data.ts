@@ -16,6 +16,8 @@ export const DUREE_ILLIMITE_JOURS = 30; // validé par le client
  * mais voir un profil complet demande un compte. Un compte gratuit ouvre 5 profils par mois,
  * ensuite le client passe Premium. Les messages, eux, restent gratuits et illimités.
  */
+/** Profils complets qu'un visiteur peut ouvrir sans compte, avant de devoir s'inscrire. */
+export const PROFILS_SANS_COMPTE = 3;
 export const PROFILS_GRATUITS_PAR_MOIS = 5;
 export const PRIX_PREMIUM_CLIENT_FCFA = 500;
 export const DUREE_PREMIUM_JOURS = 30;

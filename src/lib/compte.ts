@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { DUREE_PREMIUM_JOURS, PROFILS_GRATUITS_PAR_MOIS } from "./data";
+import { DUREE_PREMIUM_JOURS, PROFILS_GRATUITS_PAR_MOIS, PROFILS_SANS_COMPTE } from "./data";
 import type { Identite } from "@/components/Identite";
 
 /**
@@ -21,11 +21,13 @@ type Etat = {
   consultes: string[];
   premiumJusqua: number | null;
   favoris: string[];
+  /** profils ouverts avant de créer un compte (3 au maximum, sans remise à zéro) */
+  vusSansCompte: string[];
 };
 
 const CLE = "artico-compte";
 const moisCourant = () => new Date().toISOString().slice(0, 7);
-const vide = (): Etat => ({ compte: null, mois: moisCourant(), consultes: [], premiumJusqua: null, favoris: [] });
+const vide = (): Etat => ({ compte: null, mois: moisCourant(), consultes: [], premiumJusqua: null, favoris: [], vusSansCompte: [] });
 
 let cache: Etat | null = null;
 const abonnes = new Set<() => void>();
@@ -59,7 +61,7 @@ function ecrire(e: Etat) {
 const NOMS_MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 /** État neutre du rendu serveur : aucune date lue pendant le pré-rendu. */
-const SERVEUR: Etat = { compte: null, mois: "", consultes: [], premiumJusqua: null, favoris: [] };
+const SERVEUR: Etat = { compte: null, mois: "", consultes: [], premiumJusqua: null, favoris: [], vusSansCompte: [] };
 
 export function useCompte() {
   const etat = useSyncExternalStore(
@@ -73,6 +75,8 @@ export function useCompte() {
   const e = etat ?? SERVEUR;
   const premium = e.premiumJusqua !== null;
   const restants = Math.max(0, PROFILS_GRATUITS_PAR_MOIS - e.consultes.length);
+  const vusSansCompte = e.vusSansCompte ?? [];
+  const restantsSansCompte = Math.max(0, PROFILS_SANS_COMPTE - vusSansCompte.length);
   return {
     /** false pendant le rendu serveur : on ne sait pas encore qui est connecté */
     pret: etat !== null,
@@ -81,15 +85,25 @@ export function useCompte() {
     mois: e.mois ? NOMS_MOIS[Number(e.mois.slice(5, 7)) - 1] : "",
     consultes: e.consultes,
     restants,
+    /** visiteur sans compte : profils encore ouvrables avant de devoir s'inscrire */
+    restantsSansCompte,
     premium,
     premiumJusqua: premium ? new Date(e.premiumJusqua!) : null,
     favoris: e.favoris,
     /** profil déjà ouvert ce mois-ci, ou encore ouvrable */
-    peutVoir: (id: string) => e.compte !== null && (premium || e.consultes.includes(id) || restants > 0),
+    peutVoir: (id: string) =>
+      e.compte === null
+        ? vusSansCompte.includes(id) || restantsSansCompte > 0
+        : premium || e.consultes.includes(id) || restants > 0,
     /** compte une consultation (sans effet si déjà vu ce mois-ci ou Premium) */
     consulter: (id: string) => {
       const x = lire();
-      if (!x.compte || x.consultes.includes(id)) return;
+      if (!x.compte) {
+        const vus = x.vusSansCompte ?? [];
+        if (vus.includes(id) || vus.length >= PROFILS_SANS_COMPTE) return;
+        return ecrire({ ...x, vusSansCompte: [...vus, id] });
+      }
+      if (x.consultes.includes(id)) return;
       if (x.premiumJusqua === null && x.consultes.length >= PROFILS_GRATUITS_PAR_MOIS) return;
       ecrire({ ...x, consultes: [...x.consultes, id] });
     },
