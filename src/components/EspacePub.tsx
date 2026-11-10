@@ -90,12 +90,12 @@ export function PubLaterale({
         <Link
           href={pub.href}
           className={`group flex flex-1 overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.04] transition hover:shadow-md ${
-            rail ? "min-h-0 flex-col" : "flex-col sm:flex-row"
+            rail ? "min-h-0 flex-col" : "flex-row"
           }`}
         >
           <span
             className={`relative block shrink-0 overflow-hidden bg-foreground ${
-              rail ? "min-h-0 flex-1" : "aspect-[4/3] sm:aspect-auto sm:w-2/5"
+              rail ? "min-h-0 flex-1" : "min-h-36 w-2/5 sm:min-h-44"
             }`}
           >
             {pub.type === "video" ? (
@@ -105,18 +105,18 @@ export function PubLaterale({
                 src={pub.src}
                 alt=""
                 fill
-                sizes={rail ? "190px" : "(min-width: 640px) 25vw, 50vw"}
+                sizes={rail ? "570px" : "40vw"}
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
             )}
           </span>
-          <span className={`flex shrink-0 flex-col ${rail ? "gap-1.5 p-3.5" : "gap-1 p-3 sm:justify-center sm:gap-1.5 sm:p-5"}`}>
+          <span className={`flex shrink-0 flex-col ${rail ? "gap-2 p-5 2xl:p-6" : "flex-1 justify-center gap-1 p-4 sm:gap-1.5 sm:p-5"}`}>
             <span className="text-[9px] font-semibold tracking-[0.2em] text-accent-ink uppercase sm:text-[10px]">
               {pub.annonceur}
             </span>
-            <span className={`font-serif leading-tight ${rail ? "text-lg" : "text-base sm:text-xl"}`}>{pub.titre}</span>
+            <span className={`font-serif leading-tight ${rail ? "text-3xl" : "text-lg sm:text-2xl"}`}>{pub.titre}</span>
             {pub.texte && (
-              <span className={`text-muted-foreground ${rail ? "text-xs" : "hidden text-sm sm:block"}`}>{pub.texte}</span>
+              <span className={`text-muted-foreground ${rail ? "text-sm" : "text-xs sm:text-sm"}`}>{pub.texte}</span>
             )}
             <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground sm:mt-2">
               {pub.cta} <ArrowRight className="size-3" />
@@ -127,7 +127,7 @@ export function PubLaterale({
         <Link
           href="/services#contact"
           className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-accent-ink/30 bg-cream/60 p-4 text-center transition hover:border-accent-ink/60 ${
-            rail ? "aspect-[3/5]" : "aspect-[4/3] sm:aspect-auto sm:min-h-40"
+            rail ? "" : "min-h-36"
           }`}
         >
           <ImageIcon className="size-6 text-accent-ink" />
@@ -139,14 +139,9 @@ export function PubLaterale({
   );
 }
 
-/** Les deux barres latérales, réinsérées côte à côte dans le fil de la page sous 1280 px. */
+/** Sous 1280 px, la barre latérale est réinsérée dans le fil de la page. */
 export function PubsLateralesFil({ className = "" }: { className?: string }) {
-  return (
-    <div className={`grid grid-cols-2 gap-3 sm:gap-4 xl:hidden ${className}`}>
-      <PubLaterale emplacement="laterale-gauche" variante="carte" className="flex flex-col" />
-      <PubLaterale emplacement="laterale-droite" variante="carte" className="flex flex-col" />
-    </div>
-  );
+  return <PubLaterale emplacement="laterale-gauche" variante="carte" className={`flex flex-col xl:hidden ${className}`} />;
 }
 
 export function EspacePub({ emplacement, className = "" }: { emplacement: Emplacement; className?: string }) {
@@ -243,15 +238,22 @@ export function PubPages() {
 }
 
 /**
- * Grand écran (≥ 1280 px) : deux barres fixées aux bords gauche et droit de l'écran, du haut au bas.
- * Le site reste centré entre les deux (le <body> réserve leur largeur avec un padding).
+ * Grand écran (≥ 1280 px) : une large barre publicitaire collante à gauche, le site à droite.
+ * Sur l'accueil, le cadre commence après le hero (voir app/page.tsx) ; ailleurs, sous le header.
  */
-export function BarresLaterales() {
-  const cote = "fixed inset-y-0 z-30 hidden w-[150px] flex-col p-2.5 xl:flex 2xl:w-[190px] 2xl:p-3";
+export function CadrePub({ children, accueil = false }: { children: React.ReactNode; accueil?: boolean }) {
+  const path = usePathname();
+  if (path === "/" && !accueil) return <>{children}</>;
   return (
-    <>
-      <PubLaterale emplacement="laterale-gauche" variante="rail" className={`${cote} left-0 border-r border-border bg-cream/70`} />
-      <PubLaterale emplacement="laterale-droite" variante="rail" className={`${cote} right-0 border-l border-border bg-cream/70`} />
-    </>
+    <div className="xl:grid xl:grid-cols-[450px_minmax(0,1fr)] xl:gap-6 xl:pl-5 2xl:grid-cols-[570px_minmax(0,1fr)]">
+      <div className="hidden xl:block">
+        <PubLaterale
+          emplacement="laterale-gauche"
+          variante="rail"
+          className="sticky top-20 flex h-[calc(100vh-6rem)] flex-col pt-6"
+        />
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
   );
 }

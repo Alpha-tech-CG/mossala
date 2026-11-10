@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 const EMPLACEMENTS = [
   [Film, "Vidéo sur l’accueil", "Votre spot de 15 à 30 secondes, lu sans le son, en grand sur la page d’accueil.", "Format 16:9 · MP4"],
   [ImageIcon, "Image sur l’accueil", "Une grande affiche pour votre marque, votre promotion ou votre nouvelle boutique.", "Format 16:9 ou 21:9 · JPG/PNG"],
-  [PanelsLeftRight, "Barres latérales de l’accueil", "Deux affiches qui restent visibles à gauche et à droite pendant la lecture ; sur mobile, elles s’insèrent dans la page.", "Image portrait 3:4 · JPG/PNG"],
+  [PanelsLeftRight, "Grande barre latérale", "Une grande affiche à gauche du site, visible sur toutes les pages pendant la lecture ; sur mobile, elle s’insère dans la page.", "Image portrait · JPG/PNG"],
   [GalleryHorizontal, "Bannière sur tout le site", "Présente sur toutes les pages : recherche, profils, quincaillerie…", "Image ou vidéo · format bandeau"],
   [Megaphone, "Annonces sponsorisées", "Votre fiche en tête des résultats de recherche, toujours signalée « Sponsorisé ».", "Artisans et boutiques"],
   [MapPin, "Mise en avant locale", "Soyez visible en premier dans votre quartier ou pour votre métier.", "Ciblage par quartier"],

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
-import { EspacePub, PubsLateralesFil } from "@/components/EspacePub";
+import { CadrePub, EspacePub, PubsLateralesFil } from "@/components/EspacePub";
 import { ArtisanCardVertical, ProduitCard, SectionTitle, categorieIcons } from "@/components/ui";
 import { artisans, categories, metiers, produits, quartiers } from "@/lib/data";
 
@@ -61,6 +61,8 @@ export default function Home() {
     <>
       <Hero />
 
+      <CadrePub accueil>
+
       {/* Bandeau quartiers défilant */}
       <div className="mt-6 overflow-hidden py-3 md:mt-8" aria-label="Quartiers couverts">
         <div className="marquee flex w-max gap-10 text-sm font-semibold text-muted-foreground">
@@ -75,8 +77,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Les barres publicitaires sont fixées aux bords de l'écran (layout, BarresLaterales).
-          Sous 1280 px, elles sont réinsérées dans le fil (PubsLateralesFil). */}
+      {/* Grand écran : la barre publicitaire est à gauche (CadrePub).
+          Sous 1280 px, elle est réinsérée dans le fil (PubsLateralesFil). */}
       <div className="mx-auto max-w-6xl">
         {/* Catégories de métiers. Mobile : une seule ligne (3 secteurs + « Tout voir »). */}
         <Reveal className="mt-8 px-5 md:mt-12">
@@ -297,6 +299,7 @@ export default function Home() {
           </div>
         </Reveal>
       </div>
+      </CadrePub>
     </>
   );
 }

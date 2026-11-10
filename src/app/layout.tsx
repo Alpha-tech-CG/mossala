@@ -4,7 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { AccesModal } from "@/components/Acces";
 import { SplashLoader } from "@/components/Loader";
-import { BarresLaterales, PubPages } from "@/components/EspacePub";
+import { CadrePub, PubPages } from "@/components/EspacePub";
 import { Footer } from "@/components/Footer";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
@@ -25,17 +25,18 @@ export const viewport: Viewport = { themeColor: "#14213d" };
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className={`${figtree.variable} ${playfair.variable} antialiased`}>
-      <body className="flex min-h-screen flex-col font-sans xl:px-[150px] 2xl:px-[190px]">
+      <body className="flex min-h-screen flex-col font-sans">
         <noscript>
           <style>{`.reveal{opacity:1;transform:none}.splash{display:none}`}</style>
         </noscript>
         <SplashLoader />
         <Header />
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">
+          <CadrePub>{children}</CadrePub>
+        </main>
         <PubPages />
         <Footer />
         <AccesModal />
-        <BarresLaterales />
       </body>
     </html>
   );
