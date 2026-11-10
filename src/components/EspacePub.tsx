@@ -235,6 +235,8 @@ export function PubPages() {
   if (path === "/") return null;
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pt-4 pb-10">
+      {/* Mobile et tablette : les deux barres latérales sont réinsérées ici, sur toutes les pages */}
+      <PubsLateralesFil className="mb-6" />
       <EspacePub emplacement="pages" />
     </div>
   );
