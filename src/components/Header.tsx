@@ -3,17 +3,34 @@ import Image from "next/image";
 import { Bell } from "lucide-react";
 import { MobileMenu } from "./MobileMenu";
 
-export function Logo({ className = "h-11 md:h-12" }: { className?: string }) {
+/**
+ * Logo Artopif : le castor, et sous lui le nom en capitales Playfair espacées,
+ * encadré de deux filets dorés (à la place de l'ancien « ARTICO » du logo).
+ */
+export function Logo({ grand = false }: { grand?: boolean }) {
   return (
-    <Link href="/" className="flex shrink-0 items-center" aria-label="Artopif, accueil">
+    <Link href="/" className="flex w-fit shrink-0 flex-col items-center" aria-label="Artopif, accueil">
       <Image
         src="/images/artopif-embleme.png"
-        alt="Artopif"
+        alt=""
         width={1076}
         height={470}
         priority
-        className={`w-auto ${className}`}
+        className={`w-auto ${grand ? "h-16" : "h-8 md:h-9"}`}
       />
+      <span
+        className={`flex items-center text-foreground ${grand ? "mt-1.5 gap-2.5" : "mt-0.5 gap-1.5"}`}
+      >
+        <span aria-hidden className={`h-px bg-accent ${grand ? "w-6" : "w-3"}`} />
+        <span
+          className={`font-serif leading-none font-bold uppercase ${
+            grand ? "mr-[-0.3em] text-2xl tracking-[0.3em]" : "mr-[-0.26em] text-[13px] tracking-[0.26em] md:text-sm"
+          }`}
+        >
+          Artopif
+        </span>
+        <span aria-hidden className={`h-px bg-accent ${grand ? "w-6" : "w-3"}`} />
+      </span>
     </Link>
   );
 }

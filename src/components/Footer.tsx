@@ -6,7 +6,7 @@ export function Footer() {
     <footer className="border-t border-border bg-card">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-4">
         <div className="md:col-span-2">
-          <Logo className="h-20" />
+          <Logo grand />
           <p className="mt-4 max-w-sm text-sm text-muted-foreground">
             Les bonnes adresses, les vrais avis, les bons professionnels. Gratuit pour les particuliers et
             les professionnels dans sa version de base.
