@@ -10,7 +10,7 @@ import { ArrowRight, Film, Image as ImageIcon, Play } from "lucide-react";
  * MAQUETTE : les créations sont déclarées ici ; avec Supabase elles viendront d'une table
  * « publicites » (emplacement, fichier dans le Storage, lien, dates de diffusion).
  */
-export type Emplacement = "accueil-1" | "accueil-2" | "pages";
+export type Emplacement = "accueil-1" | "accueil-2" | "pages" | "laterale-gauche" | "laterale-droite";
 
 type Pub = {
   type: "image" | "video";
@@ -44,8 +44,110 @@ const PUBS: Partial<Record<Emplacement, Pub>> = {
     cta: "Réserver",
     href: "/quincaillerie/ciment-42-5",
   },
+  "laterale-gauche": {
+    type: "image",
+    src: "/images/patrick.jpg",
+    annonceur: "Quincaillerie Total Bacongo",
+    titre: "Câble électrique 2,5 mm²",
+    texte: "Rouleau de 100 m, conseils de pose offerts.",
+    cta: "Voir le prix",
+    href: "/quincaillerie/cable-2-5",
+  },
+  "laterale-droite": {
+    type: "image",
+    src: "/images/marcel.jpg",
+    annonceur: "Menuiserie Ngouaka",
+    titre: "Portes et meubles sur mesure",
+    texte: "Devis gratuit partout à Brazzaville.",
+    cta: "Voir le profil",
+    href: "/artisans/marcel-ngouaka",
+  },
   // « accueil-2 » est libre : l'emplacement vidéo invite les annonceurs.
 };
+
+/**
+ * Barre latérale publicitaire (format portrait).
+ * - « rail » : colonne collante à gauche ou à droite du contenu, sur grand écran ;
+ * - « carte » : la même publicité réinsérée dans le fil de la page (mobile et tablette).
+ * Le contenu du site garde toujours la place principale : la pub ne recouvre jamais rien.
+ */
+export function PubLaterale({
+  emplacement,
+  variante,
+  className = "",
+}: {
+  emplacement: "laterale-gauche" | "laterale-droite";
+  variante: "rail" | "carte";
+  className?: string;
+}) {
+  const pub = PUBS[emplacement];
+  const rail = variante === "rail";
+
+  return (
+    <aside aria-label="Publicité" className={className}>
+      <p className="mb-1.5 text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">Publicité</p>
+      {pub ? (
+        <Link
+          href={pub.href}
+          className={`group flex flex-1 overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.04] transition hover:shadow-md ${
+            rail ? "flex-col" : "flex-col sm:flex-row"
+          }`}
+        >
+          <span
+            className={`relative block shrink-0 overflow-hidden bg-foreground ${
+              rail ? "aspect-[3/4] 2xl:aspect-[3/5]" : "aspect-[4/3] sm:aspect-auto sm:w-2/5"
+            }`}
+          >
+            {pub.type === "video" ? (
+              <video src={pub.src} poster={pub.poster} autoPlay muted loop playsInline className="absolute inset-0 size-full object-cover" />
+            ) : (
+              <Image
+                src={pub.src}
+                alt=""
+                fill
+                sizes={rail ? "180px" : "(min-width: 640px) 25vw, 50vw"}
+                className="object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+            )}
+          </span>
+          <span className={`flex flex-1 flex-col ${rail ? "gap-1.5 p-3.5" : "gap-1 p-3 sm:justify-center sm:gap-1.5 sm:p-5"}`}>
+            <span className="text-[9px] font-semibold tracking-[0.2em] text-accent-ink uppercase sm:text-[10px]">
+              {pub.annonceur}
+            </span>
+            <span className={`font-serif leading-tight ${rail ? "text-lg" : "text-base sm:text-xl"}`}>{pub.titre}</span>
+            {pub.texte && (
+              <span className={`text-muted-foreground ${rail ? "text-xs" : "hidden text-sm sm:block"}`}>{pub.texte}</span>
+            )}
+            <span className="mt-auto inline-flex w-fit items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-accent-foreground sm:mt-2">
+              {pub.cta} <ArrowRight className="size-3" />
+            </span>
+          </span>
+        </Link>
+      ) : (
+        <Link
+          href="/services#contact"
+          className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-accent-ink/30 bg-cream/60 p-4 text-center transition hover:border-accent-ink/60 ${
+            rail ? "aspect-[3/5]" : "aspect-[4/3] sm:aspect-auto sm:min-h-40"
+          }`}
+        >
+          <ImageIcon className="size-6 text-accent-ink" />
+          <span className="font-serif text-lg leading-tight">Votre publicité ici</span>
+          <span className="text-xs text-muted-foreground">Espace disponible</span>
+        </Link>
+      )}
+    </aside>
+  );
+}
+
+/** Les deux barres latérales, réinsérées côte à côte dans le fil de la page sous 1280 px. */
+export function PubsLateralesFil({ className = "" }: { className?: string }) {
+  return (
+    <div className={`grid grid-cols-2 gap-3 sm:gap-4 xl:hidden ${className}`}>
+      <PubLaterale emplacement="laterale-gauche" variante="carte" className="flex flex-col" />
+      <PubLaterale emplacement="laterale-droite" variante="carte" className="flex flex-col" />
+    </div>
+  );
+}
 
 export function EspacePub({ emplacement, className = "" }: { emplacement: Emplacement; className?: string }) {
   const pub = PUBS[emplacement];
