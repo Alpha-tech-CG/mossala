@@ -7,7 +7,7 @@ import { ArtisanCardRow } from "@/components/ui";
 import { type CategorieId, artisans, getMetier, metierLabel, villeArtisan } from "@/lib/data";
 import { FilterChips, SearchBar } from "./Filters";
 
-export const metadata: Metadata = { title: "Rechercher un artisan — Artico" };
+export const metadata: Metadata = { title: "Rechercher un artisan — Artopif" };
 
 const norm = (s: string) =>
   s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();

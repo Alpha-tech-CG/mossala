@@ -3,8 +3,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — Artico",
-  description: "Comment Artico collecte, utilise et protège vos données personnelles, et comment exercer vos droits.",
+  title: "Politique de confidentialité — Artopif",
+  description: "Comment Artopif collecte, utilise et protège vos données personnelles, et comment exercer vos droits.",
 };
 
 /**
@@ -86,7 +86,7 @@ export default function Confidentialite() {
         <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">Vos données</p>
         <h1 className="mt-2 font-serif text-3xl md:text-5xl">Politique de confidentialité</h1>
         <p className="mt-4 text-muted-foreground">
-          Artico met en relation des clients avec des artisans et des quincailleries de Brazzaville. Cette page
+          Artopif met en relation des clients avec des artisans et des quincailleries de Brazzaville. Cette page
           explique simplement quelles données nous traitons, pourquoi, et comment vous gardez la main dessus,
           conformément au Règlement général sur la protection des données (RGPD, règlement UE 2016/679) et à la
           loi congolaise n° 29-2019 du 10 octobre 2019 portant protection des données à caractère personnel.
@@ -122,7 +122,7 @@ export default function Confidentialite() {
           <Section id="responsable" n={1}>
             <p>Le responsable du traitement de vos données est :</p>
             <address className="rounded-2xl bg-card p-5 not-italic ring-1 ring-border">
-              <strong><Champ v={RESPONSABLE.raisonSociale} label="raison sociale" /></strong> (Artico)
+              <strong><Champ v={RESPONSABLE.raisonSociale} label="raison sociale" /></strong> (Artopif)
               <br />
               <Champ v={RESPONSABLE.formeEtCapital} label="forme juridique et capital" /> · RCCM{" "}
               <Champ v={RESPONSABLE.rccm} label="numéro RCCM" />
@@ -212,7 +212,7 @@ export default function Confidentialite() {
             <p>
               La version de base est gratuite. Le Premium se paie par Mobile Money : nous ne voyons ni ne
               conservons votre code secret, seulement la confirmation de l’opérateur. Les publicités affichées sur
-              Artico sont des emplacements signalés, jamais ciblées à partir de vos données personnelles.
+              Artopif sont des emplacements signalés, jamais ciblées à partir de vos données personnelles.
             </p>
             <p>Vos données ne sont jamais vendues ni louées.</p>
           </Section>
@@ -244,7 +244,7 @@ export default function Confidentialite() {
           </Section>
 
           <Section id="traceurs" n={7}>
-            <p>Artico n’utilise que des traceurs strictement nécessaires au service, exemptés de consentement :</p>
+            <p>Artopif n’utilise que des traceurs strictement nécessaires au service, exemptés de consentement :</p>
             <ul className="list-disc space-y-2 pl-5">
               <li>
                 <strong>Session de connexion</strong> des clients et des professionnels, pour rester connecté et

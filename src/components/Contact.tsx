@@ -204,7 +204,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
                 onClick={() => setEtape("message")}
                 className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-left font-bold transition hover:border-primary"
               >
-                <Send className="size-5 text-primary" /> Écrire sur Artico
+                <Send className="size-5 text-primary" /> Écrire sur Artopif
               </button>
             </div>
           )}
@@ -333,7 +333,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
               <p className="mt-3 font-serif text-2xl">Message envoyé</p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {prenom} vient d’être prévenu par WhatsApp et SMS. Sa réponse arrivera dans vos messages
-                Artico, et il peut aussi vous rappeler au <strong className="text-foreground">{tel}</strong>.
+                Artopif, et il peut aussi vous rappeler au <strong className="text-foreground">{tel}</strong>.
               </p>
               {QUOTA_ACTIF && (
                 <div className="mt-5">

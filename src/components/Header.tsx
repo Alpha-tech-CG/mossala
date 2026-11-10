@@ -5,12 +5,12 @@ import { MobileMenu } from "./MobileMenu";
 
 export function Logo({ className = "h-11 md:h-12" }: { className?: string }) {
   return (
-    <Link href="/" className="flex shrink-0 items-center" aria-label="Artico, accueil">
+    <Link href="/" className="flex shrink-0 items-center" aria-label="Artopif, accueil">
       <Image
-        src="/images/artico-logo.png"
-        alt="Artico"
-        width={1175}
-        height={661}
+        src="/images/artopif-embleme.png"
+        alt="Artopif"
+        width={1076}
+        height={470}
         priority
         className={`w-auto ${className}`}
       />

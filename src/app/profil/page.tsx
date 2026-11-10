@@ -3,7 +3,7 @@ import { BackHeader } from "@/components/ui";
 import { artisans, metierLabel } from "@/lib/data";
 import { MonCompte } from "./MonCompte";
 
-export const metadata: Metadata = { title: "Mon compte — Artico" };
+export const metadata: Metadata = { title: "Mon compte — Artopif" };
 
 export default function Page() {
   const annuaire = artisans.map((a) => ({

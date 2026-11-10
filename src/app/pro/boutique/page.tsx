@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { EspaceBoutique } from "./EspaceBoutique";
 
-export const metadata: Metadata = { title: "Mon espace boutique — Artico" };
+export const metadata: Metadata = { title: "Mon espace boutique — Artopif" };
 
 export default function BoutiquePage() {
   return (

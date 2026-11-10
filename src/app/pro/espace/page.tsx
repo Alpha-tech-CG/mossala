@@ -7,7 +7,7 @@ import { ARTISAN_DEMO_ID, JOUR_DEMO, demandes, rendezVous, statsArtisan } from "
 import { DemandeCard } from "./shared";
 import { DispoToggle } from "./widgets";
 
-export const metadata: Metadata = { title: "Mon espace artisan — Artico" };
+export const metadata: Metadata = { title: "Mon espace artisan — Artopif" };
 
 export default function EspaceAccueil() {
   const a = getArtisan(ARTISAN_DEMO_ID)!;

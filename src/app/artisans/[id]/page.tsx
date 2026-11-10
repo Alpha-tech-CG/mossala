@@ -17,7 +17,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata(props: PageProps<"/artisans/[id]">) {
   const a = getArtisan((await props.params).id);
-  return { title: a ? `${a.nom} — Artico` : "Artisan introuvable" };
+  return { title: a ? `${a.nom} — Artopif` : "Artisan introuvable" };
 }
 
 export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {

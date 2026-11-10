@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Artico — Artisans de confiance et quincaillerie à Brazzaville",
+  title: "Artopif — Artisans de confiance et quincaillerie à Brazzaville",
   description:
     "Contactez des artisans de confiance par appel ou message et réservez vos matériaux au prix affiché.",
 };

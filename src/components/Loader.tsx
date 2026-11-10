@@ -3,12 +3,12 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-/** Castor Artico qui flotte + barre dorée qui défile. */
-export function LoaderArtico({ label = "Chargement…" }: { label?: string }) {
+/** Castor Artopif qui flotte + barre dorée qui défile. */
+export function LoaderArtopif({ label = "Chargement…" }: { label?: string }) {
   return (
     <div role="status" aria-live="polite" className="flex flex-col items-center gap-5">
       <Image
-        src="/images/artico-embleme.png"
+        src="/images/artopif-embleme.png"
         alt=""
         width={1076}
         height={470}
@@ -49,7 +49,7 @@ export function SplashLoader() {
   if (etape === "parti") return null;
   return (
     <div className={`splash ${etape === "fondu" ? "is-done" : ""}`} aria-hidden={etape === "fondu"}>
-      <LoaderArtico />
+      <LoaderArtopif />
     </div>
   );
 }

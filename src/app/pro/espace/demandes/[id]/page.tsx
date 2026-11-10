@@ -8,7 +8,7 @@ import { UrgenceChip, initialesClient } from "../../shared";
 import { ActionsDemande } from "./ActionsDemande";
 
 export const instant = false;
-export const metadata: Metadata = { title: "Demande reçue — Artico" };
+export const metadata: Metadata = { title: "Demande reçue — Artopif" };
 
 export function generateStaticParams() {
   return demandes.map((d) => ({ id: d.id }));

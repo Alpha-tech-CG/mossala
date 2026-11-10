@@ -34,7 +34,7 @@ export function Footer() {
         </div>
       </div>
       <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border px-5 py-5 text-center text-xs text-muted-foreground">
-        <span>© 2026 Artico · Brazzaville, République du Congo</span>
+        <span>© 2026 Artopif · Brazzaville, République du Congo</span>
         <span aria-hidden>·</span>
         <Link href="/confidentialite" className="font-semibold underline-offset-2 hover:text-foreground hover:underline">
           Politique de confidentialité

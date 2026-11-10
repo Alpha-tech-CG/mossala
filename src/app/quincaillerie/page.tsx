@@ -25,7 +25,7 @@ import {
   type Lieu,
 } from "@/lib/data";
 
-export const metadata: Metadata = { title: "Quincaillerie — Artico" };
+export const metadata: Metadata = { title: "Quincaillerie — Artopif" };
 
 export default function QuincailleriePage(props: PageProps<"/quincaillerie">) {
   return (

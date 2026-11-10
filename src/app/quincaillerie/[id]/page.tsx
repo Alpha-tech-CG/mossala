@@ -16,7 +16,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata(props: PageProps<"/quincaillerie/[id]">): Promise<Metadata> {
   const p = getProduit((await props.params).id);
-  return { title: p ? `${p.nom} : comparer les prix — Artico` : "Produit — Artico" };
+  return { title: p ? `${p.nom} : comparer les prix — Artopif` : "Produit — Artopif" };
 }
 
 export default async function ProduitPage(props: PageProps<"/quincaillerie/[id]">) {

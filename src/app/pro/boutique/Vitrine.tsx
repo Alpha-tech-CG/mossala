@@ -8,7 +8,7 @@ import { AUJOURDHUI, type EtatBoutique, type Infos } from "./store";
 type Maj = (f: (e: EtatBoutique) => EtatBoutique) => void;
 const input = "w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm";
 
-/** Promotions affichées sur la vitrine Artico. */
+/** Promotions affichées sur la vitrine Artopif. */
 export function Promotions({ etat, maj }: { etat: EtatBoutique; maj: Maj }) {
   const [articleId, setArticleId] = useState("");
   const [prix, setPrix] = useState("");
@@ -114,7 +114,7 @@ export function MaBoutique({ etat, maj }: { etat: EtatBoutique; maj: Maj }) {
   const stats = [
     { Icon: Eye, label: "Vues de la vitrine (30 j)", valeur: "1 284" },
     { Icon: MousePointerClick, label: "Clics « Réserver »", valeur: "96" },
-    { Icon: Phone, label: "Appels depuis Artico", valeur: "41" },
+    { Icon: Phone, label: "Appels depuis Artopif", valeur: "41" },
   ];
 
   return (

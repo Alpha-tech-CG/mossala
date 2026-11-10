@@ -14,7 +14,7 @@ import {
 import { Reveal } from "@/components/Reveal";
 import { metiers } from "@/lib/metiers";
 
-export const metadata: Metadata = { title: "Espace professionnels — Artico" };
+export const metadata: Metadata = { title: "Espace professionnels — Artopif" };
 
 const avantages = [
   { Icon: Percent, t: "0 % de commission", d: "Vos prix restent libres. Nous ne prenons rien sur vos prestations." },

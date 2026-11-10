@@ -17,7 +17,7 @@ import { BackHeader } from "@/components/ui";
 import { DemandeAnnonceur } from "./DemandeAnnonceur";
 
 export const metadata: Metadata = {
-  title: "Nos services — Artico",
+  title: "Nos services — Artopif",
   description:
     "Publicité vidéo et image, annonces sponsorisées, mise en avant locale et outils Premium pour les boutiques à Brazzaville.",
 };
@@ -52,7 +52,7 @@ export default function ServicesPage() {
         </h2>
         <p className="mt-4 text-muted-foreground">
           Les particuliers consultent gratuitement les avis et les informations, les artisans et les commerces
-          créent gratuitement leur fiche. Artico se finance en vendant de la visibilité : jamais de faux avis ni
+          créent gratuitement leur fiche. Artopif se finance en vendant de la visibilité : jamais de faux avis ni
           de badge acheté.
         </p>
         <a
@@ -99,7 +99,7 @@ export default function ServicesPage() {
 
       <section className="mt-12 grid gap-6 md:grid-cols-[1fr_minmax(0,26rem)]">
         <div className="space-y-4">
-          <h2 className="font-serif text-3xl">Pourquoi Artico</h2>
+          <h2 className="font-serif text-3xl">Pourquoi Artopif</h2>
           {(
             [
               [Users, "Une audience qualifiée", "Des gens qui ont un besoin concret : réparer, construire, acheter."],

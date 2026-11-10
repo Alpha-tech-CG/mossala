@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BackHeader } from "@/components/ui";
 import { Inscription } from "./Inscription";
 
-export const metadata: Metadata = { title: "Inscription professionnelle — Artico" };
+export const metadata: Metadata = { title: "Inscription professionnelle — Artopif" };
 
 export default function InscriptionPage() {
   return (

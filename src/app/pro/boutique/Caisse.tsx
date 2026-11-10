@@ -178,7 +178,7 @@ export function Caisse({ etat, maj }: { etat: EtatBoutique; maj: Maj }) {
                 <strong className="shrink-0">{fcfa(v.quantite * v.prixUnitaire)}</strong>
               </div>
               <p className="text-xs text-muted-foreground">
-                {v.paiement} · {v.canal === "reservation" ? "Réservation Artico" : "Comptoir"}
+                {v.paiement} · {v.canal === "reservation" ? "Réservation Artopif" : "Comptoir"}
                 {v.clientId && ` · ${etat.clients.find((c) => c.id === v.clientId)?.nom ?? ""}`}
               </p>
             </li>

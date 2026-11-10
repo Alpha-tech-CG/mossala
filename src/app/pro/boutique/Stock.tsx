@@ -131,7 +131,7 @@ export function Stock({ etat, maj }: { etat: EtatBoutique; maj: Maj }) {
                   <button
                     onClick={() => modifier(a.id, { enLigne: !a.enLigne })}
                     aria-pressed={a.enLigne}
-                    title={a.enLigne ? "Visible sur Artico" : "Masqué sur Artico"}
+                    title={a.enLigne ? "Visible sur Artopif" : "Masqué sur Artopif"}
                     className="flex size-8 items-center justify-center rounded-full ring-1 ring-border"
                   >
                     {a.enLigne ? <Eye className="size-4" /> : <EyeOff className="size-4 text-muted-foreground" />}

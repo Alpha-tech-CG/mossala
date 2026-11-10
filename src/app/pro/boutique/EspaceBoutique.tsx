@@ -40,7 +40,7 @@ const AVANTAGES_PREMIUM = [
   [Package, "Gestion du stock", "Mouvements, seuils d’alerte, valeur du stock, réassort par WhatsApp"],
   [ShoppingCart, "Caisse", "Ventes au comptoir, Mobile Money, stock décompté automatiquement"],
   [Users, "Fichier clients", "Historique d’achats, notes, relance des clients inactifs"],
-  [BadgePercent, "Promotions", "Prix barrés sur votre vitrine Artico, avec date de fin"],
+  [BadgePercent, "Promotions", "Prix barrés sur votre vitrine Artopif, avec date de fin"],
   [Store, "Vitrine et statistiques", "Infos de la boutique, vues, clics et appels reçus"],
 ] as const;
 
@@ -91,7 +91,7 @@ export function EspaceBoutique() {
               <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent uppercase">
                 <Crown className="size-4" /> Boutique Premium
               </p>
-              <h2 className="mt-2 font-serif text-3xl leading-tight">Gérez toute votre boutique depuis Artico</h2>
+              <h2 className="mt-2 font-serif text-3xl leading-tight">Gérez toute votre boutique depuis Artopif</h2>
               <p className="mt-2 max-w-xl text-sm text-white/70">
                 La formule gratuite vous donne vos réservations. Premium ajoute un vrai logiciel de gestion,
                 pensé pour les quincailleries de Brazzaville.
