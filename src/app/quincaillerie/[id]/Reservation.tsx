@@ -31,7 +31,7 @@ export function Reservation(props: { prix: number; stock: number; unite: string;
   }
 
   return (
-    <div className="mt-5 space-y-4">
+    <div className="mt-4 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold">Quantité</span>
         <div className="flex items-center gap-3">

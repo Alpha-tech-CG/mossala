@@ -13,6 +13,10 @@ import {
   Sprout,
   Cable,
   Droplets,
+  Hammer,
+  LayoutGrid,
+  Nut,
+  Store,
   PaintBucket,
   Package,
   ArrowLeft,
@@ -30,9 +34,12 @@ import {
   type Artisan,
   type CategorieId,
   type MetierId,
+  type Lieu,
   type Produit,
+  VILLE_DEFAUT,
   fcfa,
-  getBoutique,
+  lienLieu,
+  resumeProduit,
   getMetier,
   initiales,
   metierLabel,
@@ -122,6 +129,9 @@ const produitIcons: Record<string, typeof Wrench> = {
   Peinture: PaintBucket,
   Électricité: Cable,
   Plomberie: Droplets,
+  Outillage: Hammer,
+  Fixation: Nut,
+  Carrelage: LayoutGrid,
 };
 
 /** Pastille de disponibilité (critère de recherche du cahier des charges). */
@@ -313,12 +323,16 @@ export function ArtisanCardRow({ a }: { a: Artisan }) {
   );
 }
 
-export function ProduitCard({ p, wide }: { p: Produit; wide?: boolean }) {
-  const b = getBoutique(p.boutique);
+/**
+ * Carte produit : meilleur prix dans la ville du client, nombre de quincailleries qui l'ont,
+ * et la boutique la moins chère. Le lien garde la ville et le quartier choisis.
+ */
+export function ProduitCard({ p, wide, lieu = { ville: VILLE_DEFAUT } }: { p: Produit; wide?: boolean; lieu?: Lieu }) {
+  const r = resumeProduit(p.id, lieu);
   return (
     <Link
-      href={`/quincaillerie/${p.id}`}
-      className={`${wide ? "" : "w-44 shrink-0 md:w-auto"} group overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-1 hover:shadow-lg`}
+      href={lienLieu(`/quincaillerie/${p.id}`, lieu)}
+      className={`${wide ? "" : "w-44 shrink-0 md:w-auto"} group flex flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-1 hover:shadow-lg`}
     >
       <div className="relative h-32 overflow-hidden md:h-40">
         {p.image ? (
@@ -335,23 +349,33 @@ export function ProduitCard({ p, wide }: { p: Produit; wide?: boolean }) {
         <span className="absolute top-2.5 left-2.5 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold tracking-wide text-foreground uppercase backdrop-blur">
           {p.categorie}
         </span>
-        {p.promo && (
+        {r?.promo && (
           <span className="absolute top-2.5 right-2.5 rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase">
             Promo
           </span>
         )}
       </div>
-      <div className="p-3.5">
+      <div className="flex flex-1 flex-col p-3.5">
         <h3 className="text-sm font-bold leading-snug">{p.nom}</h3>
-        <p className="mt-1 text-lg font-bold text-primary">
-          {fcfa(p.promo ?? p.prix)}
-          <span className="text-xs font-medium text-muted-foreground"> / {p.unite}</span>
-        </p>
-        {p.promo && <p className="text-xs text-muted-foreground line-through">{fcfa(p.prix)}</p>}
-        <p className="truncate text-xs text-muted-foreground">{b.nom}</p>
-        <p className={`mt-1.5 text-[11px] font-bold ${p.stock > 10 ? "text-success" : "text-accent-ink"}`}>
-          {p.stock > 10 ? "En stock" : `Plus que ${p.stock} en stock`}
-        </p>
+        {r ? (
+          <>
+            <p className="mt-1 text-lg font-bold text-primary">
+              {!r.memePrix && <span className="text-xs font-semibold text-muted-foreground">dès </span>}
+              {fcfa(r.min)}
+              <span className="text-xs font-medium text-muted-foreground"> / {p.unite}</span>
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {r.memePrix && r.nb > 1 ? "Même prix partout · " : ""}
+              {r.nb} quincaillerie{r.nb > 1 ? "s" : ""} à {lieu.ville}
+            </p>
+            <p className="mt-auto flex items-center gap-1 truncate pt-1.5 text-[11px] font-bold text-success">
+              <Store className="size-3 shrink-0" />
+              <span className="truncate">{r.memePrix ? r.plusProche.b.nom : r.moinsCher.b.nom}</span>
+            </p>
+          </>
+        ) : (
+          <p className="mt-1 text-xs text-muted-foreground">Pas encore disponible à {lieu.ville}</p>
+        )}
       </div>
     </Link>
   );

@@ -179,7 +179,7 @@ export default function Home() {
             <SectionTitle eyebrow="Prix fixes affichés" title="Quincaillerie" href="/quincaillerie" />
           </div>
           <div className="no-scrollbar mt-4 flex gap-4 overflow-x-auto px-5 pt-1 pb-3 md:grid md:grid-cols-4 md:overflow-visible">
-            {produits.map((p) => (
+            {produits.slice(0, 4).map((p) => (
               <ProduitCard key={p.id} p={p} />
             ))}
           </div>

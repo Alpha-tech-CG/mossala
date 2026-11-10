@@ -366,9 +366,65 @@ export const artisans: Artisan[] = [
   },
 ];
 
+/* ------------------------------------------------------------------ *
+ * Quincaillerie : villes, boutiques, catalogue et offres par boutique *
+ * MAQUETTE : avec Supabase, ce seront les tables villes, boutiques,   *
+ * produits et offres (prix et stock propres à chaque boutique).       *
+ * ------------------------------------------------------------------ */
+
+export type Ville = { nom: string; quartiers: string[] };
+
+/** Grandes villes du Congo. Les quartiers (arrondissements) sont renseignés pour les deux métropoles. */
+export const villes: Ville[] = [
+  {
+    nom: "Brazzaville",
+    quartiers: ["Bacongo", "Makélékélé", "Poto-Poto", "Moungali", "Ouenzé", "Talangaï", "Mfilou", "Madibou", "Djiri", "Centre-ville"],
+  },
+  { nom: "Pointe-Noire", quartiers: ["Lumumba", "Mvou-Mvou", "Tié-Tié", "Loandjili", "Mongo-Mpoukou", "Ngoyo"] },
+  { nom: "Dolisie", quartiers: [] },
+  { nom: "Nkayi", quartiers: [] },
+  { nom: "Ouesso", quartiers: [] },
+  { nom: "Owando", quartiers: [] },
+  { nom: "Oyo", quartiers: [] },
+  { nom: "Impfondo", quartiers: [] },
+  { nom: "Madingou", quartiers: [] },
+  { nom: "Sibiti", quartiers: [] },
+  { nom: "Kinkala", quartiers: [] },
+  { nom: "Gamboma", quartiers: [] },
+  { nom: "Djambala", quartiers: [] },
+  { nom: "Mossendjo", quartiers: [] },
+  { nom: "Ewo", quartiers: [] },
+];
+
+export const VILLE_DEFAUT = "Brazzaville";
+export const getVille = (nom?: string) => villes.find((v) => v.nom === nom);
+
+/** Quartiers limitrophes, pour proposer d'abord les boutiques les plus proches. */
+const voisins: Record<string, string[]> = {
+  Bacongo: ["Makélékélé", "Centre-ville", "Poto-Poto"],
+  Makélékélé: ["Bacongo", "Madibou"],
+  "Poto-Poto": ["Moungali", "Centre-ville", "Bacongo", "Ouenzé"],
+  Moungali: ["Poto-Poto", "Ouenzé", "Mfilou"],
+  Ouenzé: ["Moungali", "Talangaï", "Poto-Poto"],
+  Talangaï: ["Ouenzé", "Djiri"],
+  Mfilou: ["Moungali", "Madibou"],
+  Madibou: ["Makélékélé", "Mfilou"],
+  Djiri: ["Talangaï"],
+  "Centre-ville": ["Poto-Poto", "Bacongo"],
+  Lumumba: ["Mvou-Mvou"],
+  "Mvou-Mvou": ["Lumumba", "Tié-Tié"],
+  "Tié-Tié": ["Mvou-Mvou", "Loandjili"],
+  Loandjili: ["Tié-Tié", "Mongo-Mpoukou", "Ngoyo"],
+  "Mongo-Mpoukou": ["Loandjili"],
+  Ngoyo: ["Loandjili"],
+};
+
+export type Lieu = { ville: string; quartier?: string };
+
 export type Boutique = {
   id: string;
   nom: string;
+  ville: string;
   quartier: string;
   adresse: string;
   telephone: string;
@@ -379,6 +435,7 @@ export const boutiques: Boutique[] = [
   {
     id: "total-bacongo",
     nom: "Quincaillerie Total Bacongo",
+    ville: "Brazzaville",
     quartier: "Bacongo",
     adresse: "Av. Matsoua, près du marché Total",
     telephone: "+242 06 700 11 22",
@@ -387,26 +444,93 @@ export const boutiques: Boutique[] = [
   {
     id: "batiplus-poto-poto",
     nom: "Bâtiplus Poto-Poto",
+    ville: "Brazzaville",
     quartier: "Poto-Poto",
     adresse: "Rue Mbochis, face à la pharmacie",
     telephone: "+242 05 700 33 44",
     horaires: "Lun–Sam · 8h–19h",
   },
+  {
+    id: "moungali-materiaux",
+    nom: "Moungali Matériaux",
+    ville: "Brazzaville",
+    quartier: "Moungali",
+    adresse: "Av. de la Paix, rond-point Moungali",
+    telephone: "+242 06 711 45 90",
+    horaires: "Lun–Sam · 7h–18h",
+  },
+  {
+    id: "talangai-btp",
+    nom: "Talangaï BTP",
+    ville: "Brazzaville",
+    quartier: "Talangaï",
+    adresse: "Route du Nord, arrêt Mikalou",
+    telephone: "+242 05 722 18 63",
+    horaires: "Lun–Dim · 7h–19h",
+  },
+  {
+    id: "ocean-batiment",
+    nom: "Océan Bâtiment",
+    ville: "Pointe-Noire",
+    quartier: "Lumumba",
+    adresse: "Av. Charles de Gaulle",
+    telephone: "+242 06 730 52 14",
+    horaires: "Lun–Sam · 7h30–18h30",
+  },
+  {
+    id: "quincaillerie-tie-tie",
+    nom: "Quincaillerie de Tié-Tié",
+    ville: "Pointe-Noire",
+    quartier: "Tié-Tié",
+    adresse: "En face du marché de Tié-Tié",
+    telephone: "+242 05 741 07 36",
+    horaires: "Lun–Sam · 8h–18h",
+  },
+  {
+    id: "niari-materiaux",
+    nom: "Niari Matériaux",
+    ville: "Dolisie",
+    quartier: "Centre-ville",
+    adresse: "Près de la gare",
+    telephone: "+242 06 752 61 08",
+    horaires: "Lun–Sam · 7h30–17h30",
+  },
+  {
+    id: "sangha-quincaillerie",
+    nom: "Quincaillerie de la Sangha",
+    ville: "Ouesso",
+    quartier: "Centre-ville",
+    adresse: "Rue du port",
+    telephone: "+242 05 763 29 41",
+    horaires: "Lun–Sam · 8h–17h",
+  },
 ];
 
+export const getBoutique = (id: string) => boutiques.find((b) => b.id === id)!;
+
+/**
+ * Proximité d'une boutique par rapport au client :
+ * 0 = même quartier, 1 = quartier voisin, 2 = même ville, 3 = autre ville.
+ */
+export function proximite(b: Boutique, lieu: Lieu): 0 | 1 | 2 | 3 {
+  if (b.ville !== lieu.ville) return 3;
+  if (!lieu.quartier) return 2;
+  if (b.quartier === lieu.quartier) return 0;
+  return voisins[lieu.quartier]?.includes(b.quartier) ? 1 : 2;
+}
+
+export const libelleProximite = (b: Boutique, lieu: Lieu) =>
+  ["Dans votre quartier", "Quartier voisin", `À ${b.ville}`, `À ${b.ville}`][proximite(b, lieu)];
+
+/** Fiche catalogue : commune à toutes les boutiques. Prix et stock sont dans les offres. */
 export type Produit = {
   id: string;
   nom: string;
   categorie: string;
   marque: string;
-  prix: number;
   unite: string;
-  stock: number;
-  boutique: string;
   image?: string;
   description: string;
-  /** Prix promotionnel en cours, affiché à la place du prix habituel. */
-  promo?: number;
 };
 
 export const categoriesProduits = [
@@ -425,23 +549,16 @@ export const produits: Produit[] = [
     nom: "Ciment 42,5 kg",
     categorie: "Ciment",
     marque: "Dangote",
-    prix: 8500,
     unite: "sac",
-    stock: 120,
-    boutique: "total-bacongo",
     image: "/images/ciment.jpg",
     description: "Ciment Portland CPJ 42,5 pour maçonnerie, dalles et enduits.",
-    promo: 7900,
   },
   {
     id: "peinture-blanche-20l",
     nom: "Peinture blanche 20 L",
     categorie: "Peinture",
     marque: "Seigneurie",
-    prix: 32000,
     unite: "seau",
-    stock: 18,
-    boutique: "batiplus-poto-poto",
     image: "/images/peinture.jpg",
     description: "Peinture acrylique mate pour murs et plafonds intérieurs.",
   },
@@ -450,10 +567,7 @@ export const produits: Produit[] = [
     nom: "Tuyau PVC Ø32 (4 m)",
     categorie: "Plomberie",
     marque: "Nicoll",
-    prix: 4500,
     unite: "barre",
-    stock: 60,
-    boutique: "total-bacongo",
     description: "Tuyau PVC pression pour alimentation et évacuation.",
   },
   {
@@ -461,13 +575,233 @@ export const produits: Produit[] = [
     nom: "Câble 2,5 mm² (100 m)",
     categorie: "Électricité",
     marque: "Nexans",
-    prix: 38000,
     unite: "rouleau",
-    stock: 7,
-    boutique: "batiplus-poto-poto",
     description: "Câble rigide pour prises et circuits de puissance.",
   },
+  {
+    id: "ciment-32-5",
+    nom: "Ciment 32,5 kg",
+    categorie: "Ciment",
+    marque: "Forspak",
+    unite: "sac",
+    description: "Ciment pour mortiers, crépis et petits travaux de maçonnerie.",
+  },
+  {
+    id: "peinture-glycero-4l",
+    nom: "Peinture glycéro 4 L",
+    categorie: "Peinture",
+    marque: "Astral",
+    unite: "pot",
+    description: "Laque brillante pour boiseries, portes et ferronnerie.",
+  },
+  {
+    id: "disjoncteur-16a",
+    nom: "Disjoncteur 16 A",
+    categorie: "Électricité",
+    marque: "Legrand",
+    unite: "pièce",
+    description: "Disjoncteur divisionnaire pour circuits de prises.",
+  },
+  {
+    id: "ampoule-led-12w",
+    nom: "Ampoule LED 12 W",
+    categorie: "Électricité",
+    marque: "Philips",
+    unite: "pièce",
+    description: "Culot E27, lumière blanche, équivalent 100 W.",
+  },
+  {
+    id: "robinet-laiton",
+    nom: "Robinet laiton 1/2″",
+    categorie: "Plomberie",
+    marque: "Sferaco",
+    unite: "pièce",
+    description: "Robinet d'arrêt en laiton pour cuisine et salle d'eau.",
+  },
+  {
+    id: "marteau-500g",
+    nom: "Marteau de coffreur 500 g",
+    categorie: "Outillage",
+    marque: "Stanley",
+    unite: "pièce",
+    description: "Manche fibre antivibration, tête forgée.",
+  },
+  {
+    id: "truelle",
+    nom: "Truelle de maçon",
+    categorie: "Outillage",
+    marque: "Taliaplast",
+    unite: "pièce",
+    description: "Lame acier trempé, manche bois.",
+  },
+  {
+    id: "pointes-70",
+    nom: "Pointes 70 mm (1 kg)",
+    categorie: "Fixation",
+    marque: "Tréfileries",
+    unite: "kg",
+    description: "Pointes tête plate pour coffrage et charpente.",
+  },
+  {
+    id: "chevilles-8",
+    nom: "Chevilles 8 mm (boîte de 100)",
+    categorie: "Fixation",
+    marque: "Fischer",
+    unite: "boîte",
+    description: "Chevilles nylon pour béton et brique pleine.",
+  },
+  {
+    id: "carreau-40",
+    nom: "Carreau de sol 40×40",
+    categorie: "Carrelage",
+    marque: "Twyford",
+    unite: "m²",
+    description: "Grès émaillé antidérapant pour intérieur et terrasse.",
+  },
 ];
+
+export const getProduit = (id: string) => produits.find((p) => p.id === id);
+
+/** Prix et stock d'un produit dans une boutique donnée. */
+export type Offre = { produit: string; boutique: string; prix: number; stock: number; promo?: number };
+
+const o = (produit: string, boutique: string, prix: number, stock: number, promo?: number): Offre => ({
+  produit,
+  boutique,
+  prix,
+  stock,
+  promo,
+});
+
+export const offres: Offre[] = [
+  o("ciment-42-5", "total-bacongo", 8500, 120, 7900),
+  o("ciment-42-5", "batiplus-poto-poto", 8700, 40),
+  o("ciment-42-5", "moungali-materiaux", 8400, 80),
+  o("ciment-42-5", "talangai-btp", 8600, 25),
+  o("ciment-42-5", "ocean-batiment", 9200, 200),
+  o("ciment-42-5", "quincaillerie-tie-tie", 9000, 60),
+  o("ciment-42-5", "niari-materiaux", 9500, 30),
+  o("ciment-42-5", "sangha-quincaillerie", 11000, 15),
+  o("ciment-32-5", "total-bacongo", 7500, 90),
+  o("ciment-32-5", "batiplus-poto-poto", 7500, 50),
+  o("ciment-32-5", "moungali-materiaux", 7500, 60),
+  o("ciment-32-5", "ocean-batiment", 8200, 100),
+  o("ciment-32-5", "niari-materiaux", 8500, 20),
+  o("peinture-blanche-20l", "batiplus-poto-poto", 32000, 18),
+  o("peinture-blanche-20l", "total-bacongo", 33500, 10),
+  o("peinture-blanche-20l", "moungali-materiaux", 31000, 6),
+  o("peinture-blanche-20l", "ocean-batiment", 34000, 12),
+  o("peinture-blanche-20l", "quincaillerie-tie-tie", 33000, 8),
+  o("peinture-glycero-4l", "batiplus-poto-poto", 14500, 20),
+  o("peinture-glycero-4l", "talangai-btp", 15000, 9),
+  o("peinture-glycero-4l", "ocean-batiment", 16000, 14),
+  o("cable-2-5", "batiplus-poto-poto", 38000, 7),
+  o("cable-2-5", "total-bacongo", 39500, 12),
+  o("cable-2-5", "moungali-materiaux", 37500, 4),
+  o("cable-2-5", "talangai-btp", 38500, 10),
+  o("cable-2-5", "ocean-batiment", 41000, 9),
+  o("cable-2-5", "niari-materiaux", 42000, 3),
+  o("disjoncteur-16a", "total-bacongo", 6500, 30),
+  o("disjoncteur-16a", "batiplus-poto-poto", 6500, 25),
+  o("disjoncteur-16a", "moungali-materiaux", 6500, 15),
+  o("disjoncteur-16a", "talangai-btp", 6500, 12),
+  o("disjoncteur-16a", "ocean-batiment", 6500, 20),
+  o("ampoule-led-12w", "batiplus-poto-poto", 1500, 200),
+  o("ampoule-led-12w", "total-bacongo", 1500, 150),
+  o("ampoule-led-12w", "quincaillerie-tie-tie", 1700, 100),
+  o("ampoule-led-12w", "sangha-quincaillerie", 2000, 40),
+  o("tuyau-pvc-32", "total-bacongo", 4500, 60),
+  o("tuyau-pvc-32", "moungali-materiaux", 4300, 35),
+  o("tuyau-pvc-32", "talangai-btp", 4700, 50),
+  o("tuyau-pvc-32", "ocean-batiment", 4800, 80),
+  o("tuyau-pvc-32", "quincaillerie-tie-tie", 4600, 45),
+  o("tuyau-pvc-32", "niari-materiaux", 5000, 20),
+  o("robinet-laiton", "total-bacongo", 5500, 25),
+  o("robinet-laiton", "batiplus-poto-poto", 6000, 18),
+  o("robinet-laiton", "ocean-batiment", 6500, 10),
+  o("marteau-500g", "total-bacongo", 7000, 15),
+  o("marteau-500g", "batiplus-poto-poto", 7000, 12),
+  o("marteau-500g", "moungali-materiaux", 6500, 8),
+  o("marteau-500g", "niari-materiaux", 7500, 5),
+  o("truelle", "total-bacongo", 3000, 30),
+  o("truelle", "talangai-btp", 2800, 20),
+  o("truelle", "quincaillerie-tie-tie", 3200, 25),
+  o("truelle", "sangha-quincaillerie", 3500, 10),
+  o("pointes-70", "total-bacongo", 1800, 80),
+  o("pointes-70", "batiplus-poto-poto", 1800, 60),
+  o("pointes-70", "moungali-materiaux", 1700, 40),
+  o("pointes-70", "talangai-btp", 1900, 50),
+  o("pointes-70", "ocean-batiment", 2000, 70),
+  o("pointes-70", "niari-materiaux", 2100, 30),
+  o("pointes-70", "sangha-quincaillerie", 2300, 20),
+  o("chevilles-8", "batiplus-poto-poto", 2500, 40),
+  o("chevilles-8", "moungali-materiaux", 2400, 25),
+  o("chevilles-8", "ocean-batiment", 2800, 30),
+  o("carreau-40", "total-bacongo", 6500, 300),
+  o("carreau-40", "batiplus-poto-poto", 7000, 180),
+  o("carreau-40", "ocean-batiment", 7200, 250),
+  o("carreau-40", "quincaillerie-tie-tie", 6900, 120),
+];
+
+/** Prix payé par le client (prix promo s'il y en a un). */
+export const prixOffre = (of: Offre) => of.promo ?? of.prix;
+
+export type OffreBoutique = Offre & { b: Boutique; distance: 0 | 1 | 2 | 3 };
+
+/**
+ * Offres d'un produit autour du client, triées par proximité puis par prix
+ * (ou par prix puis proximité). Seules les boutiques de la ville sont gardées.
+ */
+export function offresProduit(produitId: string, lieu: Lieu, tri: "proche" | "prix" = "proche"): OffreBoutique[] {
+  return offres
+    .filter((of) => of.produit === produitId)
+    .map((of) => {
+      const b = getBoutique(of.boutique);
+      return { ...of, b, distance: proximite(b, lieu) };
+    })
+    .filter((of) => of.distance < 3)
+    .sort((x, y) =>
+      tri === "prix"
+        ? prixOffre(x) - prixOffre(y) || x.distance - y.distance
+        : x.distance - y.distance || prixOffre(x) - prixOffre(y),
+    );
+}
+
+/** Résumé d'un produit dans la ville du client : meilleur prix, écart, boutique la plus proche. */
+export function resumeProduit(produitId: string, lieu: Lieu) {
+  const liste = offresProduit(produitId, lieu);
+  if (!liste.length) return null;
+  const prix = liste.map(prixOffre);
+  const min = Math.min(...prix);
+  const max = Math.max(...prix);
+  const moinsCher = liste.find((of) => prixOffre(of) === min)!;
+  return {
+    nb: liste.length,
+    min,
+    max,
+    memePrix: min === max,
+    moinsCher,
+    plusProche: liste[0],
+    promo: liste.some((of) => of.promo),
+  };
+}
+
+/** Lien vers une page quincaillerie en conservant la ville et le quartier choisis. */
+export function lienLieu(chemin: string, lieu: Lieu, extra: Record<string, string | undefined> = {}) {
+  const q = new URLSearchParams();
+  if (lieu.ville !== VILLE_DEFAUT) q.set("ville", lieu.ville);
+  if (lieu.quartier) q.set("quartier", lieu.quartier);
+  for (const [k, v] of Object.entries(extra)) if (v) q.set(k, v);
+  const s = q.toString();
+  return s ? `${chemin}?${s}` : chemin;
+}
+
+/** Lit la ville et le quartier dans les paramètres d'URL (valeurs inconnues ignorées). */
+export function lieuDepuis(params: { ville?: unknown; quartier?: unknown }): Lieu {
+  const v = getVille(typeof params.ville === "string" ? params.ville : undefined) ?? getVille(VILLE_DEFAUT)!;
+  const quartier = typeof params.quartier === "string" && v.quartiers.includes(params.quartier) ? params.quartier : undefined;
+  return { ville: v.nom, quartier };
+}
 
 /** Libellé du métier d'un artisan (+ sa catégorie principale). */
 export const metierLabel = (id: MetierId) => {
@@ -476,8 +810,6 @@ export const metierLabel = (id: MetierId) => {
   return { id: m.id, label: m.label, artisan: m.label, categorie: getCategorie(m.categories[0])! };
 };
 export const getArtisan = (id: string) => artisans.find((a) => a.id === id);
-export const getProduit = (id: string) => produits.find((p) => p.id === id);
-export const getBoutique = (id: string) => boutiques.find((b) => b.id === id)!;
 
 export const fcfa = (n: number) =>
   new Intl.NumberFormat("fr-FR").format(n).replace(/ | /g, " ") + " FCFA";
