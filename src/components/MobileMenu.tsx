@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import { BoutonCompte } from "./BoutonCompte";
 import {
-  ArrowRight,
   Home,
   LayoutGrid,
   Megaphone,
@@ -145,12 +145,7 @@ export function MobileMenu() {
               </nav>
 
               <div className="mt-auto space-y-3 p-5">
-                <Link
-                  href="/recherche"
-                  className="flex items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground"
-                >
-                  Contactez un artisan <ArrowRight className="size-4" />
-                </Link>
+                <BoutonCompte className="flex items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground" />
                 <Link
                   href="/pro"
                   className="flex items-center justify-center gap-2 rounded-xl border border-sand bg-white py-3.5 text-sm font-bold"

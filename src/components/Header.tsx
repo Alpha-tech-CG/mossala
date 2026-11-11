@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Bell } from "lucide-react";
+import { BoutonCompte } from "./BoutonCompte";
 import { MobileMenu } from "./MobileMenu";
 
 /**
@@ -66,12 +67,7 @@ export function Header() {
           >
             <Bell className="size-5" />
           </button>
-          <Link
-            href="/recherche"
-            className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold whitespace-nowrap text-accent-foreground hover:brightness-95 lg:block"
-          >
-            Contactez un artisan
-          </Link>
+          <BoutonCompte className="hidden items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-bold whitespace-nowrap text-accent-foreground hover:brightness-95 lg:flex" />
           <MobileMenu />
         </div>
       </div>
