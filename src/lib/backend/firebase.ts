@@ -7,8 +7,9 @@
  * la sécurité repose sur firestore.rules et les domaines autorisés de l'Auth.
  */
 import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
-import { type Auth, RecaptchaVerifier, getAuth, signInWithPhoneNumber } from "firebase/auth";
+import { type Auth, type User, RecaptchaVerifier, getAuth, onAuthStateChanged, signInWithPhoneNumber, signOut } from "firebase/auth";
 import { type Firestore, doc, getFirestore, serverTimestamp, writeBatch } from "firebase/firestore";
+import { erreurSupabase } from "./supabase";
 import type { NouveauProfilPro, VerificationTelephone } from "./types";
 
 const config = {
@@ -61,6 +62,40 @@ export async function envoyerCodeSms(telephone: string, conteneurId: string): Pr
   }
 }
 
+// ——— Session (le compte connecté par SMS sert aussi d'identité à Supabase) ———
+
+/** Suit la connexion : `cb(null)` une fois déconnecté. Renvoie la fonction de désabonnement. */
+export function surConnexion(cb: (u: { id: string; telephone: string } | null) => void): () => void {
+  return onAuthStateChanged(auth(), (u: User | null) => cb(u ? { id: u.uid, telephone: u.phoneNumber ?? "" } : null));
+}
+
+let roleVerifie = false;
+let dernierRafraichissement = 0;
+
+/**
+ * Jeton d'identité à transmettre à Supabase, ou null si personne n'est connecté.
+ * Supabase a besoin du claim role: "authenticated" (posé par la Cloud Function
+ * firebase-functions/) ; s'il manque encore juste après l'inscription, on rafraîchit le jeton.
+ */
+export async function jetonIdentite(): Promise<string | null> {
+  const u = auth().currentUser;
+  if (!u) return null;
+  if (roleVerifie) return u.getIdToken();
+  let r = await u.getIdTokenResult();
+  // au plus un rafraîchissement forcé toutes les 20 s (si la Cloud Function n'est pas déployée)
+  if (r.claims.role !== "authenticated" && Date.now() - dernierRafraichissement > 20_000) {
+    dernierRafraichissement = Date.now();
+    r = await u.getIdTokenResult(true);
+  }
+  roleVerifie = r.claims.role === "authenticated";
+  return r.token;
+}
+
+export async function deconnexion(): Promise<void> {
+  roleVerifie = false;
+  await signOut(auth());
+}
+
 // ——— Profils professionnels ———
 
 /**
@@ -111,5 +146,9 @@ export function messageErreur(e: unknown): string {
     "permission-denied": "Enregistrement refusé par les règles de sécurité.",
     unavailable: "Service momentanément indisponible. Réessayez.",
   };
-  return messages[code] ?? `Une erreur est survenue${code ? ` (${code})` : ""}. Réessayez.`;
+  if (messages[code]) return messages[code];
+  // Erreurs de la base Supabase (codes Postgres)
+  if (code === "23505") return "Ce numéro a déjà un profil. Connectez-vous à votre espace.";
+  if (code && !code.startsWith("auth/")) return erreurSupabase(e);
+  return `Une erreur est survenue${code ? ` (${code})` : ""}. Réessayez.`;
 }

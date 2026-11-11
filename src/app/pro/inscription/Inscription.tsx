@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { rechargerProConnecte } from "@/lib/pro-connecte";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -132,6 +133,7 @@ export function Inscription() {
           ? {}
           : { metier, zones: zonesPossibles.length ? zones : [i.quartier] }),
       });
+      await rechargerProConnecte();
       setFini(true);
     });
   // étape 2 : coordonnées

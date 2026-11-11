@@ -8,6 +8,9 @@ import { useRouter } from "next/navigation";
 import { Eye, Lock, Star, UserPlus, X } from "lucide-react";
 import { PROFILS_SANS_COMPTE } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
+import { SUPABASE_ACTIF, erreurSupabase } from "@/lib/backend/supabase";
+import { useSession } from "@/lib/session";
+import { ConnexionTelephone } from "./ConnexionTelephone";
 import { ChampsIdentite, ChoixProfil, identitePropre, identiteValide, identiteVide, type Identite } from "./Identite";
 
 
@@ -17,15 +20,47 @@ import { ChampsIdentite, ChoixProfil, identitePropre, identiteValide, identiteVi
  */
 export function InscriptionClient({ titre, intro }: { titre?: string; intro?: string }) {
   const c = useCompte();
+  const { session } = useSession();
   const router = useRouter();
   const [identite, setIdentite] = useState<Identite>(() => identiteVide());
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
   const valide = identiteValide(identite);
+
+  // Supabase : on vérifie d'abord le numéro par SMS. S'il a déjà un compte, c'est une connexion.
+  if (SUPABASE_ACTIF && !session) {
+    return (
+      <div className="space-y-4">
+        {titre && (
+          <h2 id="acces-titre" className="text-center font-serif text-2xl leading-tight">
+            {titre}
+          </h2>
+        )}
+        <ConnexionTelephone
+          intro="Connectez-vous ou créez votre compte gratuit avec votre numéro : vous recevrez un code par SMS."
+          onConnecte={({ telephone }) =>
+            setIdentite((i) => ({ ...i, telephones: [{ ...i.telephones[0], numero: telephone }, ...i.telephones.slice(1)] }))
+          }
+        />
+      </div>
+    );
+  }
+  if (SUPABASE_ACTIF && !c.pret) return <div className="h-40 animate-pulse rounded-2xl bg-muted" aria-busy />;
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        if (valide) c.inscrire(identitePropre(identite));
+        if (!valide) return;
+        setErreur("");
+        setEnvoi(true);
+        try {
+          await c.inscrire(identitePropre(identite));
+        } catch (err) {
+          setErreur(erreurSupabase(err));
+        } finally {
+          setEnvoi(false);
+        }
       }}
       className="space-y-4"
     >
@@ -42,9 +77,10 @@ export function InscriptionClient({ titre, intro }: { titre?: string; intro?: st
         }}
       />
       <ChampsIdentite id="ins" value={identite} onChange={setIdentite} />
+      {erreur && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{erreur}</p>}
       <button
         type="submit"
-        disabled={!valide}
+        disabled={!valide || envoi}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition hover:brightness-95 active:scale-[0.98] disabled:opacity-40"
       >
         <UserPlus className="size-5" /> Créer mon compte gratuit

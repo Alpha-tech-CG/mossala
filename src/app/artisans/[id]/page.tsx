@@ -7,6 +7,7 @@ import { ContactButton } from "@/components/Contact";
 import { FavoriButton, Signaler } from "@/components/Engagement";
 import { Avatar, BackHeader, Rating, toContact } from "@/components/ui";
 import { artisans, badgesReputation, getArtisan, metierLabel } from "@/lib/data";
+import { artisanInscrit } from "@/lib/backend/serveur";
 import { OngletsProfil } from "./OngletsProfil";
 
 // Toutes les fiches sont pré-générées : la navigation peut attendre le rendu.
@@ -17,12 +18,15 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(props: PageProps<"/artisans/[id]">) {
-  const a = getArtisan((await props.params).id);
+  const id = (await props.params).id;
+  const a = getArtisan(id) ?? (await artisanInscrit(id));
   return { title: a ? `${a.nom} — Artopif` : "Artisan introuvable" };
 }
 
 export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
-  const a = getArtisan((await props.params).id);
+  const id = (await props.params).id;
+  // Artisan de démonstration, sinon artisan vérifié inscrit sur la plateforme (base Supabase)
+  const a = getArtisan(id) ?? (await artisanInscrit(id));
   if (!a) notFound();
   const m = metierLabel(a.metier);
   // Couverture = une réalisation différente de la photo de profil

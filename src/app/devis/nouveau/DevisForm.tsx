@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronDown, Search, Send, Store } from "lucide-react";
+import { InscriptionClient } from "@/components/Acces";
+import { SUPABASE_ACTIF, erreurSupabase, estDemo, sb } from "@/lib/backend/supabase";
 import { useCompte } from "@/lib/compte";
 import { creerDemande, type ProDevis } from "@/lib/devis";
 import { getArtisan, getBoutique, boutiques, metierLabel, quartiers } from "@/lib/data";
@@ -40,15 +42,69 @@ function cible(params: URLSearchParams): ProDevis | null {
   return null;
 }
 
+/** Pro inscrit (base Supabase) visé par la demande, lu côté navigateur. */
+function useProInscrit(params: URLSearchParams): { charge: boolean; pro: ProDevis | null } {
+  const id = params.get("artisan") ?? params.get("boutique") ?? "";
+  const aChercher = SUPABASE_ACTIF && !!id && !estDemo(id);
+  const [res, setRes] = useState<{ id: string; pro: ProDevis | null } | null>(null);
+  useEffect(() => {
+    if (!aChercher) return;
+    let actif = true;
+    void sb()
+      .from("pros")
+      .select("id, type, nom, metier, quartier, image, telephone_public")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data: p }) => {
+        if (!actif) return;
+        setRes({
+          id,
+          pro: p
+            ? {
+                type: p.type,
+                id: p.id,
+                nom: p.nom,
+                sous: p.type === "boutique" ? `Quincaillerie · ${p.quartier}` : p.metier ? metierLabel(p.metier).artisan : "Artisan",
+                image: p.image ?? undefined,
+                telephone: p.telephone_public ?? undefined,
+              }
+            : null,
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [aChercher, id]);
+  return { charge: !aChercher || res?.id === id, pro: res?.id === id ? res.pro : null };
+}
+
 export function DevisForm() {
   const params = useSearchParams();
-  const pro = cible(params);
-  const { compte } = useCompte();
+  const inscrit = useProInscrit(params);
+  const pro = cible(params) ?? inscrit.pro;
+  const { compte, pret } = useCompte();
   const similaire = params.get("similaire");
   const [texte, setTexte] = useState(similaire ? `Travaux similaires à : ${similaire}. ` : "");
   const [prenom, setPrenom] = useState("");
   const [tel, setTel] = useState("");
   const [envoye, setEnvoye] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
+
+  if (!inscrit.charge) return <div className="mt-6 h-72 animate-pulse rounded-2xl bg-card" aria-busy />;
+
+  // Pro inscrit : la demande est enregistrée dans la base, il faut un compte (numéro vérifié).
+  if (pro && !estDemo(pro.id) && !compte) {
+    if (!pret) return <div className="mt-6 h-72 animate-pulse rounded-2xl bg-card" aria-busy />;
+    return (
+      <div className="mt-6 rounded-2xl bg-card p-5 shadow-sm">
+        <InscriptionClient
+          titre={`Connectez-vous pour écrire à ${pro.nom}`}
+          intro="Votre demande et le devis seront gardés dans votre compte, et vous serez prévenu par SMS."
+        />
+      </div>
+    );
+  }
 
   if (!pro) {
     return (
@@ -88,10 +144,14 @@ export function DevisForm() {
   return (
     <form
       className="mt-6 space-y-6"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
+        if (envoi) return;
         const f = new FormData(e.currentTarget);
-        creerDemande({
+        setErreur("");
+        setEnvoi(true);
+        try {
+          await creerDemande({
           pro,
           client: {
             prenom: compte?.prenom ?? prenom.trim(),
@@ -101,8 +161,13 @@ export function DevisForm() {
           quartier: String(f.get("quartier") ?? ""),
           dateSouhaitee: String(f.get("date") ?? "") || undefined,
           budget: String(f.get("budget") ?? "").trim() || undefined,
-        });
-        setEnvoye(true);
+          });
+          setEnvoye(true);
+        } catch (err) {
+          setErreur(erreurSupabase(err));
+        } finally {
+          setEnvoi(false);
+        }
       }}
     >
       <div className="flex items-center gap-3 rounded-2xl bg-secondary p-4 text-primary">
@@ -206,9 +271,11 @@ export function DevisForm() {
         </div>
       )}
 
+      {erreur && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{erreur}</p>}
       <button
         type="submit"
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground transition-transform active:scale-[0.98]"
+        disabled={envoi}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 text-base font-bold text-accent-foreground transition-transform active:scale-[0.98] disabled:opacity-60"
       >
         <Send className="size-5" /> Envoyer ma demande de devis
       </button>

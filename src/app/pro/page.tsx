@@ -68,12 +68,8 @@ export default function ProPage() {
             </div>
             <p className="mt-5 text-sm text-white/70">
               Déjà inscrit ?{" "}
-              <Link href="/pro/espace" className="font-bold text-white underline underline-offset-4">
-                Accéder à mon espace artisan
-              </Link>{" "}
-              ·{" "}
-              <Link href="/pro/boutique" className="font-bold text-white underline underline-offset-4">
-                mon espace boutique
+              <Link href="/pro/connexion" className="font-bold text-white underline underline-offset-4">
+                Se connecter à mon espace
               </Link>
             </p>
           </div>

@@ -2,6 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import { notifierNouveauMessage } from "./backend";
+import { SUPABASE_ACTIF, estDemo, sb, verifier } from "./backend/supabase";
+import { metierLabel } from "./data";
+import { sessionActuelle, surSession } from "./session";
 
 /**
  * Demandes de devis et devis chiffrés (client ↔ artisan ou boutique).
@@ -12,8 +15,8 @@ import { notifierNouveauMessage } from "./backend";
  * désignation / quantité / unité / prix unitaire, un sous-total par rubrique et un total.
  * Chaque ligne peut aussi porter une fourchette de prix du marché (« de … à … »).
  *
- * MAQUETTE : gardé dans le navigateur. Avec Supabase : tables demandes_devis, devis,
- * devis_rubriques, devis_lignes (voir supabase/migrations/0002_devis_realisations.sql).
+ * Pros inscrits (Supabase actif) : tables demandes_devis et devis (supabase/migrations/0003_devis.sql),
+ * en temps réel. Pros de démonstration (ou maquette) : gardé dans le navigateur.
  */
 
 export type TypePro = "artisan" | "boutique";
@@ -65,6 +68,8 @@ export type StatutDemande =
 
 export type DemandeDevis = {
   id: string;
+  /** demande enregistrée en base : le côté de l'utilisateur connecté */
+  moi?: "client" | "pro";
   pro: ProDevis;
   client: { prenom: string; telephone: string };
   /** besoin décrit par le client, en langage naturel */
@@ -207,6 +212,7 @@ function lire(): DemandeDevis[] {
 
 function ecrire(d: DemandeDevis[]) {
   cache = d;
+  combinees = null;
   try {
     localStorage.setItem(CLE, JSON.stringify(d));
   } catch {
@@ -220,11 +226,13 @@ if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
     if (e.key !== CLE) return;
     cache = null;
+    combinees = null;
     abonnes.forEach((f) => f());
   });
 }
 
 const abonner = (f: () => void) => {
+  ecouterSupabase();
   abonnes.add(f);
   return () => abonnes.delete(f);
 };
@@ -233,11 +241,155 @@ function modifier(id: string, f: (d: DemandeDevis) => DemandeDevis) {
   ecrire(lire().map((d) => (d.id === id ? f(d) : d)));
 }
 
+// ——— Supabase : demandes avec les pros inscrits (les pros de démo restent dans le navigateur) ———
+
+type LigneDevisDb = {
+  rubriques: RubriqueDevis[];
+  delai: string;
+  validite: string;
+  materiaux_inclus: boolean;
+  paiement: string;
+  note: string;
+  envoye_le: string | null;
+};
+
+type LigneDemande = {
+  id: string;
+  client_id: string;
+  pro_id: string;
+  texte: string;
+  quartier: string;
+  date_souhaitee: string | null;
+  budget: string | null;
+  statut: StatutDemande;
+  motif_declin: string | null;
+  cree_le: string;
+  devis: LigneDevisDb | LigneDevisDb[] | null;
+  pro: { type: TypePro; nom: string; metier: string | null; quartier: string; image: string | null; telephone_public: string | null } | null;
+  client: { prenom: string; telephone: string } | null;
+};
+
+let distantes: DemandeDevis[] = [];
+let combinees: DemandeDevis[] | null = null;
+let ecoute = false;
+
+function versDemande(l: LigneDemande, moi: string): DemandeDevis {
+  const dv = Array.isArray(l.devis) ? l.devis[0] : l.devis;
+  const p = l.pro;
+  return {
+    id: l.id,
+    moi: l.pro_id === moi ? "pro" : "client",
+    pro: {
+      type: p?.type ?? "artisan",
+      id: l.pro_id,
+      nom: p?.nom ?? "Professionnel",
+      sous: p?.type === "boutique" ? `Quincaillerie · ${p.quartier}` : p?.metier ? metierLabel(p.metier).artisan : "Artisan",
+      image: p?.image ?? undefined,
+      telephone: p?.telephone_public ?? undefined,
+    },
+    client: { prenom: l.client?.prenom ?? "Client", telephone: l.client?.telephone ?? "" },
+    texte: l.texte,
+    quartier: l.quartier,
+    dateSouhaitee: l.date_souhaitee ?? undefined,
+    budget: l.budget ?? undefined,
+    creeLe: Date.parse(l.cree_le),
+    statut: l.statut,
+    motifDeclin: l.motif_declin ?? undefined,
+    devis: dv
+      ? {
+          rubriques: dv.rubriques,
+          delai: dv.delai,
+          validite: dv.validite,
+          materiauxInclus: dv.materiaux_inclus,
+          paiement: dv.paiement,
+          note: dv.note,
+          envoyeLe: dv.envoye_le ? Date.parse(dv.envoye_le) : undefined,
+        }
+      : undefined,
+  };
+}
+
+const prevenir = () => {
+  combinees = null;
+  abonnes.forEach((f) => f());
+};
+
+async function chargerDistantes() {
+  const s = sessionActuelle();
+  if (!s) {
+    distantes = [];
+    return prevenir();
+  }
+  try {
+    const lignes = verifier(
+      await sb()
+        .from("demandes_devis")
+        .select("*, devis(*), pro:pros(type, nom, metier, quartier, image, telephone_public), client:comptes(prenom, telephone)")
+        .order("cree_le", { ascending: false }),
+    ) as LigneDemande[];
+    distantes = lignes.map((l) => versDemande(l, s.id));
+    prevenir();
+  } catch {
+    /* hors ligne : on garde les dernières demandes connues */
+  }
+}
+
+let rechargement: ReturnType<typeof setTimeout> | null = null;
+
+/** Recharge un peu après un changement (plusieurs événements temps réel arrivent groupés). */
+const rechargerBientot = () => {
+  if (rechargement) clearTimeout(rechargement);
+  rechargement = setTimeout(() => void chargerDistantes(), 150);
+};
+
+function ecouterSupabase() {
+  if (ecoute || !SUPABASE_ACTIF || typeof window === "undefined") return;
+  ecoute = true;
+  let canal: ReturnType<ReturnType<typeof sb>["channel"]> | null = null;
+  surSession(() => {
+    void chargerDistantes();
+    if (canal) void sb().removeChannel(canal);
+    canal = sessionActuelle()
+      ? sb()
+          .channel("devis")
+          .on("postgres_changes", { event: "*", schema: "public", table: "demandes_devis" }, rechargerBientot)
+          .on("postgres_changes", { event: "*", schema: "public", table: "devis" }, rechargerBientot)
+          .subscribe()
+      : null;
+  });
+}
+
+const estDistante = (id: string) => distantes.some((d) => d.id === id);
+
+/** Demandes locales (démo) et distantes (base), une seule liste stable pour React. */
+function toutes(): DemandeDevis[] {
+  combinees ??= [...distantes, ...lire()];
+  return combinees;
+}
+
+// ——— Actions ———
+
 /** Le client envoie sa demande en langage naturel. */
-export function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "statut">): DemandeDevis {
+export async function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "statut">): Promise<void> {
+  if (!estDemo(d.pro.id)) {
+    const s = sessionActuelle();
+    if (!s) throw new Error("Connectez-vous pour envoyer votre demande.");
+    // L'alerte WhatsApp/SMS au pro part de la base (trigger → Edge Function « notifier »).
+    verifier(
+      await sb().from("demandes_devis").insert({
+        client_id: s.id,
+        pro_id: d.pro.id,
+        texte: d.texte.trim(),
+        quartier: d.quartier,
+        date_souhaitee: d.dateSouhaitee || null,
+        budget: d.budget || null,
+      }),
+    );
+    return chargerDistantes();
+  }
   const demande: DemandeDevis = { ...d, texte: d.texte.trim(), id: nouvelId(), creeLe: Date.now(), statut: "nouvelle" };
   ecrire([demande, ...lire()]);
-  // Alerte WhatsApp/SMS au professionnel (point de branchement du backend, sans effet en maquette).
+  // Alerte WhatsApp/SMS au professionnel (point de branchement, sans effet en maquette).
   void notifierNouveauMessage({
     conversationId: `devis-${demande.id}`,
     de: "client",
@@ -248,11 +400,33 @@ export function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "statut">):
       telephones: demande.pro.telephone ? [{ numero: demande.pro.telephone, whatsapp: true }] : [],
     },
   });
-  return demande;
 }
 
 /** Le pro enregistre son devis ; `envoyer` le transmet au client. */
-export function enregistrerDevis(id: string, devis: Devis, envoyer: boolean) {
+export async function enregistrerDevis(id: string, devis: Devis, envoyer: boolean): Promise<void> {
+  if (estDistante(id)) {
+    const actuelle = distantes.find((d) => d.id === id);
+    const precedent = actuelle?.devis?.envoyeLe;
+    verifier(
+      await sb()
+        .from("devis")
+        .upsert({
+          demande_id: id,
+          rubriques: devis.rubriques,
+          delai: devis.delai,
+          validite: devis.validite,
+          materiaux_inclus: devis.materiauxInclus,
+          paiement: devis.paiement,
+          note: devis.note,
+          envoye_le: envoyer ? new Date().toISOString() : precedent ? new Date(precedent).toISOString() : null,
+          modifie_le: new Date().toISOString(),
+        }),
+    );
+    // un devis déjà envoyé reste « envoyé » même si on enregistre une correction en brouillon
+    const statut = envoyer || actuelle?.statut === "envoyee" ? "envoyee" : "brouillon";
+    if (statut !== actuelle?.statut) verifier(await sb().from("demandes_devis").update({ statut }).eq("id", id));
+    return chargerDistantes();
+  }
   modifier(id, (d) => ({
     ...d,
     devis: envoyer ? { ...devis, envoyeLe: Date.now() } : devis,
@@ -270,20 +444,33 @@ export function enregistrerDevis(id: string, devis: Devis, envoyer: boolean) {
   });
 }
 
-export function declinerDemande(id: string, motif: string) {
+export async function declinerDemande(id: string, motif: string): Promise<void> {
+  if (estDistante(id)) {
+    verifier(await sb().from("demandes_devis").update({ statut: "declinee", motif_declin: motif.trim() || null }).eq("id", id));
+    return chargerDistantes();
+  }
   modifier(id, (d) => ({ ...d, statut: "declinee", motifDeclin: motif.trim() || undefined }));
 }
 
 /** Réponse du client au devis reçu. */
-export function repondreDevis(id: string, accepte: boolean) {
+export async function repondreDevis(id: string, accepte: boolean): Promise<void> {
+  if (estDistante(id)) {
+    verifier(await sb().from("demandes_devis").update({ statut: accepte ? "acceptee" : "refusee" }).eq("id", id));
+    return chargerDistantes();
+  }
   modifier(id, (d) => (d.statut === "envoyee" ? { ...d, statut: accepte ? "acceptee" : "refusee" } : d));
 }
 
-/** Demandes vues par le client (toutes) ou par un professionnel (les siennes). `null` côté serveur. */
+/**
+ * Demandes vues par le client (les siennes, plus les démos) ou par un professionnel
+ * (celles qu'il a reçues). `null` côté serveur.
+ */
 export function useDemandesDevis(pro?: { type: TypePro; id: string }): DemandeDevis[] | null {
-  const toutes = useSyncExternalStore(abonner, lire, () => null);
-  if (!toutes) return null;
-  return pro ? toutes.filter((d) => d.pro.type === pro.type && d.pro.id === pro.id) : toutes;
+  const liste = useSyncExternalStore(abonner, toutes, () => null);
+  if (!liste) return null;
+  return pro
+    ? liste.filter((d) => d.pro.type === pro.type && d.pro.id === pro.id)
+    : liste.filter((d) => d.moi !== "pro");
 }
 
 export const libelleStatut: Record<StatutDemande, [string, string]> = {

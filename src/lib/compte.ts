@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import { PROFILS_SANS_COMPTE } from "./data";
+import { SUPABASE_ACTIF, sb, verifier } from "./backend/supabase";
+import { surSession, useSession } from "./session";
 import type { Identite } from "@/components/Identite";
 
 /**
@@ -41,6 +43,8 @@ function lire(): Etat {
   } catch {
     /* stockage indisponible : on repart d'un état vide */
   }
+  // Supabase : le compte vient de la base (numéro connecté), jamais d'une copie locale.
+  if (SUPABASE_ACTIF) e = { ...e, compte: null };
   // nouveau mois : les profils gratuits repartent à zéro (le Premium reste valable)
   if (e.mois !== moisCourant()) e = { ...e, mois: moisCourant(), consultes: [] };
   if (e.premiumJusqua !== null && e.premiumJusqua < Date.now()) e = { ...e, premiumJusqua: null };
@@ -58,14 +62,99 @@ function ecrire(e: Etat) {
   abonnes.forEach((f) => f());
 }
 
+// ——— Supabase : le compte est celui du numéro connecté par SMS (table comptes) ———
+
+type LigneCompte = {
+  id: string;
+  prenom: string;
+  nom: string | null;
+  telephone: string;
+  telephones: Identite["telephones"];
+  adresse: string | null;
+  ville: string | null;
+  quartier: string | null;
+  email: string | null;
+  cree_le: string;
+};
+
+const versCompte = (l: LigneCompte): Compte => ({
+  prenom: l.prenom,
+  nom: l.nom ?? undefined,
+  telephone: l.telephone,
+  telephones: l.telephones,
+  adresse: l.adresse ?? undefined,
+  ville: l.ville ?? undefined,
+  quartier: l.quartier ?? undefined,
+  email: l.email ?? undefined,
+  creeLe: Date.parse(l.cree_le),
+});
+
+/** Session connectée sans compte client (pas encore inscrite, ou compte pro uniquement). */
+let sessionSansCompte = false;
+/** uid dont le compte a été lu dans la base (pour savoir quand `pret` est vrai). */
+let compteLuPour: string | null = null;
+let synchro = false;
+
+function synchroniser() {
+  if (synchro || !SUPABASE_ACTIF || typeof window === "undefined") return;
+  synchro = true;
+  surSession(async () => {
+    const { sessionActuelle } = await import("./session");
+    const s = sessionActuelle();
+    if (!s) {
+      sessionSansCompte = false;
+      if (lire().compte) ecrire({ ...lire(), compte: null });
+      return;
+    }
+    try {
+      const ligne = verifier(await sb().from("comptes").select("*").eq("id", s.id).maybeSingle()) as LigneCompte | null;
+      sessionSansCompte = !ligne;
+      compteLuPour = s.id;
+      ecrire({ ...lire(), compte: ligne ? versCompte(ligne) : null });
+    } catch {
+      /* hors ligne : on garde l'état connu */
+      compteLuPour = s.id;
+      abonnes.forEach((f) => f());
+    }
+  });
+}
+
+/** Crée (ou met à jour) le compte du numéro connecté. Supabase seulement. */
+async function enregistrerCompte(i: Identite): Promise<void> {
+  const { sessionActuelle } = await import("./session");
+  const s = sessionActuelle();
+  if (!s) throw new Error("Vérifiez d’abord votre numéro par SMS.");
+  const ligne = verifier(
+    await sb()
+      .from("comptes")
+      .upsert({
+        id: s.id,
+        prenom: i.prenom,
+        nom: i.nom || null,
+        telephone: s.telephone,
+        telephones: i.telephones,
+        adresse: i.adresse || null,
+        ville: i.ville || null,
+        quartier: i.quartier || null,
+        email: i.email || null,
+      })
+      .select("*")
+      .single(),
+  ) as LigneCompte;
+  sessionSansCompte = false;
+  ecrire({ ...lire(), compte: versCompte(ligne) });
+}
+
 const NOMS_MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 /** État neutre du rendu serveur : aucune date lue pendant le pré-rendu. */
 const SERVEUR: Etat = { compte: null, mois: "", consultes: [], premiumJusqua: null, favoris: [], vusSansCompte: [] };
 
 export function useCompte() {
+  const session = useSession();
   const etat = useSyncExternalStore(
     (f) => {
+      synchroniser();
       abonnes.add(f);
       return () => abonnes.delete(f);
     },
@@ -78,7 +167,7 @@ export function useCompte() {
   const restantsSansCompte = Math.max(0, PROFILS_SANS_COMPTE - vusSansCompte.length);
   return {
     /** false pendant le rendu serveur : on ne sait pas encore qui est connecté */
-    pret: etat !== null,
+    pret: etat !== null && session.pret && (!session.session || compteLuPour === session.session.id),
     compte: e.compte,
     inscrit: e.compte !== null,
     mois: e.mois ? NOMS_MOIS[Number(e.mois.slice(5, 7)) - 1] : "",
@@ -98,10 +187,17 @@ export function useCompte() {
       if (vus.includes(id) || vus.length >= PROFILS_SANS_COMPTE) return;
       ecrire({ ...x, vusSansCompte: [...vus, id] });
     },
-    // TODO backend : envoyerCodeSms + vérification OTP (Supabase Auth téléphone)
-    inscrire: (i: Identite) =>
-      ecrire({ ...lire(), compte: { ...i, telephone: i.telephones[0]?.numero ?? "", creeLe: Date.now() } }),
-    deconnecter: () => ecrire({ ...lire(), compte: null }),
+    /** Supabase : numéro vérifié par SMS mais pas encore de compte client. */
+    sessionSansCompte: SUPABASE_ACTIF && sessionSansCompte,
+    /** Crée le compte. Supabase : après vérification du numéro par SMS (enregistré dans la base). */
+    inscrire: async (i: Identite): Promise<void> => {
+      if (SUPABASE_ACTIF) return enregistrerCompte(i);
+      ecrire({ ...lire(), compte: { ...i, telephone: i.telephones[0]?.numero ?? "", creeLe: Date.now() } });
+    },
+    deconnecter: async () => {
+      if (SUPABASE_ACTIF) await (await import("./backend/firebase")).deconnexion();
+      ecrire({ ...lire(), compte: null });
+    },
     basculerFavori: (id: string) => {
       const x = lire();
       ecrire({ ...x, favoris: x.favoris.includes(id) ? x.favoris.filter((f) => f !== id) : [...x.favoris, id] });

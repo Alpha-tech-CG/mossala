@@ -5,6 +5,7 @@ import { SearchX } from "lucide-react";
 import { BandeauAcces } from "@/components/Acces";
 import { ArtisanCardRow } from "@/components/ui";
 import { type CategorieId, artisans, getMetier, metierLabel, villeArtisan } from "@/lib/data";
+import { artisansInscrits } from "@/lib/backend/serveur";
 import { FilterChips, SearchBar } from "./Filters";
 
 export const metadata: Metadata = { title: "Rechercher un artisan — Artopif" };
@@ -31,7 +32,9 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
   const dispo = get("dispo");
   const minNote = parseFloat(get("note")) || 0;
 
-  const resultats = artisans
+  // Artisans de démonstration + artisans vérifiés inscrits (base Supabase, mis en cache)
+  const tous = [...artisans, ...(await artisansInscrits())];
+  const resultats = tous
     .filter((a) => {
       const m = metierLabel(a.metier);
       if (q) {

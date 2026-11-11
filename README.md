@@ -15,9 +15,10 @@ Plateforme de mise en relation entre les habitants de Brazzaville et des artisan
 
 Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · lucide-react.
 
-**Backend** : Firebase pour la **démo** (projet `mossala-6f297` : connexion par SMS, Firestore).
-La production ira sur **Supabase ou Neon**. Toutes les pages passent par `src/lib/backend/` :
-pour changer de fournisseur, on écrit une nouvelle implémentation dans ce dossier sans toucher aux pages.
+**Backend** : connexion par **code SMS avec Firebase** (projet `mossala-6f297`) et données dans
+**Supabase** (comptes, profils pros, réalisations, messagerie, devis). Sans clés Supabase dans
+`.env.local`, le site tourne en **maquette** (données dans le navigateur). Mode d'emploi complet :
+[`supabase/README.md`](supabase/README.md). Les pages passent par `src/lib/backend/`.
 
 ## Démarrer
 
@@ -38,7 +39,9 @@ Puis ouvrir http://localhost:3000.
 | `src/lib/devis.ts` | Demandes de devis en langage naturel, devis en rubriques/lignes, calculs (maquette navigateur) |
 | `src/components/devis/` | Éditeur de devis (artisan et boutique) et affichage imprimable du devis |
 | `src/lib/realisations.ts` | Réalisations publiées par les artisans (onglet « Réalisations » du profil) |
-| `supabase/migrations/0002_devis_realisations.sql` | Tables et règles RLS des devis et réalisations pour la production |
+| `supabase/` | Schéma de la base (migrations 0001 à 0003), règles d’accès, fonction d’alerte WhatsApp/SMS |
+| `src/lib/backend/supabase.ts` | Client Supabase et interrupteur maquette / production (`SUPABASE_ACTIF`) |
+| `src/lib/session.ts` · `src/lib/pro-connecte.ts` | Compte connecté par SMS, et pro dont on affiche l’espace |
 | `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté serveur) |
 | `src/lib/backend/` | Accès au backend (Firebase en démo) |
 | `firestore.rules` | Règles de sécurité de la démo — tests : `npm run test:rules` |

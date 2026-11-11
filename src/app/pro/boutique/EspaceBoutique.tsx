@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { BoiteDevisPro } from "@/components/devis/BoiteDevisPro";
 import { useDemandesDevis, type ArticleCatalogue } from "@/lib/devis";
-import { BOUTIQUE_DEMO_ID } from "@/lib/pro-data";
+import { useProConnecte } from "@/lib/pro-connecte";
+import { BandeauDemoPro } from "@/components/BandeauDemoPro";
 import { Caisse } from "./Caisse";
 import { Clients } from "./Clients";
 import { Dashboard, type Onglet } from "./Dashboard";
@@ -52,13 +53,14 @@ const AVANTAGES_PREMIUM = [
 export function EspaceBoutique() {
   const { etat, maj, reinitialiser } = useBoutique();
   const [onglet, setOnglet] = useState<Onglet>("accueil");
-  const demandesDevis = useDemandesDevis({ type: "boutique", id: BOUTIQUE_DEMO_ID });
+  const { id: boutiqueId } = useProConnecte("boutique");
+  const demandesDevis = useDemandesDevis({ type: "boutique", id: boutiqueId });
 
   if (!etat) return <div className="h-[70vh] animate-pulse rounded-2xl bg-card" aria-busy />;
   const premium = etat.formule === "premium";
   // Catalogue de la boutique (prix promo compris) : sert à chiffrer les demandes de devis.
   const catalogue: ArticleCatalogue[] = etat.articles.map((a) => ({ nom: a.nom, unite: a.unite, prix: a.promo?.prix ?? a.prix }));
-  const devisPro = <BoiteDevisPro pro={{ type: "boutique", id: BOUTIQUE_DEMO_ID }} catalogue={catalogue} />;
+  const devisPro = <BoiteDevisPro pro={{ type: "boutique", id: boutiqueId }} catalogue={catalogue} />;
   const changerFormule = (formule: "gratuit" | "premium") => {
     maj((e) => ({ ...e, formule }));
     setOnglet("accueil");
@@ -66,6 +68,7 @@ export function EspaceBoutique() {
 
   return (
     <div>
+      <BandeauDemoPro type="boutique" />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">

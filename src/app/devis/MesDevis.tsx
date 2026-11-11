@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, ChevronRight, FileText, Printer, Store, X } from "lucide-react";
+import { useState } from "react";
 import { TableauDevis } from "@/components/devis/TableauDevis";
+import { erreurSupabase } from "@/lib/backend/supabase";
 import { fcfa } from "@/lib/data";
 import { libelleStatut, libelleStatutClient, repondreDevis, totalDevis, useDemandesDevis, type DemandeDevis } from "@/lib/devis";
 
@@ -23,6 +25,11 @@ export function MesDevis() {
   const demandes = useDemandesDevis();
   const sp = useSearchParams();
   const router = useRouter();
+  const [erreur, setErreur] = useState("");
+  const repondre = (id: string, accepte: boolean) => {
+    setErreur("");
+    repondreDevis(id, accepte).catch((e) => setErreur(erreurSupabase(e)));
+  };
 
   if (!demandes) return <div className="mt-6 h-64 animate-pulse rounded-2xl bg-card" aria-busy />;
 
@@ -36,6 +43,7 @@ export function MesDevis() {
         {d.devis && d.statut !== "brouillon" ? (
           <>
             <TableauDevis demande={d} devis={d.devis} />
+            {erreur && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive print:hidden">{erreur}</p>}
             <div className="flex flex-col gap-2 print:hidden sm:flex-row">
               <button
                 onClick={() => window.print()}
@@ -46,13 +54,13 @@ export function MesDevis() {
               {d.statut === "envoyee" && (
                 <>
                   <button
-                    onClick={() => repondreDevis(d.id, false)}
+                    onClick={() => repondre(d.id, false)}
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/40 py-3 text-sm font-bold text-destructive"
                   >
                     <X className="size-4" /> Refuser
                   </button>
                   <button
-                    onClick={() => repondreDevis(d.id, true)}
+                    onClick={() => repondre(d.id, true)}
                     className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground"
                   >
                     <Check className="size-4" /> Accepter ce devis

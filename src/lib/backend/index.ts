@@ -4,7 +4,17 @@
  * Démo : Firebase. Pour passer à Supabase ou Neon, écrire ./supabase.ts (ou ./neon.ts)
  * avec les mêmes fonctions et remplacer la ligne ci-dessous.
  */
-export { creerProfilPro, envoyerCodeSms, messageErreur, nettoyerVerification } from "./firebase";
+import { creerProfilPro as creerProfilProFirebase } from "./firebase";
+import { creerProfilProSupabase } from "./pros";
+import { SUPABASE_ACTIF } from "./supabase";
+import type { NouveauProfilPro } from "./types";
+
+export { envoyerCodeSms, messageErreur, nettoyerVerification } from "./firebase";
+export { SUPABASE_ACTIF, estDemo } from "./supabase";
+
+/** Crée le profil pro : dans Supabase s'il est configuré, sinon dans Firestore (démo). */
+export const creerProfilPro = (id: string, p: NouveauProfilPro): Promise<void> =>
+  SUPABASE_ACTIF ? creerProfilProSupabase(id, p) : creerProfilProFirebase(id, p);
 export { destinatairesAlerte, notifierNouveauMessage, texteAlerte } from "./notifications";
 export type { NotificationMessage, NouveauProfilPro, NumeroJoignable, VerificationTelephone } from "./types";
 

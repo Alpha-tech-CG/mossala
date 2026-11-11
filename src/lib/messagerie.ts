@@ -3,12 +3,16 @@
 import { useSyncExternalStore } from "react";
 import { ARTISAN_DEMO_ID } from "./pro-data";
 import { notifierNouveauMessage } from "./backend";
+import { SUPABASE_ACTIF, estDemo, sb, verifier } from "./backend/supabase";
+import { metierLabel } from "./data";
+import { sessionActuelle, surSession } from "./session";
 
 /**
  * Messagerie client ↔ artisan sur la plateforme.
- * MAQUETTE : les conversations sont gardées dans le navigateur. Avec Supabase : tables
- * conversations et messages (RLS : chaque partie ne voit que ses échanges), Realtime pour
- * l'arrivée des messages, et une notification WhatsApp/SMS à l'artisan à chaque nouveau message.
+ *  - Artisans inscrits (Supabase actif) : tables conversations et messages (RLS : chaque partie
+ *    ne voit que ses échanges), temps réel pour l'arrivée des messages ; l'alerte WhatsApp/SMS
+ *    part de la base (trigger → Edge Function « notifier »).
+ *  - Artisans de démonstration (ou maquette) : conversations gardées dans le navigateur.
  */
 
 export type Cote = "client" | "artisan";
@@ -16,8 +20,10 @@ export type Cote = "client" | "artisan";
 export type Message = { id: string; de: Cote; texte: string; date: number };
 
 export type Conversation = {
-  /** une conversation par artisan pour un client */
+  /** maquette : l'id de l'artisan (une conversation par artisan) ; base : l'id de la conversation */
   id: string;
+  /** conversation enregistrée en base : le côté de l'utilisateur connecté */
+  moi?: Cote;
   artisan: { id: string; nom: string; metier: string; image?: string; telephone: string; numeroPublic: boolean };
   client: { prenom: string; telephone: string };
   messages: Message[];
@@ -42,6 +48,7 @@ function lire(): Conversation[] {
 
 function ecrire(c: Conversation[]) {
   cache = c;
+  combinees = null;
   try {
     localStorage.setItem(CLE, JSON.stringify(c));
   } catch {
@@ -55,22 +62,141 @@ if (typeof window !== "undefined") {
   window.addEventListener("storage", (e) => {
     if (e.key !== CLE) return;
     cache = null;
+    combinees = null;
     abonnes.forEach((f) => f());
   });
 }
 
+// ——— Supabase ———
+
+type LigneConversation = {
+  id: string;
+  client_id: string;
+  pro_id: string;
+  lu_client: string;
+  lu_pro: string;
+  pro: { nom: string; metier: string | null; image: string | null; telephone_public: string | null; numero_public: boolean } | null;
+  client: { prenom: string; telephone: string } | null;
+  messages: { id: string; de: "client" | "pro"; texte: string; envoye_le: string }[];
+};
+
+let distantes: Conversation[] = [];
+let combinees: Conversation[] | null = null;
+let ecoute = false;
+
+function versConversation(l: LigneConversation, moi: string): Conversation {
+  const messages = [...l.messages]
+    .sort((a, b) => a.envoye_le.localeCompare(b.envoye_le))
+    .map((m) => ({ id: m.id, de: (m.de === "pro" ? "artisan" : "client") as Cote, texte: m.texte, date: Date.parse(m.envoye_le) }));
+  return {
+    id: l.id,
+    moi: l.pro_id === moi ? "artisan" : "client",
+    artisan: {
+      id: l.pro_id,
+      nom: l.pro?.nom ?? "Artisan",
+      metier: l.pro?.metier ? metierLabel(l.pro.metier).artisan : "",
+      image: l.pro?.image ?? undefined,
+      telephone: l.pro?.telephone_public ?? "",
+      numeroPublic: l.pro?.numero_public ?? false,
+    },
+    client: { prenom: l.client?.prenom ?? "Client", telephone: l.client?.telephone ?? "" },
+    messages,
+    lu: { client: Date.parse(l.lu_client), artisan: Date.parse(l.lu_pro) },
+  };
+}
+
+const prevenir = () => {
+  combinees = null;
+  abonnes.forEach((f) => f());
+};
+
+async function chargerDistantes() {
+  const s = sessionActuelle();
+  if (!s) {
+    distantes = [];
+    return prevenir();
+  }
+  try {
+    const lignes = verifier(
+      await sb()
+        .from("conversations")
+        .select(
+          "*, pro:pros(nom, metier, image, telephone_public, numero_public), client:comptes(prenom, telephone), messages(id, de, texte, envoye_le)",
+        ),
+    ) as LigneConversation[];
+    distantes = lignes
+      .map((l) => versConversation(l, s.id))
+      .filter((c) => c.messages.length)
+      .sort((a, b) => (b.messages.at(-1)?.date ?? 0) - (a.messages.at(-1)?.date ?? 0));
+    prevenir();
+  } catch {
+    /* hors ligne : on garde les dernières conversations connues */
+  }
+}
+
+let rechargement: ReturnType<typeof setTimeout> | null = null;
+const rechargerBientot = () => {
+  if (rechargement) clearTimeout(rechargement);
+  rechargement = setTimeout(() => void chargerDistantes(), 150);
+};
+
+function ecouterSupabase() {
+  if (ecoute || !SUPABASE_ACTIF || typeof window === "undefined") return;
+  ecoute = true;
+  let canal: ReturnType<ReturnType<typeof sb>["channel"]> | null = null;
+  surSession(() => {
+    void chargerDistantes();
+    if (canal) void sb().removeChannel(canal);
+    canal = sessionActuelle()
+      ? sb()
+          .channel("messagerie")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, rechargerBientot)
+          .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, rechargerBientot)
+          .subscribe()
+      : null;
+  });
+}
+
+function toutes(): Conversation[] {
+  combinees ??= [...distantes, ...lire()];
+  return combinees;
+}
+
 const abonner = (f: () => void) => {
+  ecouterSupabase();
   abonnes.add(f);
   return () => abonnes.delete(f);
 };
 
 const nouvelId = () => Math.random().toString(36).slice(2, 10);
 
-export function envoyerMessage(
-  conv: Pick<Conversation, "artisan" | "client">,
-  de: Cote,
-  texte: string,
-) {
+// ——— Actions ———
+
+/** Envoie un message. Base : la conversation est créée au premier message du client. */
+export async function envoyerMessage(conv: Pick<Conversation, "artisan" | "client"> & { id?: string }, de: Cote, texte: string): Promise<void> {
+  if (!estDemo(conv.artisan.id)) {
+    const s = sessionActuelle();
+    if (!s) throw new Error("Connectez-vous pour écrire à cet artisan.");
+    let id = conv.id && distantes.some((c) => c.id === conv.id) ? conv.id : undefined;
+    if (!id) {
+      const existante = distantes.find((c) => c.artisan.id === conv.artisan.id && c.moi === "client");
+      id =
+        existante?.id ??
+        (
+          verifier(
+            await sb()
+              .from("conversations")
+              .upsert({ client_id: s.id, pro_id: conv.artisan.id }, { onConflict: "client_id,pro_id" })
+              .select("id")
+              .single(),
+          ) as { id: string }
+        ).id;
+    }
+    verifier(await sb().from("messages").insert({ conversation_id: id, de: de === "artisan" ? "pro" : "client", texte: texte.trim() }));
+    await marquerLu(id, de);
+    return chargerDistantes();
+  }
+
   const maintenant = Date.now();
   const msg: Message = { id: nouvelId(), de, texte: texte.trim(), date: maintenant };
   const liste = lire();
@@ -110,10 +236,22 @@ export function envoyerMessage(
       ecrire([{ ...c, messages: [...c.messages, reponse] }, ...lire().filter((x) => x.id !== c.id)]);
     }, 2500);
   }
-  return maj;
 }
 
-export function marquerLu(id: string, cote: Cote) {
+export async function marquerLu(id: string, cote: Cote): Promise<void> {
+  const distante = distantes.find((x) => x.id === id);
+  if (distante) {
+    const dernier = distante.messages.at(-1)?.date ?? 0;
+    if (distante.lu[cote] >= dernier && dernier) return;
+    // mise à jour immédiate à l'écran, puis dans la base
+    distantes = distantes.map((x) => (x.id === id ? { ...x, lu: { ...x.lu, [cote]: Date.now() } } : x));
+    prevenir();
+    await sb()
+      .from("conversations")
+      .update(cote === "client" ? { lu_client: new Date().toISOString() } : { lu_pro: new Date().toISOString() })
+      .eq("id", id);
+    return;
+  }
   const liste = lire();
   const c = liste.find((x) => x.id === id);
   if (!c) return;
@@ -125,10 +263,9 @@ export function marquerLu(id: string, cote: Cote) {
 export const nonLus = (c: Conversation, cote: Cote) =>
   c.messages.filter((m) => m.de !== cote && m.date > c.lu[cote]).length;
 
-/** Conversations vues par le client (toutes) ou par un artisan (les siennes). */
+/** Conversations vues par le client (les siennes) ou par un artisan (celles qu'il a reçues). */
 export function useConversations(artisanId?: string): Conversation[] | null {
-  const toutes = useSyncExternalStore(abonner, lire, () => null);
-  if (!toutes) return null;
-  return artisanId ? toutes.filter((c) => c.artisan.id === artisanId) : toutes;
+  const liste = useSyncExternalStore(abonner, toutes, () => null);
+  if (!liste) return null;
+  return artisanId ? liste.filter((c) => c.artisan.id === artisanId) : liste.filter((c) => c.moi !== "artisan");
 }
-

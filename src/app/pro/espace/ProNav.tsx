@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarDays, FileText, Home, Inbox, MessagesSquare, User } from "lucide-react";
 import { useDemandesDevis } from "@/lib/devis";
-import { ARTISAN_DEMO_ID, demandes } from "@/lib/pro-data";
+import { useProConnecte } from "@/lib/pro-connecte";
+import { demandes } from "@/lib/pro-data";
 import { nonLus, useConversations } from "@/lib/messagerie";
 
 const onglets = [
@@ -20,9 +21,10 @@ const onglets = [
 export function ProNav() {
   const path = usePathname();
   const nouvelles = demandes.filter((d) => d.statut === "nouvelle").length;
-  const conversations = useConversations(ARTISAN_DEMO_ID);
+  const { id } = useProConnecte("artisan");
+  const conversations = useConversations(id);
   const messages = (conversations ?? []).reduce((n, c) => n + nonLus(c, "artisan"), 0);
-  const devis = (useDemandesDevis({ type: "artisan", id: ARTISAN_DEMO_ID }) ?? []).filter((d) => d.statut === "nouvelle").length;
+  const devis = (useDemandesDevis({ type: "artisan", id }) ?? []).filter((d) => d.statut === "nouvelle").length;
   const badges: Record<string, number> = { Demandes: nouvelles, Messages: messages, Devis: devis };
   return (
     <nav

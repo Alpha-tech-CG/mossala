@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Code Supabase (SQL + Edge Functions Deno), hors application Next.
     "supabase/**",
+    // Cloud Functions Firebase (Node, CommonJS), déployées à part.
+    "firebase-functions/**",
   ]),
 ]);
 

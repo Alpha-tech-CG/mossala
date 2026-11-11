@@ -48,6 +48,8 @@ export type Badge =
   | "Top avis";
 
 export type Realisation = {
+  /** identifiant en base (réalisations publiées par un artisan inscrit) */
+  id?: string;
   titre: string;
   type: string;
   quartier: string;

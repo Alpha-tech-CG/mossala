@@ -22,7 +22,8 @@ import {
   fcfa,
 } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
-import { demanderAcces } from "./Acces";
+import { InscriptionClient, demanderAcces } from "./Acces";
+import { erreurSupabase, estDemo } from "@/lib/backend/supabase";
 import { useQuota } from "@/lib/quota";
 import { envoyerMessage } from "@/lib/messagerie";
 
@@ -86,6 +87,10 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
   const [etape, setEtape] = useState<Etape>(a.numeroPublic ? "choix" : "message");
   const [texte, setTexte] = useState("");
   const [tel, setTel] = useState(compte.compte?.telephone ?? "");
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
+  /** artisan inscrit (base Supabase) : il faut un compte, le numéro est celui du compte */
+  const reel = !estDemo(a.id);
   const [operateur, setOperateur] = useState<"MTN MoMo" | "Airtel Money">("MTN MoMo");
   const [paiementEnCours, setPaiementEnCours] = useState(false);
   const prenom = a.nom.split(" ")[0];
@@ -102,20 +107,29 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
     };
   }, [onClose]);
 
-  const envoyer = (e: React.FormEvent) => {
+  const envoyer = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (envoi) return;
     if (QUOTA_ACTIF && !q.peutEnvoyer) return setEtape("paiement");
-    // TODO backend : insérer le message + déclencher les notifications WhatsApp et SMS
-    envoyerMessage(
-      {
-        artisan: { id: a.id, nom: a.nom, metier: a.metier, image: a.image, telephone: a.telephone, numeroPublic: a.numeroPublic },
-        client: { prenom: compte.compte?.prenom ?? "Client", telephone: tel },
-      },
-      "client",
-      texte,
-    );
-    if (QUOTA_ACTIF) q.consommer();
-    setEtape("envoye");
+    setErreur("");
+    setEnvoi(true);
+    try {
+      // Artisan inscrit : message enregistré en base, l'alerte WhatsApp/SMS part du serveur.
+      await envoyerMessage(
+        {
+          artisan: { id: a.id, nom: a.nom, metier: a.metier, image: a.image, telephone: a.telephone, numeroPublic: a.numeroPublic },
+          client: { prenom: compte.compte?.prenom ?? "Client", telephone: tel },
+        },
+        "client",
+        texte,
+      );
+      if (QUOTA_ACTIF) q.consommer();
+      setEtape("envoye");
+    } catch (err) {
+      setErreur(erreurSupabase(err));
+    } finally {
+      setEnvoi(false);
+    }
   };
 
   const payer = () => {
@@ -209,7 +223,14 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
             </div>
           )}
 
-          {etape === "message" && (
+          {etape === "message" && reel && !compte.compte && (
+            <InscriptionClient
+              titre={`Connectez-vous pour écrire à ${prenom}`}
+              intro="Votre numéro vérifié permet à l’artisan de vous rappeler. Gratuit."
+            />
+          )}
+
+          {etape === "message" && (!reel || compte.compte) && (
             <form onSubmit={envoyer} className="space-y-4">
               {!a.numeroPublic && (
                 <p className="flex gap-3 rounded-2xl bg-secondary p-4 text-sm text-primary">
@@ -235,20 +256,27 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
                   className={`${field} resize-none`}
                 />
               </div>
-              <div>
-                <label htmlFor="rappel" className="mb-2 block text-sm font-semibold">
-                  Votre numéro pour être rappelé
-                </label>
-                <input
-                  id="rappel"
-                  type="tel"
-                  required
-                  value={tel}
-                  onChange={(e) => setTel(e.target.value)}
-                  placeholder="06 000 00 00"
-                  className={field}
-                />
-              </div>
+              {reel ? (
+                <p className="text-sm text-muted-foreground">
+                  {prenom} pourra vous rappeler au <strong className="text-foreground">{compte.compte?.telephone}</strong>.
+                </p>
+              ) : (
+                <div>
+                  <label htmlFor="rappel" className="mb-2 block text-sm font-semibold">
+                    Votre numéro pour être rappelé
+                  </label>
+                  <input
+                    id="rappel"
+                    type="tel"
+                    required
+                    value={tel}
+                    onChange={(e) => setTel(e.target.value)}
+                    placeholder="06 000 00 00"
+                    className={field}
+                  />
+                </div>
+              )}
+              {erreur && <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{erreur}</p>}
 
               {QUOTA_ACTIF && (
                 <QuotaLine illimite={q.illimite} restants={q.restants} jusqua={q.illimiteJusqua} mois={mois} />
@@ -263,6 +291,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
 
               <button
                 type="submit"
+                disabled={envoi}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition hover:brightness-95 active:scale-[0.98]"
               >
                 <Send className="size-5" />

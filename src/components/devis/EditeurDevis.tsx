@@ -22,6 +22,7 @@ import {
   type LigneDevis,
   type RubriqueDevis,
 } from "@/lib/devis";
+import { erreurSupabase } from "@/lib/backend/supabase";
 import { TableauDevis } from "./TableauDevis";
 
 const champ =
@@ -78,6 +79,7 @@ export function EditeurDevis({
   );
   const [declin, setDeclin] = useState<string | null>(null);
   const [erreur, setErreur] = useState("");
+  const [envoi, setEnvoi] = useState(false);
   const modifiable = demande.statut === "nouvelle" || demande.statut === "brouillon" || demande.statut === "envoyee";
 
   const majRubrique = (id: string, f: (r: RubriqueDevis) => RubriqueDevis) =>
@@ -131,8 +133,11 @@ export function EditeurDevis({
       setErreur("Ajoutez au moins une ligne avec une désignation avant d’envoyer le devis.");
       return;
     }
-    enregistrerDevis(demande.id, propre, envoyer);
-    onFermer();
+    setEnvoi(true);
+    enregistrerDevis(demande.id, propre, envoyer)
+      .then(onFermer)
+      .catch((e) => setErreur(erreurSupabase(e)))
+      .finally(() => setEnvoi(false));
   };
 
   if (apercu)
@@ -370,10 +375,10 @@ export function EditeurDevis({
             </div>
             {erreur && <p className="mt-2 text-sm text-accent">{erreur}</p>}
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => sauver(false)} className="flex items-center justify-center gap-2 rounded-xl bg-white/10 py-3 text-sm font-bold ring-1 ring-white/20">
+              <button type="button" disabled={envoi} onClick={() => sauver(false)} className="disabled:opacity-60flex items-center justify-center gap-2 rounded-xl bg-white/10 py-3 text-sm font-bold ring-1 ring-white/20">
                 <Save className="size-4" /> Brouillon
               </button>
-              <button type="button" onClick={() => sauver(true)} className="flex items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground">
+              <button type="button" disabled={envoi} onClick={() => sauver(true)} className="disabled:opacity-60flex items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground">
                 <Send className="size-4" /> {demande.statut === "envoyee" ? "Renvoyer" : "Envoyer"} le devis
               </button>
             </div>
@@ -404,8 +409,9 @@ export function EditeurDevis({
                   <button
                     type="button"
                     onClick={() => {
-                      declinerDemande(demande.id, declin);
-                      onFermer();
+                      declinerDemande(demande.id, declin)
+                        .then(onFermer)
+                        .catch((e) => setErreur(erreurSupabase(e)));
                     }}
                     className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-bold text-white"
                   >

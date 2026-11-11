@@ -4,6 +4,7 @@ import { BadgeCheck, ExternalLink, Hourglass } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { getArtisan, metierLabel } from "@/lib/data";
 import { ARTISAN_DEMO_ID } from "@/lib/pro-data";
+import { ProfilConnecte } from "./ProfilConnecte";
 import { ProfilEditor } from "./ProfilEditor";
 
 export const metadata: Metadata = { title: "Mon profil pro — Artopif" };
@@ -17,7 +18,8 @@ const verifications = [
 
 export default function ProfilPro() {
   const a = getArtisan(ARTISAN_DEMO_ID)!;
-  return (
+  // Démo rendue par le serveur ; remplacée par le profil de l'artisan connecté (Supabase).
+  const demo = (
     <div className="mx-auto max-w-3xl">
       <div className="flex flex-wrap items-center gap-4">
         <Avatar a={a} className="size-16 rounded-2xl shadow" />
@@ -65,4 +67,5 @@ export default function ProfilPro() {
       />
     </div>
   );
+  return <ProfilConnecte demo={demo} />;
 }

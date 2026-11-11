@@ -11,7 +11,7 @@ import type { NotificationMessage } from "./types";
  * En production, on n'appelle JAMAIS un fournisseur SMS/WhatsApp depuis le navigateur (la
  * clé secrète serait exposée). Le vrai chemin est :
  *   1. le message est écrit dans Supabase (table `messages`, protégée par RLS) ;
- *   2. un trigger Postgres déclenche l'Edge Function `notifier-message` ;
+ *   2. un trigger Postgres déclenche l'Edge Function `notifier` ;
  *   3. l'Edge Function lit les numéros du destinataire et appelle le fournisseur
  *      (Africa's Talking ou Twilio) avec une clé secrète côté serveur.
  * Cette fonction côté client se contentera donc d'écrire le message ; l'alerte part du serveur.
@@ -26,8 +26,8 @@ export async function notifierNouveauMessage(n: NotificationMessage): Promise<vo
       `\n${texteAlerte(n)}`,
     );
   }
-  // TODO backend : écrire le message dans Supabase ; l'Edge Function `notifier-message`
-  // s'occupe de l'envoi WhatsApp/SMS. Voir supabase/functions/notifier-message/.
+  // Avec Supabase, les échanges avec les pros inscrits n'appellent pas cette fonction : le
+  // message est écrit en base et un trigger appelle l'Edge Function `notifier` (supabase/).
 }
 
 /** Texte de l'alerte WhatsApp/SMS envoyée au destinataire. */

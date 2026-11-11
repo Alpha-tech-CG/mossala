@@ -15,7 +15,8 @@ import {
   X,
 } from "lucide-react";
 import type { Avis, Realisation } from "@/lib/data";
-import { compresserPhoto, enregistrerRealisations, useRealisations } from "@/lib/realisations";
+import { ajouterRealisation, compresserPhoto, retirerRealisation, useRealisations } from "@/lib/realisations";
+import { erreurSupabase } from "@/lib/backend/supabase";
 import { PhotoRealisation } from "@/components/PhotoRealisation";
 import { quartiers } from "@/lib/data";
 
@@ -54,6 +55,8 @@ function Interrupteur({ on, onChange, label, sub }: { on: boolean; onChange: (v:
 
 export function ProfilEditor(props: {
   artisanId: string;
+  /** artisan inscrit : enregistre la fiche publique (absent en démo) */
+  onSauver?: (champs: { description: string; zones: string[]; numeroPublic: boolean }) => Promise<void>;
   nom: string;
   metier: string;
   description: string;
@@ -73,12 +76,7 @@ export function ProfilEditor(props: {
   // Réalisations publiées : enregistrées et visibles aussitôt dans l'onglet « Réalisations » du profil public.
   const realisations = useRealisations(props.artisanId, props.realisations) ?? props.realisations;
   const [erreurReal, setErreurReal] = useState("");
-  const setRealisations = (l: Realisation[]) =>
-    setErreurReal(
-      enregistrerRealisations(props.artisanId, l)
-        ? ""
-        : "Enregistrement impossible : trop de photos pour la démo. Retirez-en quelques-unes.",
-    );
+  const [publication, setPublication] = useState(false);
   const [formOuvert, setFormOuvert] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [titre, setTitre] = useState("");
@@ -93,10 +91,17 @@ export function ProfilEditor(props: {
   );
   const [brouillons, setBrouillons] = useState<Record<string, string>>({});
 
-  const sauver = () => {
-    // TODO Firebase : mettre à jour le profil
-    setEnregistre(true);
-    setTimeout(() => setEnregistre(false), 2500);
+  const [erreurProfil, setErreurProfil] = useState("");
+  const sauver = async () => {
+    setErreurProfil("");
+    try {
+      // Artisan inscrit : fiche publique enregistrée dans la base. Démo : rien à enregistrer.
+      await props.onSauver?.({ description, zones, numeroPublic });
+      setEnregistre(true);
+      setTimeout(() => setEnregistre(false), 2500);
+    } catch (e) {
+      setErreurProfil(erreurSupabase(e));
+    }
   };
 
   return (
@@ -189,7 +194,7 @@ export function ProfilEditor(props: {
               <button
                 type="button"
                 aria-label={`Supprimer ${r.titre}`}
-                onClick={() => setRealisations(realisations.filter((x) => x !== r))}
+                onClick={async () => setErreurReal((await retirerRealisation(props.artisanId, r, realisations)) ?? "")}
                 className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-white/90 shadow"
               >
                 <X className="size-4" />
@@ -210,15 +215,17 @@ export function ProfilEditor(props: {
         {formOuvert && (
           <form
             className="mt-5 space-y-4 rounded-2xl bg-background p-4 ring-1 ring-border"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
+              if (publication) return;
               if (!photos.length) {
                 setErreurReal("Ajoutez au moins une photo du chantier.");
                 return;
               }
-              // TODO backend : envoyer les photos (Storage) et créer la réalisation
               const mois = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-              setRealisations([
+              setPublication(true);
+              const erreur = await ajouterRealisation(
+                props.artisanId,
                 {
                   titre: titre.trim(),
                   type: props.metier,
@@ -231,8 +238,11 @@ export function ProfilEditor(props: {
                   photos,
                   verifiee: false,
                 },
-                ...realisations,
-              ]);
+                realisations,
+              );
+              setPublication(false);
+              setErreurReal(erreur ?? "");
+              if (erreur) return;
               setFormOuvert(false);
               setTitre("");
               setDesc("");
@@ -298,7 +308,9 @@ export function ProfilEditor(props: {
               <button type="button" onClick={() => setFormOuvert(false)} className="flex-1 rounded-xl border border-border py-3 font-semibold">
                 Annuler
               </button>
-              <button className="flex-1 rounded-xl bg-primary py-3 font-bold text-primary-foreground">Publier</button>
+              <button disabled={publication} className="flex-1 rounded-xl bg-primary py-3 font-bold text-primary-foreground disabled:opacity-60">
+                {publication ? "Publication…" : "Publier"}
+              </button>
             </div>
           </form>
         )}
@@ -368,6 +380,7 @@ export function ProfilEditor(props: {
             </>
           )}
         </button>
+        {erreurProfil && <p className="mt-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{erreurProfil}</p>}
       </div>
     </div>
   );

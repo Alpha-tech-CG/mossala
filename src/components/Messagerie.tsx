@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, MessagesSquare, Phone, Send } from "lucide-react";
+import { erreurSupabase } from "@/lib/backend/supabase";
 import {
   envoyerMessage,
   marquerLu,
@@ -113,20 +114,27 @@ export function BoiteMessages({ cote, artisanId, vide }: { cote: Cote; artisanId
 function Fil({ conv, cote, onRetour }: { conv: Conversation; cote: Cote; onRetour: () => void }) {
   const qui = interlocuteur(conv, cote);
   const [texte, setTexte] = useState("");
+  const [erreur, setErreur] = useState("");
   const bas = useRef<HTMLDivElement>(null);
   const nb = conv.messages.length;
 
   // Ouvrir le fil marque les messages comme lus et descend au dernier message.
   useEffect(() => {
-    marquerLu(conv.id, cote);
+    void marquerLu(conv.id, cote);
     bas.current?.scrollIntoView({ block: "end" });
   }, [conv.id, cote, nb]);
 
   const envoyer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!texte.trim()) return;
-    envoyerMessage(conv, cote, texte);
+    const envoye = texte;
     setTexte("");
+    setErreur("");
+    // en cas d'échec, le texte revient dans la zone de saisie
+    envoyerMessage(conv, cote, envoye).catch((err) => {
+      setTexte(envoye);
+      setErreur(erreurSupabase(err));
+    });
   };
 
   const tel = cote === "client" ? (conv.artisan.numeroPublic ? conv.artisan.telephone : null) : conv.client.telephone;
@@ -180,6 +188,7 @@ function Fil({ conv, cote, onRetour }: { conv: Conversation; cote: Cote; onRetou
         <div ref={bas} />
       </div>
 
+      {erreur && <p className="border-t border-border bg-destructive/10 px-4 py-2 text-sm text-destructive">{erreur}</p>}
       <form onSubmit={envoyer} className="flex items-end gap-2 border-t border-border p-3">
         <label htmlFor={`msg-${conv.id}`} className="sr-only">
           Votre message

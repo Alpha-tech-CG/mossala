@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { MessagesSquare } from "lucide-react";
 import { BoiteMessages } from "@/components/Messagerie";
-import { ARTISAN_DEMO_ID } from "@/lib/pro-data";
+import { useProConnecte } from "@/lib/pro-connecte";
 
-/** Messagerie côté artisan (MAQUETTE : l'artisan connecté est l'artisan de démo). */
+/** Messagerie côté artisan : celui qui est connecté, sinon l'artisan de démonstration. */
 export function BoiteArtisan() {
+  const { id: artisanId, pret } = useProConnecte("artisan");
+  if (!pret) return <div className="mt-6 h-96 animate-pulse rounded-2xl bg-card" aria-busy />;
   return (
     <BoiteMessages
       cote="artisan"
-      artisanId={ARTISAN_DEMO_ID}
+      artisanId={artisanId}
       vide={
         <div className="mt-6 flex flex-col items-center rounded-2xl bg-card p-8 text-center shadow-sm">
           <MessagesSquare className="size-10 text-muted-foreground" />
@@ -19,7 +21,7 @@ export function BoiteArtisan() {
             Pour tester : ouvrez votre fiche publique et cliquez sur « Contactez », puis « Laisser un message ».
           </p>
           <Link
-            href={`/artisans/${ARTISAN_DEMO_ID}`}
+            href={`/artisans/${artisanId}`}
             className="mt-5 rounded-xl bg-accent px-5 py-3 text-sm font-bold text-accent-foreground"
           >
             Voir ma fiche publique
