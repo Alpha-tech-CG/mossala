@@ -4,11 +4,12 @@ import { Suspense } from "react";
 import { SearchX } from "lucide-react";
 import { BandeauAcces } from "@/components/Acces";
 import { ArtisanCardRow } from "@/components/ui";
-import { type CategorieId, artisans, getMetier, metierLabel, villeArtisan } from "@/lib/data";
+import { type CategorieId, artisans, getMetier, lieuDepuis, metierLabel, quoiDepuis, villeArtisan } from "@/lib/data";
 import { artisansInscrits } from "@/lib/backend/serveur";
 import { FilterChips, SearchBar } from "./Filters";
+import { ResultatsMateriaux } from "./Materiaux";
 
-export const metadata: Metadata = { title: "Rechercher un artisan — Artopif" };
+export const metadata: Metadata = { title: "Rechercher un artisan ou un matériau — Artopif" };
 
 const norm = (s: string) =>
   s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
@@ -24,6 +25,26 @@ export default function RecherchePage(props: PageProps<"/recherche">) {
 async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
   const sp = await props.searchParams;
   const get = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
+
+  // Quincaillerie / matériaux : produits et prix de chaque boutique
+  if (quoiDepuis(get("quoi")) === "materiaux") {
+    return (
+      <div className="mx-auto max-w-6xl pt-4 md:pt-8">
+        <div className="px-5 md:max-w-2xl">
+          <Suspense>
+            <SearchBar />
+          </Suspense>
+        </div>
+        <div className="mt-4">
+          <Suspense>
+            <FilterChips />
+          </Suspense>
+        </div>
+        <ResultatsMateriaux q={get("q").trim()} cat={get("cat")} lieu={lieuDepuis(sp)} />
+      </div>
+    );
+  }
+
   const q = norm(get("q"));
   const metier = get("metier");
   const categorie = get("categorie");

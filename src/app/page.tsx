@@ -15,8 +15,8 @@ import {
 import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
 import { CadrePub, EspacePub, PubsLateralesFil } from "@/components/EspacePub";
-import { ArtisanCardVertical, ProduitCard, SectionTitle, categorieIcons } from "@/components/ui";
-import { artisans, categories, metiers, produits, quartiers } from "@/lib/data";
+import { ArtisanCardVertical, BoutiqueCard, SectionTitle, categorieIcons } from "@/components/ui";
+import { VILLE_DEFAUT, artisans, boutiquesProches, categories, metiers, quartiers } from "@/lib/data";
 
 const etapes = [
   { Icon: Search, t: "Trouvez votre artisan", d: "Par métier et quartier, avec ses avis et ses réalisations." },
@@ -178,10 +178,14 @@ export default function Home() {
           <div className="px-5">
             <SectionTitle eyebrow="Une meilleure connaissance des prix" title="Quincaillerie" href="/quincaillerie" />
           </div>
-          <div className="no-scrollbar mt-4 flex gap-4 overflow-x-auto px-5 pt-1 pb-3 md:grid md:grid-cols-4 md:overflow-visible">
-            {produits.slice(0, 4).map((p) => (
-              <ProduitCard key={p.id} p={p} />
-            ))}
+          <div className="no-scrollbar mt-4 flex gap-4 overflow-x-auto px-5 pt-1 pb-3 md:grid md:grid-cols-3 md:overflow-visible">
+            {boutiquesProches({ ville: VILLE_DEFAUT })
+              .slice(0, 3)
+              .map((s) => (
+                <div key={s.b.id} className="grid w-72 shrink-0 md:w-auto">
+                  <BoutiqueCard lieu={{ ville: VILLE_DEFAUT }} {...s} />
+                </div>
+              ))}
           </div>
         </Reveal>
 

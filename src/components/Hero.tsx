@@ -66,13 +66,25 @@ export function Hero() {
             action="/recherche"
             className="fade-up fade-up-1 mx-auto mt-9 flex max-w-3xl flex-col overflow-hidden border border-sand bg-white text-left shadow-[0_20px_50px_-30px_rgba(20,33,61,0.5)] sm:flex-row"
           >
+            <label className="sr-only" htmlFor="hero-quoi">
+              Que cherchez-vous ?
+            </label>
+            <select
+              id="hero-quoi"
+              name="quoi"
+              defaultValue="artisans"
+              className="border-b border-sand bg-transparent px-5 py-5 text-[15px] font-semibold outline-none sm:w-44 sm:border-r sm:border-b-0"
+            >
+              <option value="artisans">Artisans</option>
+              <option value="materiaux">Quincaillerie / Matériaux</option>
+            </select>
             <label className="flex min-w-0 flex-1 items-center gap-3 px-5">
               <Search className="size-5 shrink-0 text-primary" />
-              <span className="sr-only">Quel artisan cherchez-vous ?</span>
+              <span className="sr-only">Que cherchez-vous ?</span>
               <input
                 name="q"
                 type="text"
-                placeholder="Quel artisan cherchez-vous ?"
+                placeholder="Un artisan, du ciment, de la peinture…"
                 className="w-full bg-transparent py-5 text-[15px] outline-none placeholder:text-muted-foreground"
               />
             </label>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import {
   Check,
@@ -14,6 +15,7 @@ import { BoutiquePhoto } from "@/components/ui";
 import {
   fcfa,
   libelleProximite,
+  lienLieu,
   offresProduit,
   prixOffre,
   type Produit,
@@ -200,7 +202,12 @@ export function Comparateur({ p }: { p: Pick<Produit, "id" | "unite"> }) {
                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                   Retrait chez
                 </p>
-                <p className="mt-0.5 font-bold">{choisie.b.nom}</p>
+                <Link
+                  href={lienLieu(`/quincaillerie/boutique/${choisie.boutique}`, lieu)}
+                  className="mt-0.5 block font-bold hover:underline"
+                >
+                  {choisie.b.nom}
+                </Link>
                 <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                   <MapPin className="size-4 shrink-0" /> {choisie.b.adresse},{" "}
                   {choisie.b.quartier}, {choisie.b.ville}

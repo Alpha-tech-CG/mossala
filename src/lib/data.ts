@@ -880,6 +880,60 @@ export function resumeProduit(produitId: string, lieu: Lieu) {
   };
 }
 
+/** Rayons d'une quincaillerie : ses produits avec son prix et son stock, et le meilleur prix de la ville. */
+export function rayonsBoutique(boutiqueId: string) {
+  const b = boutiques.find((x) => x.id === boutiqueId);
+  if (!b) return [];
+  return offres
+    .filter((of) => of.boutique === boutiqueId)
+    .flatMap((of) => {
+      const p = getProduit(of.produit);
+      if (!p) return [];
+      const minVille = Math.min(...offresProduit(p.id, { ville: b.ville }).map(prixOffre));
+      return [{ ...of, p, meilleurPrix: prixOffre(of) <= minVille }];
+    })
+    .sort(
+      (x, y) =>
+        categoriesProduits.indexOf(x.p.categorie) - categoriesProduits.indexOf(y.p.categorie) ||
+        x.p.nom.localeCompare(y.p.nom, "fr"),
+    );
+}
+
+/** Quincailleries de la ville du client, les plus proches d'abord, avec leur nombre de produits et de meilleurs prix. */
+export function boutiquesProches(lieu: Lieu) {
+  return boutiques
+    .filter((b) => b.ville === lieu.ville)
+    .map((b) => {
+      const rayons = rayonsBoutique(b.id);
+      return {
+        b,
+        nbProduits: rayons.length,
+        meilleursPrix: rayons.filter((r) => r.meilleurPrix).length,
+        distance: proximite(b, lieu),
+      };
+    })
+    .sort((x, y) => x.distance - y.distance || y.meilleursPrix - x.meilleursPrix);
+}
+
+const sansAccents = (s: string) =>
+  s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
+
+/** Produits correspondant à une recherche libre (« ciment », « peinture blanche ») et/ou à un type. */
+export function chercherProduits(texte: string, type?: string) {
+  const mots = sansAccents(texte).split(/\s+/).filter(Boolean);
+  return produits.filter((p) => {
+    if (type && p.categorie !== type) return false;
+    if (!mots.length) return true;
+    const hay = sansAccents([p.nom, p.categorie, p.marque, p.description].join(" "));
+    // « tuyaux » doit trouver « tuyau » : on compare aussi le début du mot
+    return mots.every((m) => hay.includes(m) || hay.includes(m.slice(0, 5)));
+  });
+}
+
+/** Ce que l'on cherche sur /recherche : des artisans, ou des produits de quincaillerie (prix comparés). */
+export type Quoi = "artisans" | "materiaux";
+export const quoiDepuis = (v: string | null | undefined): Quoi => (v === "materiaux" ? "materiaux" : "artisans");
+
 /** Lien vers une page quincaillerie en conservant la ville et le quartier choisis. */
 export function lienLieu(chemin: string, lieu: Lieu, extra: Record<string, string | undefined> = {}) {
   const q = new URLSearchParams();

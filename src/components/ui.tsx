@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   Nut,
   Store,
+  TrendingDown,
   PaintBucket,
   Package,
   ArrowLeft,
@@ -39,6 +40,7 @@ import {
   type Produit,
   VILLE_DEFAUT,
   fcfa,
+  libelleProximite,
   lienLieu,
   resumeProduit,
   getMetier,
@@ -383,6 +385,65 @@ export function ProduitCard({ p, wide, lieu = { ville: VILLE_DEFAUT } }: { p: Pr
   );
 }
 
+/** Carte d'une quincaillerie : on la touche pour entrer et voir ses produits et ses prix. */
+export function BoutiqueCard({
+  b,
+  lieu,
+  nbProduits,
+  meilleursPrix,
+  distance,
+}: {
+  b: Boutique;
+  lieu: Lieu;
+  nbProduits: number;
+  meilleursPrix: number;
+  distance: 0 | 1 | 2 | 3;
+}) {
+  return (
+    <Link
+      href={lienLieu(`/quincaillerie/boutique/${b.id}`, lieu)}
+      className="group flex flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03] transition hover:-translate-y-1 hover:shadow-lg"
+    >
+      <BoutiquePhoto b={b} className="aspect-[16/7] w-full" sizes="(min-width: 768px) 480px, 100vw" />
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="font-bold">{b.nom}</h3>
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              distance === 0
+                ? "bg-success text-white"
+                : distance === 1
+                  ? "bg-secondary text-primary"
+                  : "bg-muted text-muted-foreground"
+            }`}
+          >
+            {distance === 2 ? b.quartier : libelleProximite(b, lieu)}
+          </span>
+        </div>
+        <p className="mt-1.5 flex items-center gap-2 text-sm text-muted-foreground">
+          <MapPin className="size-4 shrink-0" /> {b.adresse}, {b.quartier}
+        </p>
+        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="size-4 shrink-0" /> {b.horaires}
+        </p>
+        <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <span>
+            <strong>{nbProduits}</strong> produit{nbProduits > 1 ? "s" : ""}
+          </span>
+          {meilleursPrix > 0 && (
+            <span className="flex items-center gap-1 font-semibold text-success">
+              <TrendingDown className="size-4" /> Meilleur prix sur {meilleursPrix}
+            </span>
+          )}
+        </p>
+        <span className="mt-auto flex items-center gap-1 pt-3 text-sm font-bold text-primary">
+          Voir les produits et les prix <ChevronRight className="size-4 transition group-hover:translate-x-0.5" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 /**
  * Photo d'une quincaillerie. Sans photo, une vignette à ses couleurs avec ses initiales,
  * pour qu'on la reconnaisse quand même d'un coup d'œil.
@@ -411,6 +472,10 @@ export function BoutiquePhoto({ b, className = "", sizes = "160px" }: { b: Bouti
       <span className="relative font-serif text-[clamp(0.9rem,2.2vw,1.6rem)] leading-none tracking-wide">{initiales(b.nom)}</span>
     </span>
   );
+}
+
+export function ProduitIcon({ categorie, className }: { categorie: string; className?: string }) {
+  return createElement(produitIcons[categorie] ?? Wrench, { className, strokeWidth: 1.6 });
 }
 
 export function ProduitFallback({ categorie, big }: { categorie: string; big?: boolean }) {
