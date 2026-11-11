@@ -281,3 +281,22 @@
     animation: none;
   }
 }
+
+/* Impression d'un devis (« Imprimer / PDF ») : seul le devis est imprimé. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .devis-imprimable,
+  .devis-imprimable * {
+    visibility: visible;
+  }
+  .devis-imprimable {
+    position: absolute;
+    inset: 0 0 auto 0;
+    box-shadow: none;
+  }
+  .devis-imprimable .overflow-x-auto {
+    overflow: visible;
+  }
+}

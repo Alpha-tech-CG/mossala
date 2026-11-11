@@ -1,12 +1,13 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Award, BellRing, CheckCircle2, Clock, Lock, MapPin, MessageCircle, Phone, PenLine, Star } from "lucide-react";
+import { Award, BellRing, CheckCircle2, Clock, FileText, Lock, MapPin, MessageCircle, Phone, PenLine, Star } from "lucide-react";
 import { ProfilVerrou } from "@/components/Acces";
 import { ContactButton } from "@/components/Contact";
 import { FavoriButton, Signaler } from "@/components/Engagement";
 import { Avatar, BackHeader, Rating, toContact } from "@/components/ui";
 import { artisans, badgesReputation, getArtisan, metierLabel } from "@/lib/data";
+import { OngletsProfil } from "./OngletsProfil";
 
 // Toutes les fiches sont pré-générées : la navigation peut attendre le rendu.
 export const instant = false;
@@ -121,107 +122,81 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
         </div>
       </section>
 
-      <section className="mt-8">
-        <h2 className="text-xl font-bold">Réalisations</h2>
-        {a.realisations.length ? (
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
-            {a.realisations.map((r) => (
-              <article key={r.titre} className="overflow-hidden rounded-2xl bg-card shadow-sm">
-                <Image src={r.image} alt={r.titre} width={600} height={400} className="h-44 w-full object-cover" />
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold">{r.titre}</h3>
-                    {r.verifiee && (
-                      <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-bold text-success">
-                        Réalisation vérifiée
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {r.type} · {r.quartier} · {r.duree}
-                  </p>
-                  <p className="mt-2 text-sm">{r.description}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Matériaux : {r.materiaux}</p>
-                  <ContactButton
-                    artisan={toContact(a)}
-                    label="Contactez pour un travail similaire"
-                    className="mt-3 block w-full rounded-xl border border-primary py-2.5 text-center text-sm font-bold text-primary"
-                  />
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-sm">
-            Pas encore de réalisation publiée.
-          </p>
-        )}
-      </section>
-
-      <section className="mt-8">
-        <div className="flex items-end justify-between">
-          <h2 className="text-xl font-bold">Avis clients</h2>
-          <span className="flex items-center gap-1 text-sm font-bold">
-            <Star className="size-4 fill-star text-star" /> {a.note.toString().replace(".", ",")} ·{" "}
-            {a.nbAvis} avis
-          </span>
-        </div>
-        <div className="mt-4 space-y-3">
-          {a.avis.length ? (
-            a.avis.map((v) => (
-              <article key={v.auteur} className="rounded-2xl bg-card p-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-x-3">
-                  <p className="flex flex-wrap items-center gap-2 font-bold">
-                    {v.auteur}
-                    {v.experience === "prestation" ? (
-                      <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] text-success">
-                        Prestation confirmée
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-                        Avis non vérifié
-                      </span>
-                    )}
-                  </p>
-                  <span className="text-xs text-muted-foreground">{v.date}</span>
-                </div>
-                <p className="mt-1 flex gap-0.5" aria-label={`${v.note} sur 5`}>
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star key={i} className={`size-4 ${i < v.note ? "fill-star text-star" : "text-border"}`} />
-                  ))}
-                </p>
-                <p className="mt-2 text-sm">{v.texte}</p>
-                {v.reponse && (
-                  <p className="mt-3 border-l-2 border-primary pl-3 text-sm text-muted-foreground">
-                    <span className="font-bold text-foreground">Réponse de l’artisan : </span>
-                    {v.reponse}
-                  </p>
-                )}
-                <Signaler cible="avis" label="Signaler cet avis" />
-              </article>
-            ))
-          ) : (
-            <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-sm">
-              Aucun avis pour l’instant.
+      <OngletsProfil
+        artisanId={a.id}
+        realisations={a.realisations}
+        nbAvis={a.nbAvis}
+        avis={
+          <>
+            <p className="flex items-center gap-1 text-sm font-bold">
+              <Star className="size-4 fill-star text-star" /> {a.note.toString().replace(".", ",")} · {a.nbAvis} avis
             </p>
-          )}
-        </div>
-        <Link
-          href={`/artisans/${a.id}/evaluer`}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-primary py-3 text-sm font-bold text-primary"
-        >
-          <PenLine className="size-4" /> Évaluer {a.nom.split(" ")[0]}
-        </Link>
-        <Signaler cible="profil" label="Signaler ce profil" />
-      </section>
+            <div className="mt-4 space-y-3">
+              {a.avis.length ? (
+                a.avis.map((v) => (
+                  <article key={v.auteur} className="rounded-2xl bg-card p-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3">
+                      <p className="flex flex-wrap items-center gap-2 font-bold">
+                        {v.auteur}
+                        {v.experience === "prestation" ? (
+                          <span className="rounded-full bg-success/10 px-2 py-0.5 text-[11px] text-success">
+                            Prestation confirmée
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                            Avis non vérifié
+                          </span>
+                        )}
+                      </p>
+                      <span className="text-xs text-muted-foreground">{v.date}</span>
+                    </div>
+                    <p className="mt-1 flex gap-0.5" aria-label={`${v.note} sur 5`}>
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star key={i} className={`size-4 ${i < v.note ? "fill-star text-star" : "text-border"}`} />
+                      ))}
+                    </p>
+                    <p className="mt-2 text-sm">{v.texte}</p>
+                    {v.reponse && (
+                      <p className="mt-3 border-l-2 border-primary pl-3 text-sm text-muted-foreground">
+                        <span className="font-bold text-foreground">Réponse de l’artisan : </span>
+                        {v.reponse}
+                      </p>
+                    )}
+                    <Signaler cible="avis" label="Signaler cet avis" />
+                  </article>
+                ))
+              ) : (
+                <p className="rounded-2xl bg-card p-5 text-sm text-muted-foreground shadow-sm">
+                  Aucun avis pour l’instant.
+                </p>
+              )}
+            </div>
+            <Link
+              href={`/artisans/${a.id}/evaluer`}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-primary py-3 text-sm font-bold text-primary"
+            >
+              <PenLine className="size-4" /> Évaluer {a.nom.split(" ")[0]}
+            </Link>
+            <Signaler cible="profil" label="Signaler ce profil" />
+          </>
+        }
+      />
 
       {/* Bouton fixe orange */}
       <div className="fixed inset-x-0 bottom-4 z-40 px-5 md:static md:mt-8 md:px-0">
-        <ContactButton
-          artisan={toContact(a)}
-          label={`Contactez ${a.nom.split(" ")[0]}`}
-          className="block w-full rounded-xl bg-accent py-4 text-center text-base font-bold text-accent-foreground shadow-lg md:shadow-none"
-        />
+        <div className="grid grid-cols-[auto_1fr] gap-2">
+          <Link
+            href={`/devis/nouveau?artisan=${a.id}`}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-4 text-base font-bold text-primary-foreground shadow-lg md:px-6 md:shadow-none"
+          >
+            <FileText className="size-5" /> Devis
+          </Link>
+          <ContactButton
+            artisan={toContact(a)}
+            label={`Contactez ${a.nom.split(" ")[0]}`}
+            className="block w-full rounded-xl bg-accent py-4 text-center text-base font-bold text-accent-foreground shadow-lg md:shadow-none"
+          />
+        </div>
       </div>
       </ProfilVerrou>
     </div>

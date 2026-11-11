@@ -9,6 +9,7 @@ import {
   Check,
   Crown,
   ExternalLink,
+  FileText,
   LayoutDashboard,
   Lock,
   MapPin,
@@ -17,6 +18,9 @@ import {
   Store,
   Users,
 } from "lucide-react";
+import { BoiteDevisPro } from "@/components/devis/BoiteDevisPro";
+import { useDemandesDevis, type ArticleCatalogue } from "@/lib/devis";
+import { BOUTIQUE_DEMO_ID } from "@/lib/pro-data";
 import { Caisse } from "./Caisse";
 import { Clients } from "./Clients";
 import { Dashboard, type Onglet } from "./Dashboard";
@@ -28,6 +32,7 @@ import { MaBoutique, Promotions } from "./Vitrine";
 const ONGLETS: { id: Onglet; label: string; Icon: typeof Store }[] = [
   { id: "accueil", label: "Tableau de bord", Icon: LayoutDashboard },
   { id: "reservations", label: "Réservations", Icon: CalendarCheck },
+  { id: "devis", label: "Devis", Icon: FileText },
   { id: "caisse", label: "Caisse", Icon: ShoppingCart },
   { id: "stock", label: "Stock", Icon: Package },
   { id: "clients", label: "Clients", Icon: Users },
@@ -47,9 +52,13 @@ const AVANTAGES_PREMIUM = [
 export function EspaceBoutique() {
   const { etat, maj, reinitialiser } = useBoutique();
   const [onglet, setOnglet] = useState<Onglet>("accueil");
+  const demandesDevis = useDemandesDevis({ type: "boutique", id: BOUTIQUE_DEMO_ID });
 
   if (!etat) return <div className="h-[70vh] animate-pulse rounded-2xl bg-card" aria-busy />;
   const premium = etat.formule === "premium";
+  // Catalogue de la boutique (prix promo compris) : sert à chiffrer les demandes de devis.
+  const catalogue: ArticleCatalogue[] = etat.articles.map((a) => ({ nom: a.nom, unite: a.unite, prix: a.promo?.prix ?? a.prix }));
+  const devisPro = <BoiteDevisPro pro={{ type: "boutique", id: BOUTIQUE_DEMO_ID }} catalogue={catalogue} />;
   const changerFormule = (formule: "gratuit" | "premium") => {
     maj((e) => ({ ...e, formule }));
     setOnglet("accueil");
@@ -85,6 +94,11 @@ export function EspaceBoutique() {
       {!premium ? (
         <div className="mt-6 space-y-10">
           <Reservations reservations={etat.reservations} maj={maj} />
+
+          <section>
+            <h2 className="mb-3 text-lg font-bold">Demandes de devis</h2>
+            {devisPro}
+          </section>
 
           <section className="overflow-hidden rounded-3xl bg-foreground text-white shadow-lg">
             <div className="p-6 md:p-8">
@@ -136,7 +150,12 @@ export function EspaceBoutique() {
             <ul className="flex gap-2 lg:sticky lg:top-24 lg:flex-col lg:gap-1">
               {ONGLETS.map(({ id, label, Icon }) => {
                 const actif = onglet === id;
-                const badge = id === "reservations" ? etat.reservations.filter((r) => r.statut === "a-confirmer").length : 0;
+                const badge =
+                  id === "reservations"
+                    ? etat.reservations.filter((r) => r.statut === "a-confirmer").length
+                    : id === "devis"
+                      ? (demandesDevis ?? []).filter((d) => d.statut === "nouvelle").length
+                      : 0;
                 return (
                   <li key={id} className="shrink-0">
                     <button
@@ -160,6 +179,7 @@ export function EspaceBoutique() {
           <div className="min-w-0">
             {onglet === "accueil" && <Dashboard etat={etat} aller={setOnglet} />}
             {onglet === "reservations" && <Reservations reservations={etat.reservations} maj={maj} />}
+            {onglet === "devis" && devisPro}
             {onglet === "caisse" && <Caisse etat={etat} maj={maj} />}
             {onglet === "stock" && <Stock etat={etat} maj={maj} />}
             {onglet === "clients" && <Clients etat={etat} maj={maj} />}

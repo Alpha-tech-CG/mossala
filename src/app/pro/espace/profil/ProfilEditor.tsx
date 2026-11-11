@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import {
   AlertTriangle,
@@ -16,6 +15,8 @@ import {
   X,
 } from "lucide-react";
 import type { Avis, Realisation } from "@/lib/data";
+import { compresserPhoto, enregistrerRealisations, useRealisations } from "@/lib/realisations";
+import { PhotoRealisation } from "@/components/PhotoRealisation";
 import { quartiers } from "@/lib/data";
 
 const field =
@@ -52,6 +53,7 @@ function Interrupteur({ on, onChange, label, sub }: { on: boolean; onChange: (v:
 }
 
 export function ProfilEditor(props: {
+  artisanId: string;
   nom: string;
   metier: string;
   description: string;
@@ -68,11 +70,23 @@ export function ProfilEditor(props: {
   const [alerteSms, setAlerteSms] = useState(true);
   const [enregistre, setEnregistre] = useState(false);
 
-  const [realisations, setRealisations] = useState(props.realisations);
+  // Réalisations publiées : enregistrées et visibles aussitôt dans l'onglet « Réalisations » du profil public.
+  const realisations = useRealisations(props.artisanId, props.realisations) ?? props.realisations;
+  const [erreurReal, setErreurReal] = useState("");
+  const setRealisations = (l: Realisation[]) =>
+    setErreurReal(
+      enregistrerRealisations(props.artisanId, l)
+        ? ""
+        : "Enregistrement impossible : trop de photos pour la démo. Retirez-en quelques-unes.",
+    );
   const [formOuvert, setFormOuvert] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [titre, setTitre] = useState("");
   const [desc, setDesc] = useState("");
+  const [quartierReal, setQuartierReal] = useState(props.zones[0] ?? "");
+  const [duree, setDuree] = useState("");
+  const [materiaux, setMateriaux] = useState("");
+  const [chargement, setChargement] = useState(false);
 
   const [reponses, setReponses] = useState<Record<string, string>>(
     Object.fromEntries(props.avis.filter((a) => a.reponse).map((a) => [a.auteur, a.reponse!])),
@@ -166,9 +180,9 @@ export function ProfilEditor(props: {
 
       <Carte eyebrow="Vitrine" titre={`Mes réalisations (${realisations.length})`}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {realisations.map((r) => (
-            <figure key={r.titre} className="relative overflow-hidden rounded-xl bg-muted">
-              <Image src={r.image} alt={r.titre} width={300} height={300} className="aspect-square w-full object-cover" />
+          {realisations.map((r, i) => (
+            <figure key={`${r.titre}-${i}`} className="relative overflow-hidden rounded-xl bg-muted">
+              <PhotoRealisation src={r.image} alt={r.titre} sizes="300px" className="aspect-square w-full object-cover" />
               <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-2 pt-6 text-xs font-semibold text-white">
                 {r.titre}
               </figcaption>
@@ -198,14 +212,32 @@ export function ProfilEditor(props: {
             className="mt-5 space-y-4 rounded-2xl bg-background p-4 ring-1 ring-border"
             onSubmit={(e) => {
               e.preventDefault();
-              // TODO Firebase : envoyer les photos (Cloud Storage) et créer la réalisation
+              if (!photos.length) {
+                setErreurReal("Ajoutez au moins une photo du chantier.");
+                return;
+              }
+              // TODO backend : envoyer les photos (Storage) et créer la réalisation
+              const mois = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
               setRealisations([
+                {
+                  titre: titre.trim(),
+                  type: props.metier,
+                  quartier: quartierReal,
+                  description: desc.trim(),
+                  materiaux: materiaux.trim(),
+                  duree: duree.trim(),
+                  date: mois[0].toUpperCase() + mois.slice(1),
+                  image: photos[0],
+                  photos,
+                  verifiee: false,
+                },
                 ...realisations,
-                { titre, type: props.metier, quartier: zones[0] ?? "", description: desc, materiaux: "", duree: "", image: photos[0] ?? "/images/jean-claude.jpg", verifiee: false },
               ]);
               setFormOuvert(false);
               setTitre("");
               setDesc("");
+              setDuree("");
+              setMateriaux("");
               setPhotos([]);
             }}
           >
@@ -215,27 +247,53 @@ export function ProfilEditor(props: {
               autorisation.
             </p>
             <div className="flex flex-wrap gap-2">
-              {photos.map((p) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p} src={p} alt="" className="size-20 rounded-xl object-cover" />
+              {photos.map((p, i) => (
+                <span key={i} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p} alt={`Photo ${i + 1}${i === 0 ? " (couverture)" : ""}`} className="size-20 rounded-xl object-cover" />
+                  <button
+                    type="button"
+                    aria-label={`Retirer la photo ${i + 1}`}
+                    onClick={() => setPhotos((l) => l.filter((_, j) => j !== i))}
+                    className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-white shadow"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </span>
               ))}
               {photos.length < 10 && (
                 <label className="flex size-20 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary text-xs font-semibold text-primary">
-                  <Camera className="size-5" /> Photos
+                  <Camera className="size-5" /> {chargement ? "…" : "Photos"}
                   <input
                     type="file"
                     accept="image/*"
                     multiple
                     className="sr-only"
-                    onChange={(e) =>
-                      setPhotos((p) => [...p, ...Array.from(e.target.files ?? []).slice(0, 10 - p.length).map((f) => URL.createObjectURL(f))])
-                    }
+                    onChange={async (e) => {
+                      const fichiers = Array.from(e.target.files ?? []).slice(0, 10 - photos.length);
+                      e.target.value = "";
+                      setChargement(true);
+                      const reduites = await Promise.all(fichiers.map((f) => compresserPhoto(f).catch(() => null)));
+                      setChargement(false);
+                      setPhotos((p) => [...p, ...reduites.filter((x): x is string => !!x)].slice(0, 10));
+                    }}
                   />
                 </label>
               )}
             </div>
             <input required value={titre} onChange={(e) => setTitre(e.target.value)} placeholder="Titre (ex. Rénovation salle de bain)" className={field} />
-            <textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description du travail, matériaux, durée…" className={`${field} resize-none`} />
+            <p className="-mt-2 text-xs text-muted-foreground">La première photo sert de couverture. 10 photos au maximum.</p>
+            <textarea rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ce que vous avez fait (ex. remplacement de la robinetterie et pose du carrelage)" className={`${field} resize-none`} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <select aria-label="Quartier du chantier" value={quartierReal} onChange={(e) => setQuartierReal(e.target.value)} className={field}>
+                {quartiers.map((q) => (
+                  <option key={q}>{q}</option>
+                ))}
+              </select>
+              <input value={duree} onChange={(e) => setDuree(e.target.value)} placeholder="Durée (ex. 3 jours)" className={field} />
+            </div>
+            <input value={materiaux} onChange={(e) => setMateriaux(e.target.value)} placeholder="Matériaux utilisés (facultatif)" className={field} />
+            {erreurReal && <p className="text-sm font-semibold text-destructive">{erreurReal}</p>}
             <div className="flex gap-2">
               <button type="button" onClick={() => setFormOuvert(false)} className="flex-1 rounded-xl border border-border py-3 font-semibold">
                 Annuler

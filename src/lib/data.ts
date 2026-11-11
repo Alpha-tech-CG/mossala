@@ -54,7 +54,12 @@ export type Realisation = {
   description: string;
   materiaux: string;
   duree: string;
+  /** photo de couverture */
   image: string;
+  /** autres photos du chantier (avant, pendant, après) */
+  photos?: string[];
+  /** mois du chantier, ex. « Octobre 2026 » */
+  date?: string;
   verifiee: boolean;
 };
 

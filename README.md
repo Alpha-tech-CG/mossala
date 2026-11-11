@@ -35,6 +35,10 @@ Puis ouvrir http://localhost:3000.
 | `src/lib/metiers.ts` | Catalogue des secteurs et métiers (ajouter un métier ici) |
 | `src/lib/metierIcons.ts` | Icône de chaque métier |
 | `src/lib/data.ts` | Données de démonstration (artisans, boutiques, produits) et règles du quota |
+| `src/lib/devis.ts` | Demandes de devis en langage naturel, devis en rubriques/lignes, calculs (maquette navigateur) |
+| `src/components/devis/` | Éditeur de devis (artisan et boutique) et affichage imprimable du devis |
+| `src/lib/realisations.ts` | Réalisations publiées par les artisans (onglet « Réalisations » du profil) |
+| `supabase/migrations/0002_devis_realisations.sql` | Tables et règles RLS des devis et réalisations pour la production |
 | `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté serveur) |
 | `src/lib/backend/` | Accès au backend (Firebase en démo) |
 | `firestore.rules` | Règles de sécurité de la démo — tests : `npm run test:rules` |

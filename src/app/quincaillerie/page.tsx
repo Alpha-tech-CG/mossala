@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import {
   ChevronRight,
+  FileText,
   Clock,
   MapPin,
   Phone,
@@ -178,12 +179,20 @@ async function Quincaillerie(
                     </span>
                   )}
                 </p>
-                <a
-                  href={`tel:${b.telephone.replace(/\s/g, "")}`}
-                  className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-bold"
-                >
-                  <Phone className="size-4" /> Appeler la boutique
-                </a>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <a
+                    href={`tel:${b.telephone.replace(/\s/g, "")}`}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-border py-3 text-sm font-bold"
+                  >
+                    <Phone className="size-4" /> Appeler
+                  </a>
+                  <Link
+                    href={`/devis/nouveau?boutique=${b.id}`}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-accent py-3 text-sm font-bold text-accent-foreground"
+                  >
+                    <FileText className="size-4" /> Devis
+                  </Link>
+                </div>
               </div>
             </article>
           ))}

@@ -53,6 +53,7 @@ export default function ProfilPro() {
       </ul>
 
       <ProfilEditor
+        artisanId={a.id}
         nom={a.nom}
         metier={metierLabel(a.metier).label}
         description={a.description}

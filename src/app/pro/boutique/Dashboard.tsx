@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowRight, Banknote, CalendarCheck, Percent, ShoppingBa
 import { fcfa } from "@/lib/data";
 import { AUJOURDHUI, type EtatBoutique } from "./store";
 
-export type Onglet = "accueil" | "reservations" | "caisse" | "stock" | "clients" | "promotions" | "boutique";
+export type Onglet = "accueil" | "reservations" | "devis" | "caisse" | "stock" | "clients" | "promotions" | "boutique";
 
 const court = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1).replace(".", ",")} M` : n >= 1000 ? `${Math.round(n / 1000)} k` : `${n}`;
