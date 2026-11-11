@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { ARTISAN_DEMO_ID } from "./pro-data";
+import { notifierNouveauMessage } from "./backend";
 
 /**
  * Messagerie client ↔ artisan sur la plateforme.
@@ -78,6 +79,20 @@ export function envoyerMessage(
     ? { ...existante, client: conv.client, messages: [...existante.messages, msg], lu: { ...existante.lu, [de]: maintenant } }
     : { id: conv.artisan.id, artisan: conv.artisan, client: conv.client, messages: [msg], lu: { client: 0, artisan: 0, [de]: maintenant } };
   ecrire([maj, ...liste.filter((c) => c.id !== maj.id)]);
+
+  // Prévenir le destinataire par WhatsApp/SMS (le côté opposé à l'expéditeur).
+  // MAQUETTE : notifierNouveauMessage ne fait rien ; c'est le point de branchement du backend.
+  const dest =
+    de === "client"
+      ? { nom: maj.artisan.nom, telephones: [{ numero: maj.artisan.telephone, whatsapp: true }] }
+      : { nom: maj.client.prenom, telephones: [{ numero: maj.client.telephone, whatsapp: true }] };
+  void notifierNouveauMessage({
+    conversationId: maj.id,
+    de,
+    texte: msg.texte,
+    expediteur: de === "client" ? maj.client.prenom : maj.artisan.nom.split(" ")[0],
+    destinataire: dest,
+  });
 
   // MAQUETTE : sans backend, les artisans de démo (sauf celui de l'espace pro) répondent tout seuls
   // au premier message, pour que l'on puisse voir une conversation vivante.

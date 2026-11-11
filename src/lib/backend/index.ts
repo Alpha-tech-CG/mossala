@@ -5,7 +5,8 @@
  * avec les mêmes fonctions et remplacer la ligne ci-dessous.
  */
 export { creerProfilPro, envoyerCodeSms, messageErreur, nettoyerVerification } from "./firebase";
-export type { NouveauProfilPro, VerificationTelephone } from "./types";
+export { destinatairesAlerte, notifierNouveauMessage, texteAlerte } from "./notifications";
+export type { NotificationMessage, NouveauProfilPro, NumeroJoignable, VerificationTelephone } from "./types";
 
 /** Numéro congolais saisi (« 06 612 34 56 ») → format international (+242066123456). */
 export function versE164(saisie: string): string {

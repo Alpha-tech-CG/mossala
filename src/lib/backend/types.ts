@@ -23,3 +23,24 @@ export type NouveauProfilPro = {
   /** de 1 à 3 numéros, avec ceux qui ont WhatsApp */
   telephones: { numero: string; whatsapp: boolean }[];
 };
+
+/** Un numéro et s'il est joignable sur WhatsApp. */
+export type NumeroJoignable = { numero: string; whatsapp: boolean };
+
+/**
+ * Nouveau message à transmettre et à notifier au destinataire (celui qui ne l'a pas écrit).
+ * Sert d'entrée unique à `notifierNouveauMessage` : le jour où le backend est prêt, seule
+ * cette fonction change, pas les composants de la messagerie.
+ */
+export type NotificationMessage = {
+  conversationId: string;
+  de: "client" | "artisan";
+  texte: string;
+  /** nom de l'expéditeur, affiché dans l'alerte */
+  expediteur: string;
+  /** destinataire à prévenir */
+  destinataire: {
+    nom: string;
+    telephones: NumeroJoignable[];
+  };
+};
