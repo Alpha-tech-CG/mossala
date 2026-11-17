@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, ChevronRight, FileText, Printer, Store, X } from "lucide-react";
 import { useState } from "react";
 import { TableauDevis } from "@/components/devis/TableauDevis";
-import { erreurSupabase } from "@/lib/backend/supabase";
+import { messageErreur } from "@/lib/backend/erreurs";
 import { fcfa } from "@/lib/data";
 import { libelleStatut, libelleStatutClient, repondreDevis, totalDevis, useDemandesDevis, type DemandeDevis } from "@/lib/devis";
 
@@ -28,7 +28,7 @@ export function MesDevis() {
   const [erreur, setErreur] = useState("");
   const repondre = (id: string, accepte: boolean) => {
     setErreur("");
-    repondreDevis(id, accepte).catch((e) => setErreur(erreurSupabase(e)));
+    repondreDevis(id, accepte).catch((e) => setErreur(messageErreur(e)));
   };
 
   if (!demandes) return <div className="mt-6 h-64 animate-pulse rounded-2xl bg-card" aria-busy />;

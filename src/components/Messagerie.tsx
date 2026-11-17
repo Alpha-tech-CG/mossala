@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, MessagesSquare, Phone, Send } from "lucide-react";
-import { erreurSupabase } from "@/lib/backend/supabase";
+import { messageErreur } from "@/lib/backend/erreurs";
 import {
   envoyerMessage,
   marquerLu,
@@ -133,7 +133,7 @@ function Fil({ conv, cote, onRetour }: { conv: Conversation; cote: Cote; onRetou
     // en cas d'échec, le texte revient dans la zone de saisie
     envoyerMessage(conv, cote, envoye).catch((err) => {
       setTexte(envoye);
-      setErreur(erreurSupabase(err));
+      setErreur(messageErreur(err));
     });
   };
 

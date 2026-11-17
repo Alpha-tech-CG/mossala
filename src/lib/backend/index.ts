@@ -1,22 +1,17 @@
 /**
- * Point d'entrée unique du backend. Les pages importent uniquement d'ici.
- *
- * Démo : Firebase. Pour passer à Supabase ou Neon, écrire ./supabase.ts (ou ./neon.ts)
- * avec les mêmes fonctions et remplacer la ligne ci-dessous.
+ * Point d'entrée du backend pour les pages (connexion, profils pros, alertes de la maquette).
+ * Production : Firebase (./firebase.ts, ./pros.ts). Interrupteur : ./actif.ts.
  */
-import { creerProfilPro as creerProfilProFirebase } from "./firebase";
-import { creerProfilProSupabase } from "./pros";
-import { SUPABASE_ACTIF } from "./supabase";
-import type { NouveauProfilPro } from "./types";
-
-export { envoyerCodeSms, messageErreur, nettoyerVerification } from "./firebase";
-export { SUPABASE_ACTIF, estDemo } from "./supabase";
-
-/** Crée le profil pro : dans Supabase s'il est configuré, sinon dans Firestore (démo). */
-export const creerProfilPro = (id: string, p: NouveauProfilPro): Promise<void> =>
-  SUPABASE_ACTIF ? creerProfilProSupabase(id, p) : creerProfilProFirebase(id, p);
+export { envoyerCodeEmail, envoyerCodeSms, nettoyerVerification } from "./firebase";
+export { creerProfilPro } from "./pros";
+export { SUJETS_CONTACT, envoyerMessageContact } from "./contact";
+export type { MessageContact } from "./contact";
+export { AvisDejaDonne, envoyerSignalement, publierAvis } from "./avis";
+export type { NouvelAvis, NouveauSignalement } from "./avis";
+export { messageErreur } from "./erreurs";
+export { BACKEND_ACTIF, estDemo } from "./actif";
 export { destinatairesAlerte, notifierNouveauMessage, texteAlerte } from "./notifications";
-export type { NotificationMessage, NouveauProfilPro, NumeroJoignable, VerificationTelephone } from "./types";
+export type { NotificationMessage, NouveauProfilPro, NumeroJoignable, Session, VerificationCode } from "./types";
 
 /** Numéro congolais saisi (« 06 612 34 56 ») → format international (+242066123456). */
 export function versE164(saisie: string): string {

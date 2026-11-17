@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { rechargerProConnecte } from "@/lib/pro-connecte";
 import {
   AlertTriangle,
@@ -14,14 +14,8 @@ import {
   Phone,
   Search,
 } from "lucide-react";
-import {
-  type VerificationTelephone,
-  creerProfilPro,
-  envoyerCodeSms,
-  messageErreur,
-  nettoyerVerification,
-  versE164,
-} from "@/lib/backend";
+import { type Session, creerProfilPro, messageErreur } from "@/lib/backend";
+import { ConnexionCode } from "@/components/ConnexionCode";
 import { MetierIcon } from "@/components/ui";
 import { getVille } from "@/lib/data";
 import {
@@ -44,15 +38,15 @@ const norm = (s: string) =>
 
 /**
  * Inscription d'un professionnel (artisan ou magasin) en 4 étapes :
- * 1. vérification du téléphone par code SMS ; 2. coordonnées (nom, prénom, adresse, ville, quartier,
+ * 1. vérification du téléphone ou de l'email par code (SMS ou email) ; 2. coordonnées (nom, prénom, adresse, ville, quartier,
  * email, jusqu'à 3 téléphones) ; 3. métier ou boutique ; 4. numéro public / privé.
- * Le stockage passe par @/lib/backend (Firebase pour la démo, Supabase ou Neon ensuite).
+ * Le stockage passe par @/lib/backend (Firebase : Firestore).
  */
 export function Inscription() {
   const router = useRouter();
   const boutique = useSearchParams().get("type") === "boutique";
   const etapes = [
-    "Téléphone",
+    "Connexion",
     "Coordonnées",
     boutique ? "Ma boutique" : "Mon métier",
     "Contact",
@@ -60,19 +54,10 @@ export function Inscription() {
   const [etape, setEtape] = useState(0);
   const [fini, setFini] = useState(false);
 
-  // étape 1
-  const [tel, setTel] = useState("");
-  const [code, setCode] = useState("");
-  const [confirmation, setConfirmation] =
-    useState<VerificationTelephone | null>(null);
-  const [compte, setCompte] = useState<{
-    id: string;
-    telephone: string;
-  } | null>(null);
+  // étape 1 : connexion par code (SMS ou email)
+  const [compte, setCompte] = useState<Session | null>(null);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState("");
-
-  useEffect(() => nettoyerVerification, []);
 
   /** Exécute une action du backend avec indicateur de chargement et message d'erreur. */
   const executer = async (action: () => Promise<void>) => {
@@ -87,29 +72,16 @@ export function Inscription() {
     }
   };
 
-  const envoyerCode = () =>
-    executer(async () => {
-      setConfirmation(
-        await envoyerCodeSms(versE164(tel), "recaptcha-inscription"),
-      );
-      setCode("");
-    });
-
-  const verifierCode = () =>
-    executer(async () => {
-      if (!confirmation) return;
-      const c = await confirmation.confirmer(code);
-      setCompte(c);
-      // le numéro vérifié devient le 1er téléphone des coordonnées
-      setIdentite((i) => ({
-        ...i,
-        telephones: [
-          { ...i.telephones[0], numero: c.telephone },
-          ...i.telephones.slice(1),
-        ],
-      }));
-      setEtape(1);
-    });
+  /** Compte vérifié : le numéro (SMS) devient le 1er téléphone, l'email (code email) l'email du profil. */
+  const connecte = (c: Session) => {
+    setCompte(c);
+    setIdentite((i) => ({
+      ...i,
+      email: c.email || i.email,
+      telephones: c.telephone ? [{ ...i.telephones[0], numero: c.telephone }, ...i.telephones.slice(1)] : i.telephones,
+    }));
+    setEtape(1);
+  };
 
   const creerProfil = () =>
     executer(async () => {
@@ -118,7 +90,8 @@ export function Inscription() {
       await creerProfilPro(compte.id, {
         type: boutique ? "boutique" : "artisan",
         nom: boutique ? nom.trim() : `${i.prenom} ${i.nom}`,
-        telephone: compte.telephone,
+        // connexion par SMS : le numéro vérifié ; par email : le premier numéro saisi
+        telephone: compte.telephone || i.telephones[0]?.numero || "",
         numeroPublic,
         responsable: {
           nom: i.nom,
@@ -158,7 +131,7 @@ export function Inscription() {
 
   const valide =
     etape === 0
-      ? !!confirmation && /^\d{6}$/.test(code)
+      ? false
       : etape === 1
         ? identiteValide(identite)
         : etape === 2
@@ -222,100 +195,32 @@ export function Inscription() {
         ))}
       </ol>
 
+      {etape === 0 && (
+        <div className="mt-6 rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03] md:p-7">
+          <ConnexionCode
+            intro="Vérifiez votre numéro (code par SMS) ou votre email (code par email) : il servira à vous connecter à votre espace."
+            onConnecte={connecte}
+          />
+        </div>
+      )}
+
+      {etape > 0 && (
       <form
         className="mt-6 space-y-5 rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03] md:p-7"
         onSubmit={(e) => {
           e.preventDefault();
           if (!valide || chargement) return;
-          if (etape === 0) verifierCode();
-          else if (etape < etapes.length - 1) setEtape(etape + 1);
+          if (etape < etapes.length - 1) setEtape(etape + 1);
           else creerProfil();
         }}
       >
-        {etape === 0 && (
-          <>
-            <div>
-              <label htmlFor="tel" className="mb-2 block text-sm font-semibold">
-                Votre numéro de téléphone
-              </label>
-              <div className="flex gap-2">
-                <span className="flex items-center rounded-xl border border-border bg-muted px-3 text-sm font-semibold">
-                  +242
-                </span>
-                <input
-                  id="tel"
-                  type="tel"
-                  inputMode="tel"
-                  value={tel}
-                  disabled={!!confirmation}
-                  onChange={(e) => setTel(e.target.value)}
-                  placeholder="06 000 00 00"
-                  className={field}
-                />
-              </div>
-            </div>
-            {!confirmation ? (
-              <button
-                type="button"
-                disabled={tel.replace(/\D/g, "").length < 9 || chargement}
-                onClick={envoyerCode}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-bold text-primary-foreground disabled:opacity-40"
-              >
-                {chargement && <Loader2 className="size-5 animate-spin" />}
-                Recevoir le code par SMS
-              </button>
-            ) : (
-              <div>
-                <label
-                  htmlFor="code"
-                  className="mb-2 block text-sm font-semibold"
-                >
-                  Code reçu par SMS
-                </label>
-                <input
-                  id="code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="6 chiffres"
-                  className={`${field} text-center font-mono text-2xl tracking-[0.5em]`}
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Code envoyé au {versE164(tel)}.{" "}
-                  <button
-                    type="button"
-                    disabled={chargement}
-                    onClick={envoyerCode}
-                    className="font-semibold text-primary"
-                  >
-                    Renvoyer le code
-                  </button>{" "}
-                  ·{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmation(null);
-                      setCode("");
-                    }}
-                    className="font-semibold text-primary"
-                  >
-                    Changer de numéro
-                  </button>
-                </p>
-              </div>
-            )}
-          </>
-        )}
-
         {etape === 1 && (
           <ChampsIdentite
             id="pro"
             value={identite}
             onChange={setIdentite}
             adresseLabel={boutique ? "Adresse de la boutique" : "Adresse"}
-            premierVerrouille
+            premierVerrouille={!!compte?.telephone}
           />
         )}
 
@@ -509,32 +414,6 @@ export function Inscription() {
             <AlertTriangle className="mt-0.5 size-4 shrink-0" /> {erreur}
           </p>
         )}
-        {/* reCAPTCHA invisible exigé par Firebase pour l'envoi du SMS */}
-        <div id="recaptcha-inscription" />
-        {etape === 0 && (
-          // Mention obligatoire quand le badge reCAPTCHA est masqué (voir globals.css)
-          <p className="text-[11px] leading-snug text-muted-foreground">
-            Protégé par reCAPTCHA :{" "}
-            <a
-              href="https://policies.google.com/privacy"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              confidentialité
-            </a>{" "}
-            et{" "}
-            <a
-              href="https://policies.google.com/terms"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              conditions
-            </a>{" "}
-            de Google.
-          </p>
-        )}
         {etape === etapes.length - 1 && (
           <p className="text-xs leading-snug text-muted-foreground">
             En créant votre profil, vos informations sont utilisées pour publier
@@ -566,17 +445,12 @@ export function Inscription() {
             disabled={!valide || chargement}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground transition disabled:opacity-40"
           >
-            {chargement && etape > 0 && (
-              <Loader2 className="size-5 animate-spin" />
-            )}
-            {etape === 0
-              ? "Vérifier le code"
-              : etape < etapes.length - 1
-                ? "Continuer"
-                : "Créer mon profil"}
+            {chargement && <Loader2 className="size-5 animate-spin" />}
+            {etape < etapes.length - 1 ? "Continuer" : "Créer mon profil"}
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

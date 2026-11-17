@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { ExternalLink, Hourglass } from "lucide-react";
-import { majProfilPro } from "@/lib/backend/pros";
+import { majProfilPro, telephonePrivePro } from "@/lib/backend/pros";
 import { metierLabel } from "@/lib/data";
 import { rechargerProConnecte, useProConnecte } from "@/lib/pro-connecte";
 import { ProfilEditor } from "./ProfilEditor";
 
 /**
- * Profil de l'artisan connecté (Supabase). Sans compte pro réel, on affiche `demo`
+ * Profil de l'artisan connecté (Firestore). Sans compte pro réel, on affiche `demo`
  * (le profil de démonstration rendu par le serveur).
  */
 export function ProfilConnecte({ demo }: { demo: React.ReactNode }) {
@@ -51,18 +51,19 @@ export function ProfilConnecte({ demo }: { demo: React.ReactNode }) {
         metier={pro.metier ? metierLabel(pro.metier).label : ""}
         description={pro.description}
         zones={pro.zones.length ? pro.zones : [pro.quartier]}
-        telephone={pro.telephone_public ?? ""}
-        numeroPublic={pro.numero_public}
+        telephone={pro.telephonePublic ?? ""}
+        numeroPublic={pro.numeroPublic}
         realisations={[]}
         avis={[]}
         onSauver={async ({ description, zones, numeroPublic }) => {
           const { sessionActuelle } = await import("@/lib/session");
-          const tel = sessionActuelle()?.telephone ?? null;
+          // connexion par SMS : le numéro vérifié ; par email : le numéro principal du profil
+          const tel = sessionActuelle()?.telephone || pro.telephonePublic || (await telephonePrivePro(pro.id));
           await majProfilPro(pro.id, {
             description,
             zones,
-            numero_public: numeroPublic,
-            telephone_public: numeroPublic ? tel : null,
+            numeroPublic,
+            telephonePublic: numeroPublic ? tel : null,
           });
           await rechargerProConnecte();
         }}

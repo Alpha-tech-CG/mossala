@@ -15,10 +15,17 @@ Plateforme de mise en relation entre les habitants de Brazzaville et des artisan
 
 Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · lucide-react.
 
-**Backend** : connexion par **code SMS avec Firebase** (projet `mossala-6f297`) et données dans
-**Supabase** (comptes, profils pros, réalisations, messagerie, devis). Sans clés Supabase dans
-`.env.local`, le site tourne en **maquette** (données dans le navigateur). Mode d'emploi complet :
-[`supabase/README.md`](supabase/README.md). Les pages passent par `src/lib/backend/`.
+**Backend de production : Firebase** (projet `mossala-6f297`) :
+
+- **Connexion par code à usage unique**, au choix **par SMS** (Firebase Authentication) ou **par email**
+  (Cloud Functions + SMTP) ;
+- **Firestore** : comptes, profils pros, réalisations, messagerie, devis (temps réel) ;
+- **Storage** : photos des réalisations ;
+- **Cloud Functions** : code email et alertes WhatsApp/SMS (Africa's Talking).
+
+Sans clés Firebase dans `.env.local`, le site tourne en **maquette** (données dans le navigateur).
+Mise en production pas à pas : [`firebase-functions/README.md`](firebase-functions/README.md).
+Les pages passent par `src/lib/backend/`.
 
 ## Démarrer
 
@@ -39,17 +46,17 @@ Puis ouvrir http://localhost:3000.
 | `src/lib/devis.ts` | Demandes de devis en langage naturel, devis en rubriques/lignes, calculs (maquette navigateur) |
 | `src/components/devis/` | Éditeur de devis (artisan et boutique) et affichage imprimable du devis |
 | `src/lib/realisations.ts` | Réalisations publiées par les artisans (onglet « Réalisations » du profil) |
-| `supabase/` | Schéma de la base (migrations 0001 à 0003), règles d’accès, fonction d’alerte WhatsApp/SMS |
-| `src/lib/backend/supabase.ts` | Client Supabase et interrupteur maquette / production (`SUPABASE_ACTIF`) |
-| `src/lib/session.ts` · `src/lib/pro-connecte.ts` | Compte connecté par SMS, et pro dont on affiche l’espace |
+| `src/lib/backend/actif.ts` | Interrupteur maquette / production (`BACKEND_ACTIF`) et configuration Firebase |
+| `src/lib/backend/firebase.ts` | Connexion par code SMS ou email, accès Firestore et Storage |
+| `src/lib/backend/modele.ts` | Collections Firestore et conversions |
+| `src/components/ConnexionCode.tsx` | Formulaire de connexion par code (onglets SMS / email) |
+| `firebase-functions/` | Cloud Functions : code email, alertes WhatsApp/SMS — mode d’emploi dans son README |
+| `firestore.rules` · `storage.rules` | Règles de sécurité — tests : `npm run test:rules` |
+| `src/lib/session.ts` · `src/lib/pro-connecte.ts` | Compte connecté, et pro dont on affiche l’espace |
 | `src/lib/quota.ts` | Compteur de messages (maquette navigateur, à déplacer côté serveur) |
-| `src/lib/backend/` | Accès au backend (Firebase en démo) |
-| `firestore.rules` | Règles de sécurité de la démo — tests : `npm run test:rules` |
 | `src/components/Hero.tsx` | Hero de l'accueil et mur de photos |
 
 ## À brancher
 
-- Comptes clients/artisans par téléphone (OTP).
-- Messages, notifications WhatsApp et SMS aux artisans.
 - Quota de messages et paiement Mobile Money (MTN MoMo, Airtel Money) côté serveur.
 - Back-office : métiers, propositions de métiers, modération des avis.

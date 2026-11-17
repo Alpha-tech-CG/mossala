@@ -2,13 +2,17 @@
 
 import { useSyncExternalStore } from "react";
 import type { Realisation } from "./data";
-import { erreurSupabase, estDemo, sb, verifier } from "./backend/supabase";
-import { versRealisation, type LigneRealisation } from "./backend/realisations-db";
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp } from "firebase/firestore";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { estDemo } from "./backend/actif";
+import { messageErreur } from "./backend/erreurs";
+import { db, stockage } from "./backend/firebase";
+import { versRealisation } from "./backend/modele";
 
 /**
  * Réalisations publiées par les artisans depuis leur espace (photos de chantiers).
- * MAQUETTE : gardées dans le navigateur, photos réduites en JPEG. Avec Supabase : table
- * realisations + photos dans Storage (supabase/migrations/0001_socle.sql).
+ * MAQUETTE : gardées dans le navigateur, photos réduites en JPEG. En production : Firestore
+ * pros/{uid}/realisations + photos dans Firebase Storage realisations/{uid}/… (storage.rules).
  */
 
 const CLE = "artico-realisations";
@@ -57,7 +61,7 @@ const abonner = (f: () => void) => {
   return () => abonnes.delete(f);
 };
 
-// ——— Artisans inscrits (Supabase) : la base fait foi ———
+// ——— Artisans inscrits (production) : la base fait foi ———
 
 const distants: Etat = {};
 const enCours = new Set<string>();
@@ -66,10 +70,8 @@ async function chargerDistant(artisanId: string) {
   if (enCours.has(artisanId)) return;
   enCours.add(artisanId);
   try {
-    const lignes = verifier(
-      await sb().from("realisations").select("*").eq("artisan_id", artisanId).order("cree_le", { ascending: false }),
-    ) as LigneRealisation[];
-    distants[artisanId] = lignes.map(versRealisation);
+    const snap = await getDocs(query(collection(db(), "pros", artisanId, "realisations"), orderBy("creeLe", "desc")));
+    distants[artisanId] = snap.docs.map((d) => versRealisation(d.id, d.data()));
     // nouvelle référence pour que useSyncExternalStore voie le changement
     cache = { ...lire() };
     abonnes.forEach((f) => f());
@@ -100,9 +102,9 @@ export function enregistrerRealisations(artisanId: string, liste: Realisation[])
 async function envoyerPhoto(artisanId: string, dataUrl: string): Promise<string> {
   if (!dataUrl.startsWith("data:")) return dataUrl;
   const blob = await (await fetch(dataUrl)).blob();
-  const chemin = `${artisanId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  verifier(await sb().storage.from("realisations").upload(chemin, blob, { contentType: "image/jpeg" }));
-  return sb().storage.from("realisations").getPublicUrl(chemin).data.publicUrl;
+  const fichier = ref(stockage(), `realisations/${artisanId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`);
+  await uploadBytes(fichier, blob, { contentType: "image/jpeg" });
+  return getDownloadURL(fichier);
 }
 
 /** Publie une réalisation (en tête de liste). Renvoie un message d'erreur, ou null si c'est fait. */
@@ -113,23 +115,22 @@ export async function ajouterRealisation(artisanId: string, r: Realisation, actu
       : "Enregistrement impossible : trop de photos pour la démo. Retirez-en quelques-unes.";
   try {
     const photos = await Promise.all((r.photos?.length ? r.photos : [r.image]).map((p) => envoyerPhoto(artisanId, p)));
-    verifier(
-      await sb().from("realisations").insert({
-        artisan_id: artisanId,
-        titre: r.titre,
-        type: r.type,
-        quartier: r.quartier,
-        description: r.description,
-        materiaux: r.materiaux,
-        duree: r.duree,
-        date: r.date ?? null,
-        photos,
-      }),
-    );
+    await addDoc(collection(db(), "pros", artisanId, "realisations"), {
+      titre: r.titre,
+      type: r.type,
+      quartier: r.quartier,
+      description: r.description,
+      materiaux: r.materiaux,
+      duree: r.duree,
+      date: r.date ?? null,
+      photos,
+      verifiee: false,
+      creeLe: serverTimestamp(),
+    });
     await chargerDistant(artisanId);
     return null;
   } catch (e) {
-    return erreurSupabase(e);
+    return messageErreur(e);
   }
 }
 
@@ -140,11 +141,15 @@ export async function retirerRealisation(artisanId: string, r: Realisation, actu
     return null;
   }
   try {
-    if (r.id) verifier(await sb().from("realisations").delete().eq("id", r.id));
+    if (r.id) await deleteDoc(doc(db(), "pros", artisanId, "realisations", r.id));
+    // photos du stockage : retirées au mieux (une photo déjà absente n'empêche rien)
+    await Promise.allSettled(
+      (r.photos ?? []).filter((u) => u.startsWith("https://")).map((u) => deleteObject(ref(stockage(), u))),
+    );
     await chargerDistant(artisanId);
     return null;
   } catch (e) {
-    return erreurSupabase(e);
+    return messageErreur(e);
   }
 }
 

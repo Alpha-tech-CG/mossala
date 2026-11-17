@@ -2,15 +2,15 @@
 
 import { useSyncExternalStore } from "react";
 import { PROFILS_SANS_COMPTE } from "./data";
-import { SUPABASE_ACTIF, sb, verifier } from "./backend/supabase";
+import { BACKEND_ACTIF } from "./backend/actif";
 import { surSession, useSession } from "./session";
 import type { Identite } from "@/components/Identite";
 
 /**
  * Compte client : inscription, profils consultés dans le mois, Premium et favoris.
- * MAQUETTE : stocké dans le navigateur. Avec Supabase, le compte passe par l'OTP SMS
- * et le compteur + le Premium vivent côté serveur (table par utilisateur, RLS),
- * sinon un client pourrait les réinitialiser.
+ * MAQUETTE : stocké dans le navigateur. En production (Firebase), le compte passe par le
+ * code SMS ou email et vit dans Firestore (comptes/{uid}). Le compteur et le Premium sont
+ * encore gardés dans le navigateur : à déplacer côté serveur avant de les faire payer.
  */
 
 /** Identité complète du client (+ `telephone` : son numéro principal, utilisé pour le rappel). */
@@ -43,8 +43,8 @@ function lire(): Etat {
   } catch {
     /* stockage indisponible : on repart d'un état vide */
   }
-  // Supabase : le compte vient de la base (numéro connecté), jamais d'une copie locale.
-  if (SUPABASE_ACTIF) e = { ...e, compte: null };
+  // Production : le compte vient de la base (utilisateur connecté), jamais d'une copie locale.
+  if (BACKEND_ACTIF) e = { ...e, compte: null };
   // nouveau mois : les profils gratuits repartent à zéro (le Premium reste valable)
   if (e.mois !== moisCourant()) e = { ...e, mois: moisCourant(), consultes: [] };
   if (e.premiumJusqua !== null && e.premiumJusqua < Date.now()) e = { ...e, premiumJusqua: null };
@@ -62,10 +62,9 @@ function ecrire(e: Etat) {
   abonnes.forEach((f) => f());
 }
 
-// ——— Supabase : le compte est celui du numéro connecté par SMS (table comptes) ———
+// ——— Production : le compte est celui de l'utilisateur connecté (Firestore comptes/{uid}) ———
 
-type LigneCompte = {
-  id: string;
+type DocCompte = {
   prenom: string;
   nom: string | null;
   telephone: string;
@@ -74,10 +73,10 @@ type LigneCompte = {
   ville: string | null;
   quartier: string | null;
   email: string | null;
-  cree_le: string;
+  creeLe?: { toMillis(): number } | null;
 };
 
-const versCompte = (l: LigneCompte): Compte => ({
+const versCompte = (l: DocCompte): Compte => ({
   prenom: l.prenom,
   nom: l.nom ?? undefined,
   telephone: l.telephone,
@@ -86,7 +85,7 @@ const versCompte = (l: LigneCompte): Compte => ({
   ville: l.ville ?? undefined,
   quartier: l.quartier ?? undefined,
   email: l.email ?? undefined,
-  creeLe: Date.parse(l.cree_le),
+  creeLe: l.creeLe?.toMillis() ?? Date.now(),
 });
 
 /** Session connectée sans compte client (pas encore inscrite, ou compte pro uniquement). */
@@ -95,8 +94,14 @@ let sessionSansCompte = false;
 let compteLuPour: string | null = null;
 let synchro = false;
 
+async function lireCompte(uid: string): Promise<DocCompte | null> {
+  const [{ doc, getDoc }, { db }] = await Promise.all([import("firebase/firestore"), import("./backend/firebase")]);
+  const snap = await getDoc(doc(db(), "comptes", uid));
+  return snap.exists() ? (snap.data({ serverTimestamps: "estimate" }) as DocCompte) : null;
+}
+
 function synchroniser() {
-  if (synchro || !SUPABASE_ACTIF || typeof window === "undefined") return;
+  if (synchro || !BACKEND_ACTIF || typeof window === "undefined") return;
   synchro = true;
   surSession(async () => {
     const { sessionActuelle } = await import("./session");
@@ -107,7 +112,7 @@ function synchroniser() {
       return;
     }
     try {
-      const ligne = verifier(await sb().from("comptes").select("*").eq("id", s.id).maybeSingle()) as LigneCompte | null;
+      const ligne = await lireCompte(s.id);
       sessionSansCompte = !ligne;
       compteLuPour = s.id;
       ecrire({ ...lire(), compte: ligne ? versCompte(ligne) : null });
@@ -119,30 +124,32 @@ function synchroniser() {
   });
 }
 
-/** Crée (ou met à jour) le compte du numéro connecté. Supabase seulement. */
+/** Crée (ou met à jour) le compte de l'utilisateur connecté. Production seulement. */
 async function enregistrerCompte(i: Identite): Promise<void> {
   const { sessionActuelle } = await import("./session");
   const s = sessionActuelle();
-  if (!s) throw new Error("Vérifiez d’abord votre numéro par SMS.");
-  const ligne = verifier(
-    await sb()
-      .from("comptes")
-      .upsert({
-        id: s.id,
-        prenom: i.prenom,
-        nom: i.nom || null,
-        telephone: s.telephone,
-        telephones: i.telephones,
-        adresse: i.adresse || null,
-        ville: i.ville || null,
-        quartier: i.quartier || null,
-        email: i.email || null,
-      })
-      .select("*")
-      .single(),
-  ) as LigneCompte;
-  sessionSansCompte = false;
-  ecrire({ ...lire(), compte: versCompte(ligne) });
+  if (!s) throw new Error("Vérifiez d’abord votre numéro ou votre email avec le code reçu.");
+  const [{ doc, serverTimestamp, setDoc }, { db }] = await Promise.all([import("firebase/firestore"), import("./backend/firebase")]);
+  const nouveau = !(await lireCompte(s.id));
+  await setDoc(
+    doc(db(), "comptes", s.id),
+    {
+      prenom: i.prenom,
+      nom: i.nom || null,
+      // connexion par SMS : le numéro vérifié ; par email : le premier numéro saisi
+      telephone: s.telephone || i.telephones[0]?.numero || "",
+      telephones: i.telephones,
+      adresse: i.adresse || null,
+      ville: i.ville || null,
+      quartier: i.quartier || null,
+      email: s.email || i.email || null,
+      ...(nouveau ? { creeLe: serverTimestamp() } : {}),
+    },
+    { merge: true },
+  );
+  const ligne = await lireCompte(s.id);
+  sessionSansCompte = !ligne;
+  ecrire({ ...lire(), compte: ligne ? versCompte(ligne) : null });
 }
 
 const NOMS_MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -187,15 +194,15 @@ export function useCompte() {
       if (vus.includes(id) || vus.length >= PROFILS_SANS_COMPTE) return;
       ecrire({ ...x, vusSansCompte: [...vus, id] });
     },
-    /** Supabase : numéro vérifié par SMS mais pas encore de compte client. */
-    sessionSansCompte: SUPABASE_ACTIF && sessionSansCompte,
-    /** Crée le compte. Supabase : après vérification du numéro par SMS (enregistré dans la base). */
+    /** Production : connecté (code SMS ou email) mais pas encore de compte client. */
+    sessionSansCompte: BACKEND_ACTIF && sessionSansCompte,
+    /** Crée le compte. Production : après vérification par code (enregistré dans la base). */
     inscrire: async (i: Identite): Promise<void> => {
-      if (SUPABASE_ACTIF) return enregistrerCompte(i);
+      if (BACKEND_ACTIF) return enregistrerCompte(i);
       ecrire({ ...lire(), compte: { ...i, telephone: i.telephones[0]?.numero ?? "", creeLe: Date.now() } });
     },
     deconnecter: async () => {
-      if (SUPABASE_ACTIF) await (await import("./backend/firebase")).deconnexion();
+      if (BACKEND_ACTIF) await (await import("./backend/firebase")).deconnexion();
       ecrire({ ...lire(), compte: null });
     },
     basculerFavori: (id: string) => {

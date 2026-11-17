@@ -53,7 +53,7 @@ async function Recherche(props: Pick<PageProps<"/recherche">, "searchParams">) {
   const dispo = get("dispo");
   const minNote = parseFloat(get("note")) || 0;
 
-  // Artisans de démonstration + artisans vérifiés inscrits (base Supabase, mis en cache)
+  // Artisans de démonstration + artisans vérifiés inscrits (Firestore, mis en cache)
   const tous = [...artisans, ...(await artisansInscrits())];
   const resultats = tous
     .filter((a) => {

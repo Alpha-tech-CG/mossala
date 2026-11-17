@@ -42,6 +42,7 @@ const links = [
   { href: "/quincaillerie", label: "Quincaillerie" },
   { href: "/messages", label: "Mes messages" },
   { href: "/services", label: "Nos services" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function Header() {

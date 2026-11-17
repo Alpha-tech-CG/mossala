@@ -7,7 +7,7 @@ import { ContactButton } from "@/components/Contact";
 import { FavoriButton, Signaler } from "@/components/Engagement";
 import { Avatar, BackHeader, Rating, toContact } from "@/components/ui";
 import { artisans, badgesReputation, getArtisan, metierLabel } from "@/lib/data";
-import { artisanInscrit } from "@/lib/backend/serveur";
+import { artisanInscrit, avisPublies } from "@/lib/backend/serveur";
 import { OngletsProfil } from "./OngletsProfil";
 
 // Toutes les fiches sont pré-générées : la navigation peut attendre le rendu.
@@ -25,9 +25,12 @@ export async function generateMetadata(props: PageProps<"/artisans/[id]">) {
 
 export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
   const id = (await props.params).id;
-  // Artisan de démonstration, sinon artisan vérifié inscrit sur la plateforme (base Supabase)
-  const a = getArtisan(id) ?? (await artisanInscrit(id));
+  // Artisan de démonstration, sinon artisan vérifié inscrit sur la plateforme (Firestore)
+  const demo = getArtisan(id);
+  const a = demo ?? (await artisanInscrit(id));
   if (!a) notFound();
+  // Artisan de démonstration : ses avis d'exemple + ceux laissés sur le site et publiés par l'équipe
+  const avis = demo ? [...(await avisPublies(id)), ...a.avis] : a.avis;
   const m = metierLabel(a.metier);
   // Couverture = une réalisation différente de la photo de profil
   const cover = a.realisations.find((r) => r.image !== a.image)?.image;
@@ -136,9 +139,9 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
               <Star className="size-4 fill-star text-star" /> {a.note.toString().replace(".", ",")} · {a.nbAvis} avis
             </p>
             <div className="mt-4 space-y-3">
-              {a.avis.length ? (
-                a.avis.map((v) => (
-                  <article key={v.auteur} className="rounded-2xl bg-card p-4 shadow-sm">
+              {avis.length ? (
+                avis.map((v) => (
+                  <article key={v.id ?? `${v.auteur}-${v.date}`} className="rounded-2xl bg-card p-4 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-x-3">
                       <p className="flex flex-wrap items-center gap-2 font-bold">
                         {v.auteur}
@@ -166,7 +169,12 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
                         {v.reponse}
                       </p>
                     )}
-                    <Signaler cible="avis" label="Signaler cet avis" />
+                    <Signaler
+                      cible="avis"
+                      cibleId={v.id ?? `${a.id}/${v.auteur}`}
+                      libelle={`Avis de ${v.auteur} sur ${a.nom}`}
+                      label="Signaler cet avis"
+                    />
                   </article>
                 ))
               ) : (
@@ -181,7 +189,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
             >
               <PenLine className="size-4" /> Évaluer {a.nom.split(" ")[0]}
             </Link>
-            <Signaler cible="profil" label="Signaler ce profil" />
+            <Signaler cible="profil" cibleId={a.id} libelle={`Profil de ${a.nom}`} label="Signaler ce profil" />
           </>
         }
       />

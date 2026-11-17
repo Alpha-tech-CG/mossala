@@ -1,22 +1,23 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { SUPABASE_ACTIF } from "./backend/supabase";
+import { BACKEND_ACTIF } from "./backend/actif";
+import type { Session } from "./backend/types";
 
 /**
- * Compte connecté par code SMS (Firebase), quand Supabase est actif.
+ * Compte connecté par code SMS ou par code email (Firebase Authentication), en production.
  * En maquette, il n'y a pas de session : `session` reste null et `pret` passe à true.
  */
-export type Session = { id: string; telephone: string };
+export type { Session };
 
 type Etat = { pret: boolean; session: Session | null };
 
-let etat: Etat = { pret: !SUPABASE_ACTIF, session: null };
+let etat: Etat = { pret: !BACKEND_ACTIF, session: null };
 const abonnes = new Set<() => void>();
 let ecoute = false;
 
 function demarrer() {
-  if (ecoute || !SUPABASE_ACTIF || typeof window === "undefined") return;
+  if (ecoute || !BACKEND_ACTIF || typeof window === "undefined") return;
   ecoute = true;
   void import("./backend/firebase").then(({ surConnexion }) =>
     surConnexion((u) => {

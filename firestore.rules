@@ -1,56 +1,302 @@
 rules_version = '2';
 
-// Règles de sécurité Firestore — ArtisanBrazza (projet mossala-6f297)
-// Déploiement : firebase deploy --only firestore:rules
+// Règles de sécurité Firestore — Artopif (projet mossala-6f297), base de production.
+// Déploiement : firebase deploy --only firestore   ·   Tests : npm run test:rules
+//
+// Identité : connexion par code SMS (jeton avec phone_number) ou par code email
+// (jeton créé par la Cloud Function verifierCodeEmail, avec email et email_verified).
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ——— Outils ———
 
     function connecte() {
       return request.auth != null;
     }
+    function moi() {
+      return request.auth.uid;
+    }
     function proprietaire(uid) {
-      return connecte() && request.auth.uid == uid;
+      return connecte() && moi() == uid;
     }
-    // Numéro vérifié par le code SMS (Firebase Authentication)
+    function nouveau() {
+      return request.resource.data;
+    }
+    // Numéro vérifié par SMS, ou null si la connexion s'est faite par email.
     function telVerifie() {
-      return request.auth.token.phone_number;
+      return request.auth.token.get('phone_number', null);
     }
-    // Le numéro n'est exposé publiquement que si l'artisan l'a choisi
-    function numeroCoherent(d) {
-      return d.numeroPublic is bool
-        && (d.numeroPublic ? d.telephonePublic == telVerifie() : d.telephonePublic == null);
+    // Numéro déclaré : celui vérifié par SMS quand il y en a un (sinon contrôlé par l'équipe).
+    function numeroDuCompte(t) {
+      return t is string && t.size() >= 8 && t.size() <= 20 && (telVerifie() == null || t == telVerifie());
+    }
+    function texte(t, min, max) {
+      return t is string && t.size() >= min && t.size() <= max;
+    }
+    function texteOuNull(t, max) {
+      return t == null || texte(t, 0, max);
+    }
+    function changes() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    function chemin(c, id) {
+      return /databases/$(database)/documents/$(c)/$(id);
+    }
+    // Équipe Artopif : jeton avec admin: true (firebase-functions/donner-admin.js).
+    // Elle gère tout depuis le backoffice /admin.
+    function admin() {
+      return connecte() && request.auth.token.get('admin', false) == true;
+    }
+    function proVerifie(id) {
+      return exists(chemin('pros', id)) && get(chemin('pros', id)).data.statut == 'verifie';
     }
 
-    // ——— Profils professionnels (artisans et boutiques) ———
+    // ——— Comptes clients : privés ———
+    match /comptes/{uid} {
+      function compteValide(d) {
+        return d.keys().hasOnly(['prenom', 'nom', 'telephone', 'telephones', 'adresse', 'ville', 'quartier', 'email', 'creeLe'])
+          && texte(d.prenom, 1, 60)
+          && numeroDuCompte(d.telephone)
+          && d.telephones is list && d.telephones.size() <= 3;
+      }
+      allow read: if proprietaire(uid) || admin();
+      allow create: if proprietaire(uid) && compteValide(nouveau()) && nouveau().creeLe == request.time;
+      allow update: if proprietaire(uid) && compteValide(nouveau()) && !changes().hasAny(['creeLe']);
+      allow delete: if false;
+    }
+
+    // ——— Profils professionnels : publics une fois vérifiés par l'équipe ———
     match /pros/{uid} {
-      allow read: if true;
+      // Le numéro n'est exposé publiquement que si le pro l'a choisi.
+      function numeroCoherent(d) {
+        return d.numeroPublic is bool
+          && (d.numeroPublic ? numeroDuCompte(d.telephonePublic) : d.telephonePublic == null);
+      }
+      function profilValide(d) {
+        return d.keys().hasOnly(['type', 'nom', 'metier', 'zones', 'ville', 'quartier', 'adresse', 'description',
+                                 'numeroPublic', 'telephonePublic', 'image', 'statut', 'creeLe'])
+          && d.type in ['artisan', 'boutique']
+          && texte(d.nom, 2, 80)
+          && texte(d.description, 0, 2000)
+          && d.zones is list && d.zones.size() <= 30
+          && numeroCoherent(d);
+      }
 
+      // propriétaire d'abord : il peut lire son profil, même absent ou pas encore vérifié
+      allow get: if proprietaire(uid) || resource.data.statut == 'verifie' || admin();
+      allow list: if resource.data.statut == 'verifie' || admin();
       allow create: if proprietaire(uid)
-        && request.resource.data.type in ['artisan', 'boutique']
-        && request.resource.data.statut == 'en_verification'   // la vérification est faite par l'équipe
-        && request.resource.data.nom is string
-        && request.resource.data.nom.size() >= 2
-        && request.resource.data.nom.size() <= 80
-        && numeroCoherent(request.resource.data);
-
+        && profilValide(nouveau())
+        && nouveau().statut == 'en_verification'   // la vérification est faite par l'équipe
+        && nouveau().creeLe == request.time;
       allow update: if proprietaire(uid)
-        && request.resource.data.statut == resource.data.statut // seul l'admin change le statut
-        && request.resource.data.type == resource.data.type
-        && numeroCoherent(request.resource.data);
-
+        && profilValide(nouveau())
+        && !changes().hasAny(['statut', 'type', 'creeLe']);   // seule l'équipe change le statut
+      // l'équipe vérifie, suspend ou réactive un profil
+      allow update: if admin()
+        && changes().hasOnly(['statut'])
+        && nouveau().statut in ['en_verification', 'verifie', 'suspendu'];
       allow delete: if false;
 
-      // Coordonnées privées : lisibles par le propriétaire seul
+      // Coordonnées privées (numéros pour les alertes, responsable) : le pro seul.
       match /prive/{docId} {
-        allow read: if proprietaire(uid);
+        allow read: if proprietaire(uid) || admin();   // l'équipe rappelle le pro pour le vérifier
         allow create, update: if proprietaire(uid)
           && docId == 'contact'
-          && request.resource.data.telephone == telVerifie();
+          && numeroDuCompte(nouveau().telephone)
+          && nouveau().telephones is list && nouveau().telephones.size() <= 3;
         allow delete: if false;
+      }
+
+      // Réalisations (onglet « Réalisations » du profil public).
+      match /realisations/{rid} {
+        function realisationValide(d) {
+          return d.keys().hasOnly(['titre', 'type', 'quartier', 'description', 'materiaux', 'duree', 'date', 'photos', 'verifiee', 'creeLe'])
+            && texte(d.titre, 2, 120)
+            && texte(d.description, 0, 2000)
+            && d.photos is list && d.photos.size() >= 1 && d.photos.size() <= 10;
+        }
+        allow read: if proprietaire(uid) || proVerifie(uid) || admin();
+        allow create: if proprietaire(uid)
+          && realisationValide(nouveau())
+          && nouveau().verifiee == false            // seule l'équipe vérifie une réalisation
+          && nouveau().creeLe == request.time;
+        allow update: if proprietaire(uid) && realisationValide(nouveau()) && !changes().hasAny(['verifiee', 'creeLe']);
+        // l'équipe marque une réalisation comme vérifiée (ou retire la vérification)
+        allow update: if admin() && changes().hasOnly(['verifiee']) && nouveau().verifiee is bool;
+        allow delete: if proprietaire(uid) || admin();
       }
     }
 
-    // Tout le reste est fermé par défaut
+    // ——— Messagerie : une conversation par couple client / pro ———
+    match /conversations/{cid} {
+      function participant() {
+        return connecte() && moi() in resource.data.participants;
+      }
+      // lire une conversation absente ne révèle rien (sert à savoir s'il faut la créer)
+      allow get: if connecte() && (resource == null || moi() in resource.data.participants);
+      allow list: if participant();
+      allow create: if connecte()
+        && nouveau().keys().hasOnly(['clientId', 'proId', 'participants', 'client', 'pro', 'luClient', 'luPro', 'creeLe'])
+        && nouveau().clientId == moi()
+        && nouveau().proId != moi()
+        && cid == moi() + '_' + nouveau().proId
+        && nouveau().participants == [moi(), nouveau().proId]
+        && texte(nouveau().client.prenom, 1, 60)
+        && proVerifie(nouveau().proId)
+        && nouveau().pro.nom == get(chemin('pros', nouveau().proId)).data.nom
+        && nouveau().luClient == null && nouveau().luPro == null
+        && nouveau().creeLe == request.time;
+      // chacun ne met à jour que sa date de lecture
+      allow update: if participant()
+        && ((moi() == resource.data.clientId && changes().hasOnly(['luClient']))
+          || (moi() == resource.data.proId && changes().hasOnly(['luPro'])));
+      allow delete: if false;
+    }
+
+    match /messages/{mid} {
+      function conversation() {
+        return get(chemin('conversations', nouveau().conversationId)).data;
+      }
+      allow read: if connecte() && moi() in resource.data.participants;
+      // On écrit seulement de son propre côté de la conversation.
+      allow create: if connecte()
+        && nouveau().keys().hasOnly(['conversationId', 'participants', 'de', 'texte', 'envoyeLe'])
+        && texte(nouveau().texte, 1, 1000)
+        && nouveau().envoyeLe == request.time
+        && exists(chemin('conversations', nouveau().conversationId))
+        && nouveau().participants == conversation().participants
+        && ((nouveau().de == 'client' && conversation().clientId == moi())
+          || (nouveau().de == 'pro' && conversation().proId == moi()));
+      allow update, delete: if false;
+    }
+
+    // ——— Devis : le client demande, le pro chiffre, le client répond ———
+    match /demandes/{id} {
+      function participant() {
+        return connecte() && moi() in resource.data.participants;
+      }
+      allow read: if participant();
+      allow create: if connecte()
+        && nouveau().keys().hasOnly(['clientId', 'proId', 'participants', 'client', 'pro', 'texte', 'quartier',
+                                     'dateSouhaitee', 'budget', 'statut', 'motifDeclin', 'devis', 'creeLe'])
+        && nouveau().clientId == moi()
+        && nouveau().proId != moi()
+        && nouveau().participants == [moi(), nouveau().proId]
+        && nouveau().statut == 'nouvelle'
+        && nouveau().devis == null && nouveau().motifDeclin == null
+        && texte(nouveau().texte, 10, 2000)
+        && texte(nouveau().quartier, 1, 80)
+        && texteOuNull(nouveau().budget, 80)
+        && texte(nouveau().client.prenom, 1, 60)
+        && proVerifie(nouveau().proId)
+        && nouveau().pro.nom == get(chemin('pros', nouveau().proId)).data.nom
+        && nouveau().pro.type == get(chemin('pros', nouveau().proId)).data.type
+        && nouveau().creeLe == request.time;
+      // Le pro chiffre, envoie ou décline (pas après la réponse du client).
+      allow update: if connecte() && moi() == resource.data.proId
+        && changes().hasOnly(['statut', 'motifDeclin', 'devis'])
+        && nouveau().statut in ['brouillon', 'envoyee', 'declinee']
+        && !(resource.data.statut in ['acceptee', 'refusee'])
+        && (!changes().hasAny(['devis']) || (nouveau().devis.envoyeLe == request.time && nouveau().statut == 'envoyee'))
+        && texteOuNull(nouveau().motifDeclin, 500);
+      // Le client ne peut que répondre à un devis envoyé.
+      allow update: if connecte() && moi() == resource.data.clientId
+        && changes().hasOnly(['statut'])
+        && resource.data.statut == 'envoyee'
+        && nouveau().statut in ['acceptee', 'refusee'];
+      allow delete: if false;
+    }
+
+    // Devis en cours de rédaction : visibles du pro seul (le client voit le devis une fois envoyé).
+    match /brouillons/{id} {
+      allow read: if connecte() && resource.data.proId == moi();
+      allow create, update: if connecte()
+        && nouveau().proId == moi()
+        && exists(chemin('demandes', id))
+        && get(chemin('demandes', id)).data.proId == moi();
+      // supprimer un brouillon absent est permis (envoi d'un devis jamais enregistré en brouillon)
+      allow delete: if connecte() && (resource == null || resource.data.proId == moi());
+    }
+
+    // ——— Formulaire « Nous contacter » : tout visiteur écrit, seule l'équipe lit (console) ———
+    match /contacts/{id} {
+      allow create: if nouveau().keys().hasOnly(['nom', 'telephone', 'email', 'sujet', 'message', 'statut', 'recuLe'])
+        && texte(nouveau().nom, 2, 80)
+        && texteOuNull(nouveau().telephone, 20)
+        && texteOuNull(nouveau().email, 254)
+        && (nouveau().telephone != null || nouveau().email != null)
+        && nouveau().sujet in ['Question sur un artisan ou un magasin', 'Je suis un professionnel',
+                               'Signaler un avis ou un problème', 'Publicité et partenariats', 'Autre demande']
+        && texte(nouveau().message, 10, 2000)
+        && nouveau().statut == 'nouveau'
+        && nouveau().recuLe == request.time;
+      allow read, delete: if admin();
+      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
+    }
+
+    // ——— Avis clients : un par client et par professionnel, publiés après modération ———
+    match /avis/{id} {
+      function avisValide(d) {
+        return d.keys().hasOnly(['cibleType', 'cibleId', 'cibleNom', 'auteurId', 'auteur', 'notes', 'note',
+                                 'recommandation', 'experience', 'date', 'texte', 'statut', 'verifie',
+                                 'motifRefus', 'modereLe', 'creeLe'])
+          && d.cibleType in ['artisan', 'magasin']
+          && texte(d.cibleId, 1, 128)
+          && texte(d.cibleNom, 1, 120)
+          && texte(d.auteur, 1, 60)
+          && d.notes is map && d.notes.size() >= 1 && d.notes.size() <= 5
+          && d.note is number && d.note >= 1 && d.note <= 5
+          && d.recommandation in ['oui', 'reserves', 'non']
+          && d.experience in ['prestation', 'achat', 'devis', 'contact']
+          && texteOuNull(d.date, 7)
+          && texte(d.texte, 0, 1000);
+      }
+      // Publics une fois publiés ; l'auteur relit le sien (savoir s'il a déjà donné son avis).
+      allow get: if (connecte() && (resource == null || resource.data.auteurId == moi()))
+        || resource.data.statut == 'publie'
+        || admin();
+      allow list: if resource.data.statut == 'publie' || admin();
+      allow create: if connecte()
+        && avisValide(nouveau())
+        && nouveau().auteurId == moi()
+        && nouveau().cibleId != moi()                                   // pas d'avis sur soi-même
+        && id == nouveau().cibleType + '_' + nouveau().cibleId + '_' + moi()   // un seul avis par pro
+        && nouveau().statut == 'a_moderer'                               // seule l'équipe publie
+        && nouveau().verifie == false                                    // seule l'équipe confirme l'expérience
+        && nouveau().motifRefus == null && nouveau().modereLe == null
+        && nouveau().creeLe == request.time;
+      // Modération : publier, refuser (avec motif), confirmer l'expérience.
+      allow update: if admin()
+        && changes().hasOnly(['statut', 'verifie', 'motifRefus', 'modereLe'])
+        && nouveau().statut in ['a_moderer', 'publie', 'refuse']
+        && nouveau().verifie is bool
+        && texteOuNull(nouveau().motifRefus, 300)
+        && nouveau().modereLe == request.time;
+      allow delete: if admin();
+    }
+
+    // ——— Signalements (profil ou avis) : tout visiteur signale, seule l'équipe lit ———
+    match /signalements/{id} {
+      allow create: if nouveau().keys().hasOnly(['cible', 'cibleId', 'libelle', 'motif', 'auteurId', 'statut', 'creeLe'])
+        && nouveau().cible in ['profil', 'avis']
+        && texte(nouveau().cibleId, 1, 200)
+        && texte(nouveau().libelle, 0, 200)
+        && texte(nouveau().motif, 1, 100)
+        && (nouveau().auteurId == null || (connecte() && nouveau().auteurId == moi()))
+        && nouveau().statut == 'nouveau'
+        && nouveau().creeLe == request.time;
+      allow read, delete: if admin();
+      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
+    }
+
+    // Backoffice : toutes les réalisations à vérifier (requête collectionGroup).
+    match /{chemin=**}/realisations/{rid} {
+      allow read: if admin();
+    }
+
+    // Codes de connexion par email : réservés aux Cloud Functions (accès admin).
+    // Tout le reste est fermé par défaut.
     match /{document=**} {
       allow read, write: if false;
     }

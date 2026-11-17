@@ -2,8 +2,22 @@
 
 import { useSyncExternalStore } from "react";
 import { notifierNouveauMessage } from "./backend";
-import { SUPABASE_ACTIF, estDemo, sb, verifier } from "./backend/supabase";
-import { metierLabel } from "./data";
+import {
+  type Timestamp,
+  addDoc,
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+import { BACKEND_ACTIF, estDemo } from "./backend/actif";
+import { db } from "./backend/firebase";
+import { proPublic } from "./backend/pros";
 import { sessionActuelle, surSession } from "./session";
 
 /**
@@ -15,8 +29,9 @@ import { sessionActuelle, surSession } from "./session";
  * désignation / quantité / unité / prix unitaire, un sous-total par rubrique et un total.
  * Chaque ligne peut aussi porter une fourchette de prix du marché (« de … à … »).
  *
- * Pros inscrits (Supabase actif) : tables demandes_devis et devis (supabase/migrations/0003_devis.sql),
- * en temps réel. Pros de démonstration (ou maquette) : gardé dans le navigateur.
+ * Pros inscrits (production) : Firestore demandes/{id} (avec le devis envoyé) et brouillons/{id}
+ * (devis en cours, visible du pro seul), en temps réel. Pros de démonstration (ou maquette) :
+ * gardé dans le navigateur.
  */
 
 export type TypePro = "artisan" | "boutique";
@@ -232,7 +247,7 @@ if (typeof window !== "undefined") {
 }
 
 const abonner = (f: () => void) => {
-  ecouterSupabase();
+  ecouterBase();
   abonnes.add(f);
   return () => abonnes.delete(f);
 };
@@ -241,71 +256,68 @@ function modifier(id: string, f: (d: DemandeDevis) => DemandeDevis) {
   ecrire(lire().map((d) => (d.id === id ? f(d) : d)));
 }
 
-// ——— Supabase : demandes avec les pros inscrits (les pros de démo restent dans le navigateur) ———
+// ——— Production (Firestore) : demandes avec les pros inscrits (les pros de démo restent dans le navigateur) ———
 
-type LigneDevisDb = {
-  rubriques: RubriqueDevis[];
-  delai: string;
-  validite: string;
-  materiaux_inclus: boolean;
-  paiement: string;
-  note: string;
-  envoye_le: string | null;
-};
+type DocDevis = Omit<Devis, "envoyeLe"> & { envoyeLe?: Timestamp | null };
 
-type LigneDemande = {
-  id: string;
-  client_id: string;
-  pro_id: string;
+type DocDemande = {
+  clientId: string;
+  proId: string;
+  participants: string[];
+  client: { prenom: string; telephone: string };
+  pro: { type: TypePro; nom: string; sous: string; image: string | null; telephone: string | null };
   texte: string;
   quartier: string;
-  date_souhaitee: string | null;
+  dateSouhaitee: string | null;
   budget: string | null;
   statut: StatutDemande;
-  motif_declin: string | null;
-  cree_le: string;
-  devis: LigneDevisDb | LigneDevisDb[] | null;
-  pro: { type: TypePro; nom: string; metier: string | null; quartier: string; image: string | null; telephone_public: string | null } | null;
-  client: { prenom: string; telephone: string } | null;
+  motifDeclin: string | null;
+  /** dernier devis envoyé au client */
+  devis: DocDevis | null;
+  creeLe: Timestamp | null;
 };
 
+let docsDemandes = new Map<string, DocDemande>();
+let docsBrouillons = new Map<string, DocDevis>();
 let distantes: DemandeDevis[] = [];
 let combinees: DemandeDevis[] | null = null;
 let ecoute = false;
 
-function versDemande(l: LigneDemande, moi: string): DemandeDevis {
-  const dv = Array.isArray(l.devis) ? l.devis[0] : l.devis;
-  const p = l.pro;
+const versDevis = (d: DocDevis): Devis => ({
+  rubriques: d.rubriques ?? [],
+  delai: d.delai ?? "",
+  validite: d.validite ?? "",
+  materiauxInclus: d.materiauxInclus ?? true,
+  paiement: d.paiement ?? "",
+  note: d.note ?? "",
+  envoyeLe: d.envoyeLe?.toMillis(),
+});
+
+function versDemande(id: string, l: DocDemande, moi: string): DemandeDevis {
+  const estPro = l.proId === moi;
+  // le pro voit son brouillon s'il en a un, sinon le dernier devis envoyé
+  const brouillon = estPro ? docsBrouillons.get(id) : undefined;
+  const dv = brouillon ?? l.devis;
   return {
-    id: l.id,
-    moi: l.pro_id === moi ? "pro" : "client",
+    id,
+    moi: estPro ? "pro" : "client",
     pro: {
-      type: p?.type ?? "artisan",
-      id: l.pro_id,
-      nom: p?.nom ?? "Professionnel",
-      sous: p?.type === "boutique" ? `Quincaillerie · ${p.quartier}` : p?.metier ? metierLabel(p.metier).artisan : "Artisan",
-      image: p?.image ?? undefined,
-      telephone: p?.telephone_public ?? undefined,
+      type: l.pro?.type ?? "artisan",
+      id: l.proId,
+      nom: l.pro?.nom ?? "Professionnel",
+      sous: l.pro?.sous ?? "",
+      image: l.pro?.image ?? undefined,
+      telephone: l.pro?.telephone ?? undefined,
     },
     client: { prenom: l.client?.prenom ?? "Client", telephone: l.client?.telephone ?? "" },
     texte: l.texte,
     quartier: l.quartier,
-    dateSouhaitee: l.date_souhaitee ?? undefined,
+    dateSouhaitee: l.dateSouhaitee ?? undefined,
     budget: l.budget ?? undefined,
-    creeLe: Date.parse(l.cree_le),
+    creeLe: l.creeLe?.toMillis() ?? Date.now(),
     statut: l.statut,
-    motifDeclin: l.motif_declin ?? undefined,
-    devis: dv
-      ? {
-          rubriques: dv.rubriques,
-          delai: dv.delai,
-          validite: dv.validite,
-          materiauxInclus: dv.materiaux_inclus,
-          paiement: dv.paiement,
-          note: dv.note,
-          envoyeLe: dv.envoye_le ? Date.parse(dv.envoye_le) : undefined,
-        }
-      : undefined,
+    motifDeclin: l.motifDeclin ?? undefined,
+    devis: dv ? { ...versDevis(dv), envoyeLe: l.devis?.envoyeLe?.toMillis() } : undefined,
   };
 }
 
@@ -314,50 +326,58 @@ const prevenir = () => {
   abonnes.forEach((f) => f());
 };
 
-async function chargerDistantes() {
+function recalculer() {
   const s = sessionActuelle();
-  if (!s) {
-    distantes = [];
-    return prevenir();
-  }
-  try {
-    const lignes = verifier(
-      await sb()
-        .from("demandes_devis")
-        .select("*, devis(*), pro:pros(type, nom, metier, quartier, image, telephone_public), client:comptes(prenom, telephone)")
-        .order("cree_le", { ascending: false }),
-    ) as LigneDemande[];
-    distantes = lignes.map((l) => versDemande(l, s.id));
-    prevenir();
-  } catch {
-    /* hors ligne : on garde les dernières demandes connues */
-  }
+  distantes = s
+    ? [...docsDemandes].map(([id, d]) => versDemande(id, d, s.id)).sort((a, b) => b.creeLe - a.creeLe)
+    : [];
+  prevenir();
 }
 
-let rechargement: ReturnType<typeof setTimeout> | null = null;
-
-/** Recharge un peu après un changement (plusieurs événements temps réel arrivent groupés). */
-const rechargerBientot = () => {
-  if (rechargement) clearTimeout(rechargement);
-  rechargement = setTimeout(() => void chargerDistantes(), 150);
-};
-
-function ecouterSupabase() {
-  if (ecoute || !SUPABASE_ACTIF || typeof window === "undefined") return;
+function ecouterBase() {
+  if (ecoute || !BACKEND_ACTIF || typeof window === "undefined") return;
   ecoute = true;
-  let canal: ReturnType<ReturnType<typeof sb>["channel"]> | null = null;
+  let arreter: (() => void)[] = [];
   surSession(() => {
-    void chargerDistantes();
-    if (canal) void sb().removeChannel(canal);
-    canal = sessionActuelle()
-      ? sb()
-          .channel("devis")
-          .on("postgres_changes", { event: "*", schema: "public", table: "demandes_devis" }, rechargerBientot)
-          .on("postgres_changes", { event: "*", schema: "public", table: "devis" }, rechargerBientot)
-          .subscribe()
-      : null;
+    arreter.forEach((f) => f());
+    arreter = [];
+    docsDemandes = new Map();
+    docsBrouillons = new Map();
+    const s = sessionActuelle();
+    if (!s) return recalculer();
+    const lecture = { serverTimestamps: "estimate" } as const;
+    arreter = [
+      onSnapshot(
+        query(collection(db(), "demandes"), where("participants", "array-contains", s.id)),
+        (snap) => {
+          docsDemandes = new Map(snap.docs.map((d) => [d.id, d.data(lecture) as DocDemande]));
+          recalculer();
+        },
+        () => {
+          /* hors ligne ou refusé : on garde les dernières demandes connues */
+        },
+      ),
+      onSnapshot(
+        query(collection(db(), "brouillons"), where("proId", "==", s.id)),
+        (snap) => {
+          docsBrouillons = new Map(snap.docs.map((d) => [d.id, d.data(lecture) as DocDevis]));
+          recalculer();
+        },
+        () => {},
+      ),
+    ];
   });
 }
+
+/** Contenu du devis tel qu'enregistré (sans la date d'envoi). */
+const contenuDevis = (d: Devis) => ({
+  rubriques: d.rubriques,
+  delai: d.delai,
+  validite: d.validite,
+  materiauxInclus: d.materiauxInclus,
+  paiement: d.paiement,
+  note: d.note,
+});
 
 const estDistante = (id: string) => distantes.some((d) => d.id === id);
 
@@ -374,18 +394,25 @@ export async function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "stat
   if (!estDemo(d.pro.id)) {
     const s = sessionActuelle();
     if (!s) throw new Error("Connectez-vous pour envoyer votre demande.");
-    // L'alerte WhatsApp/SMS au pro part de la base (trigger → Edge Function « notifier »).
-    verifier(
-      await sb().from("demandes_devis").insert({
-        client_id: s.id,
-        pro_id: d.pro.id,
-        texte: d.texte.trim(),
-        quartier: d.quartier,
-        date_souhaitee: d.dateSouhaitee || null,
-        budget: d.budget || null,
-      }),
-    );
-    return chargerDistantes();
+    const pro = await proPublic(d.pro.id);
+    if (!pro) throw new Error("Ce professionnel n’est pas encore disponible.");
+    // L'alerte WhatsApp/SMS au pro part de la Cloud Function « alerteDemande ».
+    await addDoc(collection(db(), "demandes"), {
+      clientId: s.id,
+      proId: pro.id,
+      participants: [s.id, pro.id],
+      client: { prenom: d.client.prenom, telephone: d.client.telephone },
+      pro: { type: pro.type, nom: pro.nom, sous: d.pro.sous, image: pro.image, telephone: pro.telephonePublic },
+      texte: d.texte.trim(),
+      quartier: d.quartier,
+      dateSouhaitee: d.dateSouhaitee || null,
+      budget: d.budget || null,
+      statut: "nouvelle",
+      motifDeclin: null,
+      devis: null,
+      creeLe: serverTimestamp(),
+    });
+    return;
   }
   const demande: DemandeDevis = { ...d, texte: d.texte.trim(), id: nouvelId(), creeLe: Date.now(), statut: "nouvelle" };
   ecrire([demande, ...lire()]);
@@ -405,27 +432,23 @@ export async function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "stat
 /** Le pro enregistre son devis ; `envoyer` le transmet au client. */
 export async function enregistrerDevis(id: string, devis: Devis, envoyer: boolean): Promise<void> {
   if (estDistante(id)) {
+    const s = sessionActuelle();
+    if (!s) throw new Error("Connectez-vous pour enregistrer ce devis.");
     const actuelle = distantes.find((d) => d.id === id);
-    const precedent = actuelle?.devis?.envoyeLe;
-    verifier(
-      await sb()
-        .from("devis")
-        .upsert({
-          demande_id: id,
-          rubriques: devis.rubriques,
-          delai: devis.delai,
-          validite: devis.validite,
-          materiaux_inclus: devis.materiauxInclus,
-          paiement: devis.paiement,
-          note: devis.note,
-          envoye_le: envoyer ? new Date().toISOString() : precedent ? new Date(precedent).toISOString() : null,
-          modifie_le: new Date().toISOString(),
-        }),
-    );
+    const base = db();
+    if (envoyer) {
+      // le devis envoyé devient visible du client ; le brouillon n'a plus lieu d'être
+      const lot = writeBatch(base);
+      lot.update(doc(base, "demandes", id), { statut: "envoyee", devis: { ...contenuDevis(devis), envoyeLe: serverTimestamp() } });
+      lot.delete(doc(base, "brouillons", id));
+      await lot.commit();
+      return;
+    }
+    await setDoc(doc(base, "brouillons", id), { proId: s.id, ...contenuDevis(devis), modifieLe: serverTimestamp() });
     // un devis déjà envoyé reste « envoyé » même si on enregistre une correction en brouillon
-    const statut = envoyer || actuelle?.statut === "envoyee" ? "envoyee" : "brouillon";
-    if (statut !== actuelle?.statut) verifier(await sb().from("demandes_devis").update({ statut }).eq("id", id));
-    return chargerDistantes();
+    if (actuelle && actuelle.statut !== "envoyee" && actuelle.statut !== "brouillon")
+      await updateDoc(doc(base, "demandes", id), { statut: "brouillon" });
+    return;
   }
   modifier(id, (d) => ({
     ...d,
@@ -446,8 +469,8 @@ export async function enregistrerDevis(id: string, devis: Devis, envoyer: boolea
 
 export async function declinerDemande(id: string, motif: string): Promise<void> {
   if (estDistante(id)) {
-    verifier(await sb().from("demandes_devis").update({ statut: "declinee", motif_declin: motif.trim() || null }).eq("id", id));
-    return chargerDistantes();
+    await updateDoc(doc(db(), "demandes", id), { statut: "declinee", motifDeclin: motif.trim() || null });
+    return;
   }
   modifier(id, (d) => ({ ...d, statut: "declinee", motifDeclin: motif.trim() || undefined }));
 }
@@ -455,8 +478,8 @@ export async function declinerDemande(id: string, motif: string): Promise<void> 
 /** Réponse du client au devis reçu. */
 export async function repondreDevis(id: string, accepte: boolean): Promise<void> {
   if (estDistante(id)) {
-    verifier(await sb().from("demandes_devis").update({ statut: accepte ? "acceptee" : "refusee" }).eq("id", id));
-    return chargerDistantes();
+    await updateDoc(doc(db(), "demandes", id), { statut: accepte ? "acceptee" : "refusee" });
+    return;
   }
   modifier(id, (d) => (d.statut === "envoyee" ? { ...d, statut: accepte ? "acceptee" : "refusee" } : d));
 }

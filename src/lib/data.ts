@@ -66,13 +66,15 @@ export type Realisation = {
 };
 
 export type Avis = {
+  /** identifiant en base (avis laissés sur le site) */
+  id?: string;
   auteur: string;
   note: number;
   date: string;
   texte: string;
   reponse?: string;
-  /** Ce que l'auteur a réellement vécu : seule une prestation confirmée compte comme avis vérifié. */
-  experience?: "prestation" | "devis" | "contact";
+  /** Ce que l'auteur a réellement vécu : seule une prestation ou un achat confirmé compte comme avis vérifié. */
+  experience?: "prestation" | "achat" | "devis" | "contact";
 };
 
 export type Artisan = {
@@ -448,8 +450,8 @@ export const artisans: Artisan[] = [
 
 /* ------------------------------------------------------------------ *
  * Quincaillerie : villes, boutiques, catalogue et offres par boutique *
- * MAQUETTE : avec Supabase, ce seront les tables villes, boutiques,   *
- * produits et offres (prix et stock propres à chaque boutique).       *
+ * MAQUETTE : en production, ce seront des collections Firestore      *
+ * villes, boutiques, produits et offres (prix et stock par boutique). *
  * ------------------------------------------------------------------ */
 
 export type Ville = { nom: string; quartiers: string[] };
@@ -521,11 +523,16 @@ export type Boutique = {
   horaires: string;
   /** Photo de la devanture ou de l'intérieur (envoyée par le boutiquier). */
   image?: string;
+  /** Note moyenne laissée par les acheteurs (achats confirmés) et nombre d'avis. */
+  note: number;
+  nbAvis: number;
 };
 
 export const boutiques: Boutique[] = [
   {
     id: "total-bacongo",
+    note: 4.7,
+    nbAvis: 52,
     nom: "Quincaillerie Total Bacongo",
     ville: "Brazzaville",
     quartier: "Bacongo",
@@ -536,6 +543,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "batiplus-poto-poto",
+    note: 4.6,
+    nbAvis: 38,
     nom: "Bâtiplus Poto-Poto",
     ville: "Brazzaville",
     quartier: "Poto-Poto",
@@ -546,6 +555,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "moungali-materiaux",
+    note: 4.8,
+    nbAvis: 9,
     nom: "Moungali Matériaux",
     ville: "Brazzaville",
     quartier: "Moungali",
@@ -555,6 +566,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "talangai-btp",
+    note: 4.4,
+    nbAvis: 21,
     nom: "Talangaï BTP",
     ville: "Brazzaville",
     quartier: "Talangaï",
@@ -564,6 +577,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "ocean-batiment",
+    note: 4.6,
+    nbAvis: 27,
     nom: "Océan Bâtiment",
     ville: "Pointe-Noire",
     quartier: "Lumumba",
@@ -573,6 +588,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "quincaillerie-tie-tie",
+    note: 4.5,
+    nbAvis: 14,
     nom: "Quincaillerie de Tié-Tié",
     ville: "Pointe-Noire",
     quartier: "Tié-Tié",
@@ -582,6 +599,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "niari-materiaux",
+    note: 4.6,
+    nbAvis: 11,
     nom: "Niari Matériaux",
     ville: "Dolisie",
     quartier: "Centre-ville",
@@ -591,6 +610,8 @@ export const boutiques: Boutique[] = [
   },
   {
     id: "sangha-quincaillerie",
+    note: 4.3,
+    nbAvis: 6,
     nom: "Quincaillerie de la Sangha",
     ville: "Ouesso",
     quartier: "Centre-ville",
@@ -980,6 +1001,70 @@ export const AVIS_MIN_REPUTATION = 5;
  * à partir des avis, jamais achetables. « Très ponctuel », « Excellent rapport qualité-prix »
  * et « Qualité reconnue » viendront avec les notes par critère stockées en base.
  */
+/** Critères notés par les clients, différents pour un artisan et pour un magasin. */
+export const CRITERES_ARTISAN = [
+  "Qualité du travail",
+  "Respect des délais",
+  "Professionnalisme",
+  "Rapport qualité-prix",
+  "Satisfaction générale",
+];
+export const CRITERES_MAGASIN = [
+  "Qualité des produits",
+  "Prix pratiqués",
+  "Disponibilité des produits",
+  "Accueil et service client",
+  "Satisfaction générale",
+];
+
+const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+/** « Octobre 2026 » → nombre de mois depuis l'an 0 (null si la date n'est pas lisible). */
+function moisAvis(date: string) {
+  const [m, a] = date.toLowerCase().split(/\s+/);
+  const i = MOIS.indexOf(m);
+  return i >= 0 && Number(a) ? Number(a) * 12 + i : null;
+}
+
+/** Mois du dernier avis publié sur le site. */
+const MOIS_REFERENCE = Math.max(
+  0,
+  ...artisans.flatMap((a) => a.avis.map((v) => moisAvis(v.date) ?? 0)),
+);
+
+/**
+ * Score de recommandation : la note moyenne n'est PAS le seul critère.
+ *  - Nombre d'avis : moyenne bayésienne (on part d'une note de 4/5 qui vaut 10 avis), si bien
+ *    qu'un pro noté 5/5 sur 2 avis ne passe pas devant un pro à 4,8/5 sur 50 expériences.
+ *  - Expériences vérifiées : bonus selon la part d'avis issus d'une prestation ou d'un achat confirmé.
+ *  - Récence : bonus si le dernier avis date de moins de 6 mois avant `reference`
+ *    (le mois du dernier avis publié sur le site : calcul stable, sans dépendre de l'heure du rendu).
+ * La publicité n'entre jamais dans ce calcul.
+ */
+export function scoreRecommandation(r: { note: number; nbAvis: number; avis?: Avis[] }, reference = MOIS_REFERENCE) {
+  const PRIOR_NOTE = 4;
+  const PRIOR_POIDS = 10;
+  const bayes = (PRIOR_NOTE * PRIOR_POIDS + r.note * r.nbAvis) / (PRIOR_POIDS + r.nbAvis);
+  const avis = r.avis ?? [];
+  const partVerifiee = avis.length ? avis.filter((v) => v.experience === "prestation" || v.experience === "achat").length / avis.length : 0;
+  const mois = avis.map((v) => moisAvis(v.date)).filter((m): m is number => m !== null);
+  const ecart = mois.length ? reference - Math.max(...mois) : null;
+  const recence = ecart === null ? 0 : ecart <= 6 ? 0.1 * (1 - ecart / 6) : 0;
+  return bayes + 0.15 * partVerifiee + recence;
+}
+
+/** Artisans les mieux recommandés (score ci-dessus, jamais la publicité). */
+export function artisansRecommandes(n: number) {
+  return [...artisans].sort((x, y) => scoreRecommandation(y) - scoreRecommandation(x)).slice(0, n);
+}
+
+/** Magasins les plus appréciés par leurs acheteurs. */
+export function magasinsRecommandes(n: number, ville = VILLE_DEFAUT) {
+  return boutiques
+    .filter((b) => b.ville === ville)
+    .sort((x, y) => scoreRecommandation(y) - scoreRecommandation(x))
+    .slice(0, n);
+}
+
 export function badgesReputation(a: Pick<Artisan, "note" | "nbAvis">): string[] {
   if (a.nbAvis < AVIS_MIN_REPUTATION) return ["Nouveau professionnel"];
   return a.note >= 4.5 && a.nbAvis >= 10 ? ["Professionnel recommandé"] : [];

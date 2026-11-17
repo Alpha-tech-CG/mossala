@@ -7,7 +7,7 @@ import { ArrowRight, Film, Image as ImageIcon, Play } from "lucide-react";
 
 /**
  * Espaces publicitaires (image ou vidéo) vendus aux annonceurs.
- * MAQUETTE : les créations sont déclarées ici ; avec Supabase elles viendront d'une table
+ * MAQUETTE : les créations sont déclarées ici ; en production elles viendront d'une collection Firestore
  * « publicites » (emplacement, fichier dans le Storage, lien, dates de diffusion).
  */
 export type Emplacement = "accueil-1" | "accueil-2" | "pages" | "laterale-gauche" | "laterale-droite";
@@ -222,7 +222,7 @@ export function EspacePub({ emplacement, className = "" }: { emplacement: Emplac
 /** Bannière présente sur toutes les pages sauf l'accueil (qui a ses deux grands blocs). */
 export function PubPages() {
   const path = usePathname();
-  if (path === "/") return null;
+  if (path === "/" || path.startsWith("/admin")) return null;
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pt-4 pb-10">
       {/* Mobile et tablette : les deux barres latérales sont réinsérées ici, sur toutes les pages */}
@@ -239,7 +239,7 @@ export function PubPages() {
  */
 export function CadrePub({ children, accueil = false }: { children: React.ReactNode; accueil?: boolean }) {
   const path = usePathname();
-  if (path === "/" && !accueil) return <>{children}</>;
+  if ((path === "/" && !accueil) || path.startsWith("/admin")) return <>{children}</>; // pas de pub dans le backoffice
   return (
     <div className="xl:mx-auto xl:grid xl:max-w-[1500px] xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-6 xl:pr-6">
       <div className="min-w-0">{children}</div>

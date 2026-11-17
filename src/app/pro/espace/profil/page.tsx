@@ -18,7 +18,7 @@ const verifications = [
 
 export default function ProfilPro() {
   const a = getArtisan(ARTISAN_DEMO_ID)!;
-  // Démo rendue par le serveur ; remplacée par le profil de l'artisan connecté (Supabase).
+  // Démo rendue par le serveur ; remplacée par le profil de l'artisan connecté (Firestore).
   const demo = (
     <div className="mx-auto max-w-3xl">
       <div className="flex flex-wrap items-center gap-4">

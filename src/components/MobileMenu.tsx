@@ -8,6 +8,7 @@ import { BoutonCompte } from "./BoutonCompte";
 import {
   Home,
   LayoutGrid,
+  Mail,
   Megaphone,
   MessageCircle,
   Search,
@@ -25,6 +26,7 @@ const liens = [
   { href: "/messages", label: "Mes messages", Icon: MessageCircle },
   { href: "/services", label: "Nos services", Icon: Megaphone },
   { href: "/profil", label: "Mon compte", Icon: User },
+  { href: "/contact", label: "Nous contacter", Icon: Mail },
 ];
 
 /** Menu burger : remplace la barre de navigation du bas sur mobile. */

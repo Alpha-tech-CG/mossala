@@ -5,10 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle2, ChevronDown, Search, Send, Store } from "lucide-react";
 import { InscriptionClient } from "@/components/Acces";
-import { SUPABASE_ACTIF, erreurSupabase, estDemo, sb } from "@/lib/backend/supabase";
+import { BACKEND_ACTIF, estDemo } from "@/lib/backend/actif";
+import { messageErreur } from "@/lib/backend/erreurs";
 import { useCompte } from "@/lib/compte";
 import { creerDemande, type ProDevis } from "@/lib/devis";
-import { getArtisan, getBoutique, boutiques, metierLabel, quartiers } from "@/lib/data";
+import { getArtisan, getBoutique, getMetier, boutiques, metierLabel, quartiers } from "@/lib/data";
 
 const field =
   "w-full rounded-xl border border-border bg-white px-4 py-4 text-base outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
@@ -42,20 +43,17 @@ function cible(params: URLSearchParams): ProDevis | null {
   return null;
 }
 
-/** Pro inscrit (base Supabase) visé par la demande, lu côté navigateur. */
+/** Pro inscrit (Firestore) visé par la demande, lu côté navigateur. */
 function useProInscrit(params: URLSearchParams): { charge: boolean; pro: ProDevis | null } {
   const id = params.get("artisan") ?? params.get("boutique") ?? "";
-  const aChercher = SUPABASE_ACTIF && !!id && !estDemo(id);
+  const aChercher = BACKEND_ACTIF && !!id && !estDemo(id);
   const [res, setRes] = useState<{ id: string; pro: ProDevis | null } | null>(null);
   useEffect(() => {
     if (!aChercher) return;
     let actif = true;
-    void sb()
-      .from("pros")
-      .select("id, type, nom, metier, quartier, image, telephone_public")
-      .eq("id", id)
-      .maybeSingle()
-      .then(({ data: p }) => {
+    void import("@/lib/backend/pros")
+      .then(({ proPublic }) => proPublic(id))
+      .then((p) => {
         if (!actif) return;
         setRes({
           id,
@@ -64,9 +62,14 @@ function useProInscrit(params: URLSearchParams): { charge: boolean; pro: ProDevi
                 type: p.type,
                 id: p.id,
                 nom: p.nom,
-                sous: p.type === "boutique" ? `Quincaillerie · ${p.quartier}` : p.metier ? metierLabel(p.metier).artisan : "Artisan",
+                sous:
+                  p.type === "boutique"
+                    ? `Quincaillerie · ${p.quartier}`
+                    : p.metier && getMetier(p.metier)
+                      ? metierLabel(p.metier).artisan
+                      : "Artisan",
                 image: p.image ?? undefined,
-                telephone: p.telephone_public ?? undefined,
+                telephone: p.telephonePublic ?? undefined,
               }
             : null,
         });
@@ -164,7 +167,7 @@ export function DevisForm() {
           });
           setEnvoye(true);
         } catch (err) {
-          setErreur(erreurSupabase(err));
+          setErreur(messageErreur(err));
         } finally {
           setEnvoi(false);
         }

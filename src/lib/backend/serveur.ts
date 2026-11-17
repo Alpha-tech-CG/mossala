@@ -1,18 +1,23 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { getMetier, metiers, type Artisan } from "../data";
-import type { LignePro } from "./pros";
-import { versRealisation, type LigneRealisation } from "./realisations-db";
-import { SUPABASE_ACTIF, sbPublic } from "./supabase";
+import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
+import { collection, doc, getDoc, getDocs, getFirestore, limit, orderBy, query, where } from "firebase/firestore/lite";
+import { getMetier, metiers, type Artisan, type Avis, type Realisation } from "../data";
+import { BACKEND_ACTIF, configFirebase } from "./actif";
+import { type AvisDoc, type Pro, moisLisible, versAvis, versPro, versRealisation } from "./modele";
 
 /**
  * Lectures publiques côté serveur (pros vérifiés et leurs réalisations), mises en cache
- * quelques minutes. Sans Supabase configuré, elles renvoient des listes vides : le site
+ * quelques minutes. Firestore « lite » (REST, sans compte) : les règles n'autorisent que les
+ * profils vérifiés. Sans Firebase configuré, elles renvoient des listes vides : le site
  * n'affiche alors que les artisans de démonstration.
  * Invalidation immédiate possible avec revalidateTag("pros").
  */
 
+const appServeur = (): FirebaseApp => getApps().find((a) => a.name === "serveur") ?? initializeApp(configFirebase, "serveur");
+const db = () => getFirestore(appServeur());
+
 /** Un pro vérifié de la base, présenté comme les artisans de la vitrine. */
-function versArtisan(p: LignePro, realisations: LigneRealisation[] = []): Artisan {
+function versArtisan(p: Pro, realisations: Realisation[] = []): Artisan {
   return {
     id: p.id,
     nom: p.nom,
@@ -27,9 +32,9 @@ function versArtisan(p: LignePro, realisations: LigneRealisation[] = []): Artisa
     image: p.image ?? undefined,
     badges: ["Téléphone vérifié", "Identité vérifiée"],
     description: p.description,
-    telephone: p.telephone_public ?? "",
-    numeroPublic: p.numero_public,
-    realisations: realisations.map(versRealisation),
+    telephone: p.telephonePublic ?? "",
+    numeroPublic: p.numeroPublic,
+    realisations,
     avis: [],
   };
 }
@@ -39,19 +44,22 @@ export async function artisansInscrits(): Promise<Artisan[]> {
   "use cache";
   cacheLife("minutes");
   cacheTag("pros");
-  if (!SUPABASE_ACTIF) return [];
-  const { data, error } = await sbPublic()
-    .from("pros")
-    .select("*")
-    .eq("type", "artisan")
-    .eq("statut", "verifie")
-    .order("cree_le", { ascending: false })
-    .limit(500);
-  if (error) {
-    console.error("artisansInscrits", error.message);
+  if (!BACKEND_ACTIF) return [];
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db(), "pros"),
+        where("type", "==", "artisan"),
+        where("statut", "==", "verifie"),
+        orderBy("creeLe", "desc"),
+        limit(500),
+      ),
+    );
+    return snap.docs.map((d) => versArtisan(versPro(d.id, d.data())));
+  } catch (e) {
+    console.error("artisansInscrits", e);
     return [];
   }
-  return (data as LignePro[]).map((p) => versArtisan(p));
 }
 
 /** Fiche complète d'un artisan inscrit (avec ses réalisations), ou null. */
@@ -59,18 +67,67 @@ export async function artisanInscrit(id: string): Promise<Artisan | null> {
   "use cache";
   cacheLife("minutes");
   cacheTag("pros", `pro-${id}`);
-  if (!SUPABASE_ACTIF) return null;
-  const { data, error } = await sbPublic()
-    .from("pros")
-    .select("*, realisations(id, titre, type, quartier, description, materiaux, duree, date, photos, verifiee, cree_le)")
-    .eq("id", id)
-    .eq("type", "artisan")
-    .eq("statut", "verifie")
-    .maybeSingle();
-  if (error || !data) return null;
-  const { realisations, ...pro } = data as LignePro & { realisations: (LigneRealisation & { cree_le: string })[] };
-  return versArtisan(
-    pro,
-    [...realisations].sort((a, b) => b.cree_le.localeCompare(a.cree_le)),
-  );
+  if (!BACKEND_ACTIF) return null;
+  try {
+    const snap = await getDoc(doc(db(), "pros", id));
+    if (!snap.exists()) return null;
+    const pro = versPro(snap.id, snap.data());
+    if (pro.type !== "artisan" || pro.statut !== "verifie") return null;
+    const reals = await getDocs(query(collection(db(), "pros", id, "realisations"), orderBy("creeLe", "desc")));
+    const avis = await avisPublies(id);
+    return {
+      ...versArtisan(
+        pro,
+        reals.docs.map((r) => versRealisation(r.id, r.data())),
+      ),
+      ...resumeAvis(avis),
+      avis,
+    };
+  } catch {
+    return null; // inexistant ou non vérifié : refusé par les règles
+  }
 }
+
+/**
+ * Avis publiés (validés par l'équipe) sur un artisan ou un magasin, les plus récents d'abord.
+ * Invalidation immédiate possible avec revalidateTag(`avis-${cibleId}`).
+ */
+export async function avisPublies(cibleId: string): Promise<Avis[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("avis", `avis-${cibleId}`);
+  if (!BACKEND_ACTIF) return [];
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db(), "avis"),
+        where("cibleId", "==", cibleId),
+        where("statut", "==", "publie"),
+        orderBy("creeLe", "desc"),
+        limit(100),
+      ),
+    );
+    return snap.docs.map((d) => versAvisPublic(versAvis(d.id, d.data())));
+  } catch (e) {
+    console.error("avisPublies", e);
+    return [];
+  }
+}
+
+/** Avis de la base → avis affiché : seule une expérience confirmée par l'équipe porte le badge. */
+function versAvisPublic(v: AvisDoc): Avis {
+  return {
+    id: v.id,
+    auteur: v.auteur,
+    note: Math.round(v.note),
+    date: moisLisible(v.date, v.creeLe),
+    texte: v.texte,
+    experience: v.verifie ? (v.cibleType === "magasin" ? "achat" : "prestation") : undefined,
+  };
+}
+
+/** Note moyenne et nombre d'avis à partir des avis publiés. */
+export const resumeAvis = (avis: Avis[]) => ({
+  note: avis.length ? Math.round((avis.reduce((s, v) => s + v.note, 0) / avis.length) * 10) / 10 : 0,
+  nbAvis: avis.length,
+});

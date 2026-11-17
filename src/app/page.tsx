@@ -4,6 +4,8 @@ import {
   ArrowRight,
   LayoutGrid,
   BadgeCheck,
+  CheckCircle2,
+  Eye,
   Fingerprint,
   MessagesSquare,
   PhoneCall,
@@ -11,24 +13,42 @@ import {
   Search,
   Star,
   Store,
+  Users,
 } from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { Reveal } from "@/components/Reveal";
 import { CadrePub, EspacePub, PubsLateralesFil } from "@/components/EspacePub";
-import { ArtisanCardVertical, BoutiqueCard, SectionTitle, categorieIcons } from "@/components/ui";
-import { VILLE_DEFAUT, artisans, boutiquesProches, categories, metiers, quartiers } from "@/lib/data";
+import { Recommandations } from "@/components/Recommandations";
+import { ArtisanCardVertical, SectionTitle, categorieIcons } from "@/components/ui";
+import { artisans, categories, metiers, quartiers } from "@/lib/data";
 
 const etapes = [
   { Icon: Search, t: "Trouvez votre artisan", d: "Par métier et quartier, avec ses avis et ses réalisations." },
   { Icon: PhoneCall, t: "Contactez-le", d: "Appel direct, ou message : il est prévenu par WhatsApp et SMS." },
-  { Icon: Star, t: "Notez l’intervention", d: "Votre avis aide les meilleurs artisans à se démarquer." },
+  { Icon: Star, t: "Recommandez-le", d: "Votre avis aide la communauté à faire le bon choix." },
 ];
 
 const verifications = [
   { Icon: PhoneCall, t: "Téléphone vérifié", d: "Chaque numéro est confirmé par code SMS." },
   { Icon: Fingerprint, t: "Identité vérifiée", d: "Pièce d’identité contrôlée par notre équipe terrain." },
   { Icon: BadgeCheck, t: "Références contrôlées", d: "Nous appelons d’anciens clients avant d’activer le profil." },
-  { Icon: MessagesSquare, t: "Avis liés à une intervention", d: "Seul un client ayant réservé peut laisser un avis." },
+  { Icon: MessagesSquare, t: "Avis liés à une expérience réelle", d: "Seul un client ayant eu une prestation ou un achat confirmé laisse un avis vérifié." },
+];
+
+/** Les trois piliers de la promesse Artopif. */
+const piliers = [
+  { Icon: Fingerprint, t: "Vérification", d: "Savoir à qui l’on fait confiance." },
+  { Icon: Users, t: "Recommandation", d: "Choisir grâce aux expériences des autres." },
+  { Icon: Eye, t: "Transparence", d: "Connaître les prix et la qualité des services." },
+];
+
+/** Règles qui garantissent l'authenticité des recommandations. */
+const regles = [
+  "Seuls les clients ayant effectué une prestation ou un achat confirmé peuvent laisser un avis vérifié.",
+  "Un client ne peut pas évaluer plusieurs fois la même transaction.",
+  "Les avis négatifs comme positifs sont acceptés.",
+  "Les professionnels ne peuvent pas acheter de meilleures notes.",
+  "Les recommandations sont indépendantes de la publicité.",
 ];
 
 const temoignages = [
@@ -174,19 +194,8 @@ export default function Home() {
           </div>
         </section>
 
-        <Reveal className="mt-16 md:mt-24">
-          <div className="px-5">
-            <SectionTitle eyebrow="Une meilleure connaissance des prix" title="Quincaillerie" href="/quincaillerie" />
-          </div>
-          <div className="no-scrollbar mt-4 flex gap-4 overflow-x-auto px-5 pt-1 pb-3 md:grid md:grid-cols-3 md:overflow-visible">
-            {boutiquesProches({ ville: VILLE_DEFAUT })
-              .slice(0, 3)
-              .map((s) => (
-                <div key={s.b.id} className="grid w-72 shrink-0 md:w-auto">
-                  <BoutiqueCard lieu={{ ville: VILLE_DEFAUT }} {...s} />
-                </div>
-              ))}
-          </div>
+        <Reveal className="mt-16 px-5 md:mt-24">
+          <Recommandations />
         </Reveal>
 
         <EspacePub emplacement="accueil-2" className="mt-12 block px-5 md:mt-16" />
@@ -216,6 +225,61 @@ export default function Home() {
             ))}
           </ol>
         </Reveal>
+
+        {/* Notre communauté recommande : promesse de marque et règles des avis */}
+        <section className="mt-16 px-5 md:mt-24">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
+              Notre communauté recommande
+            </p>
+            <h2 className="mt-3 font-serif text-4xl leading-[1.1] md:text-5xl">
+              La confiance se construit <em className="text-primary">par l’expérience.</em>
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Les meilleures recommandations viennent de ceux qui ont déjà fait appel à un artisan ou acheté dans un
+              magasin. Découvrez leurs expériences et faites votre choix en toute confiance.
+            </p>
+          </Reveal>
+          <ul className="mt-8 grid gap-3 md:mt-10 md:grid-cols-3 md:gap-4">
+            {piliers.map(({ Icon, t, d }) => (
+              <li key={t} className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.03] md:p-6">
+                <span className="flex size-11 items-center justify-center rounded-full bg-secondary text-primary">
+                  <Icon className="size-5" />
+                </span>
+                <p className="mt-4 font-serif text-2xl">{t}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{d}</p>
+              </li>
+            ))}
+          </ul>
+
+          <Reveal className="mt-4 md:mt-6">
+            <div className="grid gap-6 rounded-2xl bg-foreground p-6 text-white md:grid-cols-[1fr_1.3fr] md:gap-10 md:p-10">
+              <div>
+                <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
+                  Des avis qui ont du sens
+                </p>
+                <h3 className="mt-3 font-serif text-3xl leading-tight md:text-4xl">Recommandés par ceux qui les connaissent.</h3>
+                <p className="mt-3 text-sm text-white/75">
+                  Des avis de vrais clients, basés sur des prestations réalisées et des achats effectués.
+                </p>
+              </div>
+              <ul className="grid gap-3 self-center">
+                {regles.map((r) => (
+                  <li key={r} className="flex gap-3 text-sm">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent-ink" />
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-10 text-center md:mt-14">
+            <p className="font-serif text-2xl italic md:text-3xl">
+              « Le bon choix commence par <span className="text-primary">la bonne recommandation.</span> »
+            </p>
+          </Reveal>
+        </section>
       </div>
 
       {/* Témoignages, sur fond crème pleine largeur */}
@@ -223,11 +287,14 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-5">
           <Reveal className="text-center">
             <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase md:text-[11px]">
-              Ils nous font confiance
+              La force du bouche-à-oreille
             </p>
             <h2 className="mt-3 font-serif text-4xl md:text-5xl">
-              Ce que disent <em className="text-primary">nos clients</em>
+              Les bonnes expériences <em className="text-primary">méritent d’être partagées.</em>
             </h2>
+            <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+              Consultez les recommandations de la communauté et découvrez les professionnels qui inspirent confiance.
+            </p>
           </Reveal>
           <div className="no-scrollbar -mx-5 mt-10 flex snap-x gap-4 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
             {temoignages.map((t, i) => (

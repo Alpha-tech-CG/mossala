@@ -8,8 +8,9 @@ export function Footer() {
         <div className="md:col-span-2">
           <Logo grand />
           <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-            Les bonnes adresses, les vrais avis, les bons professionnels. Gratuit pour les particuliers et
-            les professionnels dans sa version de base.
+            Le bon choix commence par la bonne recommandation. Des avis de vrais clients, des
+            professionnels vérifiés, des prix transparents. Gratuit pour les particuliers et les
+            professionnels dans sa version de base.
           </p>
         </div>
         <div className="text-sm">
@@ -20,6 +21,7 @@ export function Footer() {
             <li><Link href="/messages">Mes messages</Link></li>
             <li><Link href="/quincaillerie">Quincaillerie</Link></li>
             <li><Link href="/profil">Mon compte</Link></li>
+            <li><Link href="/contact">Nous contacter</Link></li>
           </ul>
         </div>
         <div className="text-sm">
@@ -35,6 +37,10 @@ export function Footer() {
       </div>
       <p className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-border px-5 py-5 text-center text-xs text-muted-foreground">
         <span>© 2026 Artopif · Brazzaville, République du Congo</span>
+        <span aria-hidden>·</span>
+        <Link href="/contact" className="font-semibold underline-offset-2 hover:text-foreground hover:underline">
+          Nous contacter
+        </Link>
         <span aria-hidden>·</span>
         <Link href="/confidentialite" className="font-semibold underline-offset-2 hover:text-foreground hover:underline">
           Politique de confidentialité

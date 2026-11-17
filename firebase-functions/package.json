@@ -1,15 +1,15 @@
 {
   "name": "artopif-firebase-functions",
   "private": true,
-  "description": "Ajoute le rôle « authenticated » au jeton Firebase pour que Supabase reconnaisse l'utilisateur.",
+  "description": "Connexion par code email et alertes WhatsApp/SMS (Africa's Talking).",
   "main": "index.js",
   "engines": { "node": "22" },
   "scripts": {
-    "deploy": "firebase deploy --only functions",
-    "roles-existants": "node attribuer-roles.js"
+    "deploy": "firebase deploy --only functions"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",
-    "firebase-functions": "^6.0.0"
+    "firebase-functions": "^6.0.0",
+    "nodemailer": "^6.9.0"
   }
 }

@@ -3,15 +3,30 @@
 import { useSyncExternalStore } from "react";
 import { ARTISAN_DEMO_ID } from "./pro-data";
 import { notifierNouveauMessage } from "./backend";
-import { SUPABASE_ACTIF, estDemo, sb, verifier } from "./backend/supabase";
-import { metierLabel } from "./data";
+import {
+  type Timestamp,
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+import { BACKEND_ACTIF, estDemo } from "./backend/actif";
+import { db } from "./backend/firebase";
+import { proPublic } from "./backend/pros";
+import { getMetier, metierLabel } from "./data";
 import { sessionActuelle, surSession } from "./session";
 
 /**
  * Messagerie client ↔ artisan sur la plateforme.
- *  - Artisans inscrits (Supabase actif) : tables conversations et messages (RLS : chaque partie
- *    ne voit que ses échanges), temps réel pour l'arrivée des messages ; l'alerte WhatsApp/SMS
- *    part de la base (trigger → Edge Function « notifier »).
+ *  - Artisans inscrits (production) : Firestore conversations et messages (règles : chaque
+ *    partie ne voit que ses échanges), en temps réel ; l'alerte WhatsApp/SMS part d'une
+ *    Cloud Function déclenchée par chaque nouveau message.
  *  - Artisans de démonstration (ou maquette) : conversations gardées dans le navigateur.
  */
 
@@ -67,41 +82,47 @@ if (typeof window !== "undefined") {
   });
 }
 
-// ——— Supabase ———
+// ——— Production (Firestore) ———
+// conversations/{clientUid_proUid} et messages/{id} (avec conversationId et participants),
+// suivis en temps réel. L'alerte WhatsApp/SMS part de la Cloud Function « alerteMessage ».
 
-type LigneConversation = {
-  id: string;
-  client_id: string;
-  pro_id: string;
-  lu_client: string;
-  lu_pro: string;
-  pro: { nom: string; metier: string | null; image: string | null; telephone_public: string | null; numero_public: boolean } | null;
-  client: { prenom: string; telephone: string } | null;
-  messages: { id: string; de: "client" | "pro"; texte: string; envoye_le: string }[];
+type DocConversation = {
+  clientId: string;
+  proId: string;
+  participants: string[];
+  client: { prenom: string; telephone: string };
+  pro: { nom: string; metier: string | null; image: string | null; telephonePublic: string | null; numeroPublic: boolean };
+  luClient: Timestamp | null;
+  luPro: Timestamp | null;
 };
 
+type DocMessage = { conversationId: string; de: "client" | "pro"; texte: string; envoyeLe: Timestamp | null };
+
+let docsConversations = new Map<string, DocConversation>();
+let docsMessages = new Map<string, DocMessage & { id: string }>();
 let distantes: Conversation[] = [];
 let combinees: Conversation[] | null = null;
 let ecoute = false;
 
-function versConversation(l: LigneConversation, moi: string): Conversation {
-  const messages = [...l.messages]
-    .sort((a, b) => a.envoye_le.localeCompare(b.envoye_le))
-    .map((m) => ({ id: m.id, de: (m.de === "pro" ? "artisan" : "client") as Cote, texte: m.texte, date: Date.parse(m.envoye_le) }));
+const libelleMetier = (m: string | null) => (m && getMetier(m) ? metierLabel(m).artisan : (m ?? ""));
+
+function versConversation(id: string, l: DocConversation, messages: (DocMessage & { id: string })[], moi: string): Conversation {
   return {
-    id: l.id,
-    moi: l.pro_id === moi ? "artisan" : "client",
+    id,
+    moi: l.proId === moi ? "artisan" : "client",
     artisan: {
-      id: l.pro_id,
+      id: l.proId,
       nom: l.pro?.nom ?? "Artisan",
-      metier: l.pro?.metier ? metierLabel(l.pro.metier).artisan : "",
+      metier: libelleMetier(l.pro?.metier ?? null),
       image: l.pro?.image ?? undefined,
-      telephone: l.pro?.telephone_public ?? "",
-      numeroPublic: l.pro?.numero_public ?? false,
+      telephone: l.pro?.telephonePublic ?? "",
+      numeroPublic: l.pro?.numeroPublic ?? false,
     },
     client: { prenom: l.client?.prenom ?? "Client", telephone: l.client?.telephone ?? "" },
-    messages,
-    lu: { client: Date.parse(l.lu_client), artisan: Date.parse(l.lu_pro) },
+    messages: messages
+      .map((m) => ({ id: m.id, de: (m.de === "pro" ? "artisan" : "client") as Cote, texte: m.texte, date: m.envoyeLe?.toMillis() ?? Date.now() }))
+      .sort((x, y) => x.date - y.date),
+    lu: { client: l.luClient?.toMillis() ?? 0, artisan: l.luPro?.toMillis() ?? 0 },
   };
 }
 
@@ -110,50 +131,53 @@ const prevenir = () => {
   abonnes.forEach((f) => f());
 };
 
-async function chargerDistantes() {
+function recalculer() {
   const s = sessionActuelle();
   if (!s) {
     distantes = [];
     return prevenir();
   }
-  try {
-    const lignes = verifier(
-      await sb()
-        .from("conversations")
-        .select(
-          "*, pro:pros(nom, metier, image, telephone_public, numero_public), client:comptes(prenom, telephone), messages(id, de, texte, envoye_le)",
-        ),
-    ) as LigneConversation[];
-    distantes = lignes
-      .map((l) => versConversation(l, s.id))
-      .filter((c) => c.messages.length)
-      .sort((a, b) => (b.messages.at(-1)?.date ?? 0) - (a.messages.at(-1)?.date ?? 0));
-    prevenir();
-  } catch {
-    /* hors ligne : on garde les dernières conversations connues */
-  }
+  const parConv = new Map<string, (DocMessage & { id: string })[]>();
+  for (const m of docsMessages.values()) parConv.set(m.conversationId, [...(parConv.get(m.conversationId) ?? []), m]);
+  distantes = [...docsConversations]
+    .map(([id, c]) => versConversation(id, c, parConv.get(id) ?? [], s.id))
+    .filter((c) => c.messages.length)
+    .sort((a, b) => (b.messages.at(-1)?.date ?? 0) - (a.messages.at(-1)?.date ?? 0));
+  prevenir();
 }
 
-let rechargement: ReturnType<typeof setTimeout> | null = null;
-const rechargerBientot = () => {
-  if (rechargement) clearTimeout(rechargement);
-  rechargement = setTimeout(() => void chargerDistantes(), 150);
-};
-
-function ecouterSupabase() {
-  if (ecoute || !SUPABASE_ACTIF || typeof window === "undefined") return;
+function ecouterBase() {
+  if (ecoute || !BACKEND_ACTIF || typeof window === "undefined") return;
   ecoute = true;
-  let canal: ReturnType<ReturnType<typeof sb>["channel"]> | null = null;
+  let arreter: (() => void)[] = [];
   surSession(() => {
-    void chargerDistantes();
-    if (canal) void sb().removeChannel(canal);
-    canal = sessionActuelle()
-      ? sb()
-          .channel("messagerie")
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, rechargerBientot)
-          .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, rechargerBientot)
-          .subscribe()
-      : null;
+    arreter.forEach((f) => f());
+    arreter = [];
+    docsConversations = new Map();
+    docsMessages = new Map();
+    const s = sessionActuelle();
+    if (!s) return recalculer();
+    const lecture = { serverTimestamps: "estimate" } as const;
+    arreter = [
+      onSnapshot(
+        query(collection(db(), "conversations"), where("participants", "array-contains", s.id)),
+        (snap) => {
+          docsConversations = new Map(snap.docs.map((d) => [d.id, d.data(lecture) as DocConversation]));
+          recalculer();
+        },
+        () => {
+          /* hors ligne ou refusé : on garde les dernières conversations connues */
+        },
+      ),
+      onSnapshot(
+        query(collection(db(), "messages"), where("participants", "array-contains", s.id)),
+        (snap) => {
+          docsMessages = new Map(snap.docs.map((d) => [d.id, { id: d.id, ...(d.data(lecture) as DocMessage) }]));
+          recalculer();
+        },
+        () => {},
+      ),
+    ];
   });
 }
 
@@ -163,7 +187,7 @@ function toutes(): Conversation[] {
 }
 
 const abonner = (f: () => void) => {
-  ecouterSupabase();
+  ecouterBase();
   abonnes.add(f);
   return () => abonnes.delete(f);
 };
@@ -177,24 +201,39 @@ export async function envoyerMessage(conv: Pick<Conversation, "artisan" | "clien
   if (!estDemo(conv.artisan.id)) {
     const s = sessionActuelle();
     if (!s) throw new Error("Connectez-vous pour écrire à cet artisan.");
-    let id = conv.id && distantes.some((c) => c.id === conv.id) ? conv.id : undefined;
+    const base = db();
+    let id = conv.id && docsConversations.has(conv.id) ? conv.id : undefined;
     if (!id) {
-      const existante = distantes.find((c) => c.artisan.id === conv.artisan.id && c.moi === "client");
-      id =
-        existante?.id ??
-        (
-          verifier(
-            await sb()
-              .from("conversations")
-              .upsert({ client_id: s.id, pro_id: conv.artisan.id }, { onConflict: "client_id,pro_id" })
-              .select("id")
-              .single(),
-          ) as { id: string }
-        ).id;
+      // une conversation par couple client / pro : identifiant déterministe
+      id = `${s.id}_${conv.artisan.id}`;
+      const ref = doc(base, "conversations", id);
+      if (!docsConversations.has(id) && !(await getDoc(ref)).exists()) {
+        const pro = await proPublic(conv.artisan.id);
+        if (!pro) throw new Error("Cet artisan n’est pas encore disponible.");
+        await setDoc(ref, {
+          clientId: s.id,
+          proId: pro.id,
+          participants: [s.id, pro.id],
+          client: { prenom: conv.client.prenom, telephone: conv.client.telephone },
+          pro: { nom: pro.nom, metier: pro.metier, image: pro.image, telephonePublic: pro.telephonePublic, numeroPublic: pro.numeroPublic },
+          luClient: null,
+          luPro: null,
+          creeLe: serverTimestamp(),
+        });
+      }
     }
-    verifier(await sb().from("messages").insert({ conversation_id: id, de: de === "artisan" ? "pro" : "client", texte: texte.trim() }));
-    await marquerLu(id, de);
-    return chargerDistantes();
+    const participants = docsConversations.get(id)?.participants ?? [s.id, conv.artisan.id];
+    const lot = writeBatch(base);
+    lot.set(doc(collection(base, "messages")), {
+      conversationId: id,
+      participants,
+      de: de === "artisan" ? "pro" : "client",
+      texte: texte.trim(),
+      envoyeLe: serverTimestamp(),
+    });
+    lot.update(doc(base, "conversations", id), de === "client" ? { luClient: serverTimestamp() } : { luPro: serverTimestamp() });
+    await lot.commit();
+    return;
   }
 
   const maintenant = Date.now();
@@ -246,10 +285,7 @@ export async function marquerLu(id: string, cote: Cote): Promise<void> {
     // mise à jour immédiate à l'écran, puis dans la base
     distantes = distantes.map((x) => (x.id === id ? { ...x, lu: { ...x.lu, [cote]: Date.now() } } : x));
     prevenir();
-    await sb()
-      .from("conversations")
-      .update(cote === "client" ? { lu_client: new Date().toISOString() } : { lu_pro: new Date().toISOString() })
-      .eq("id", id);
+    await updateDoc(doc(db(), "conversations", id), cote === "client" ? { luClient: serverTimestamp() } : { luPro: serverTimestamp() });
     return;
   }
   const liste = lire();

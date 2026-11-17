@@ -58,8 +58,8 @@ export function Hero() {
           </h1>
 
           <p className="fade-up fade-up-1 mx-auto mt-6 max-w-xl text-base leading-relaxed font-medium text-foreground/90 [text-shadow:0_0_10px_rgba(242,234,219,1),0_0_3px_rgba(242,234,219,1)] md:text-lg">
-            Appelez directement des artisans de confiance ou laissez-leur un message, et réservez
-            vos matériaux au prix affiché.
+            Le bon choix commence par la bonne recommandation : contactez les artisans et magasins
+            recommandés par des clients qui les ont réellement testés.
           </p>
 
           <form

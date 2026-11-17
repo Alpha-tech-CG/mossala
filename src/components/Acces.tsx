@@ -8,9 +8,10 @@ import { useRouter } from "next/navigation";
 import { Eye, Lock, Star, UserPlus, X } from "lucide-react";
 import { PROFILS_SANS_COMPTE } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
-import { SUPABASE_ACTIF, erreurSupabase } from "@/lib/backend/supabase";
+import { BACKEND_ACTIF } from "@/lib/backend/actif";
+import { messageErreur } from "@/lib/backend/erreurs";
 import { useSession } from "@/lib/session";
-import { ConnexionTelephone } from "./ConnexionTelephone";
+import { ConnexionCode } from "./ConnexionCode";
 import { ChampsIdentite, ChoixProfil, identitePropre, identiteValide, identiteVide, type Identite } from "./Identite";
 
 
@@ -27,8 +28,8 @@ export function InscriptionClient({ titre, intro }: { titre?: string; intro?: st
   const [erreur, setErreur] = useState("");
   const valide = identiteValide(identite);
 
-  // Supabase : on vérifie d'abord le numéro par SMS. S'il a déjà un compte, c'est une connexion.
-  if (SUPABASE_ACTIF && !session) {
+  // Production : on vérifie d'abord le numéro (SMS) ou l'email (code). S'il a déjà un compte, c'est une connexion.
+  if (BACKEND_ACTIF && !session) {
     return (
       <div className="space-y-4">
         {titre && (
@@ -36,16 +37,20 @@ export function InscriptionClient({ titre, intro }: { titre?: string; intro?: st
             {titre}
           </h2>
         )}
-        <ConnexionTelephone
-          intro="Connectez-vous ou créez votre compte gratuit avec votre numéro : vous recevrez un code par SMS."
-          onConnecte={({ telephone }) =>
-            setIdentite((i) => ({ ...i, telephones: [{ ...i.telephones[0], numero: telephone }, ...i.telephones.slice(1)] }))
+        <ConnexionCode
+          intro="Connectez-vous ou créez votre compte gratuit : vous recevrez un code par SMS ou par email."
+          onConnecte={({ telephone, email }) =>
+            setIdentite((i) => ({
+              ...i,
+              email: email || i.email,
+              telephones: telephone ? [{ ...i.telephones[0], numero: telephone }, ...i.telephones.slice(1)] : i.telephones,
+            }))
           }
         />
       </div>
     );
   }
-  if (SUPABASE_ACTIF && !c.pret) return <div className="h-40 animate-pulse rounded-2xl bg-muted" aria-busy />;
+  if (BACKEND_ACTIF && !c.pret) return <div className="h-40 animate-pulse rounded-2xl bg-muted" aria-busy />;
 
   return (
     <form
@@ -57,7 +62,7 @@ export function InscriptionClient({ titre, intro }: { titre?: string; intro?: st
         try {
           await c.inscrire(identitePropre(identite));
         } catch (err) {
-          setErreur(erreurSupabase(err));
+          setErreur(messageErreur(err));
         } finally {
           setEnvoi(false);
         }
@@ -283,7 +288,7 @@ export function AccesDialog({
  * Verrou du profil complet : 3 profils sans compte, puis un compte gratuit (sans limite).
  * Un profil déjà ouvert sans compte reste accessible.
  * Accès direct par l'adresse : aperçu flouté + la même fenêtre d'inscription par-dessus.
- * MAQUETTE : contrôle côté navigateur ; avec Supabase, le serveur ne renverra le téléphone
+ * MAQUETTE : contrôle côté navigateur ; en production, le serveur ne renverra le téléphone
  * et les détails que si l'accès est accordé.
  */
 export function ProfilVerrou({ a, children }: { a: Apercu; children: React.ReactNode }) {

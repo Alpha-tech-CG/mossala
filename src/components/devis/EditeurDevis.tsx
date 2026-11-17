@@ -22,7 +22,7 @@ import {
   type LigneDevis,
   type RubriqueDevis,
 } from "@/lib/devis";
-import { erreurSupabase } from "@/lib/backend/supabase";
+import { messageErreur } from "@/lib/backend/erreurs";
 import { TableauDevis } from "./TableauDevis";
 
 const champ =
@@ -136,7 +136,7 @@ export function EditeurDevis({
     setEnvoi(true);
     enregistrerDevis(demande.id, propre, envoyer)
       .then(onFermer)
-      .catch((e) => setErreur(erreurSupabase(e)))
+      .catch((e) => setErreur(messageErreur(e)))
       .finally(() => setEnvoi(false));
   };
 
@@ -411,7 +411,7 @@ export function EditeurDevis({
                     onClick={() => {
                       declinerDemande(demande.id, declin)
                         .then(onFermer)
-                        .catch((e) => setErreur(erreurSupabase(e)));
+                        .catch((e) => setErreur(messageErreur(e)));
                     }}
                     className="flex-1 rounded-xl bg-destructive py-2.5 text-sm font-bold text-white"
                   >

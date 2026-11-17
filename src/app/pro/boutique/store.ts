@@ -6,8 +6,8 @@ import { BOUTIQUE_DEMO_ID, reservationsBoutique, type ReservationBoutique } from
 
 /**
  * État de l'espace boutique (formule, stock, ventes, clients, promotions).
- * MAQUETTE : gardé dans le navigateur. Avec Supabase : tables produits, mouvements_stock,
- * ventes, clients_boutique, promotions, abonnements, protégées par RLS (propriétaire seul).
+ * MAQUETTE : gardé dans le navigateur. En production : collections Firestore produits,
+ * mouvements de stock, ventes, clients, promotions, abonnements (propriétaire seul).
  */
 
 export type Formule = "gratuit" | "premium";

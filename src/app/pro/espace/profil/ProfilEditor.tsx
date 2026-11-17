@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { Avis, Realisation } from "@/lib/data";
 import { ajouterRealisation, compresserPhoto, retirerRealisation, useRealisations } from "@/lib/realisations";
-import { erreurSupabase } from "@/lib/backend/supabase";
+import { messageErreur } from "@/lib/backend/erreurs";
 import { PhotoRealisation } from "@/components/PhotoRealisation";
 import { quartiers } from "@/lib/data";
 
@@ -100,7 +100,7 @@ export function ProfilEditor(props: {
       setEnregistre(true);
       setTimeout(() => setEnregistre(false), 2500);
     } catch (e) {
-      setErreurProfil(erreurSupabase(e));
+      setErreurProfil(messageErreur(e));
     }
   };
 

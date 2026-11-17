@@ -1,25 +1,26 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { SUPABASE_ACTIF } from "./backend/supabase";
-import { monProfilPro, type LignePro } from "./backend/pros";
+import { BACKEND_ACTIF } from "./backend/actif";
+import type { Pro } from "./backend/modele";
 import { ARTISAN_DEMO_ID, BOUTIQUE_DEMO_ID } from "./pro-data";
 import { sessionActuelle, surSession } from "./session";
 
 /**
  * Professionnel dont on affiche l'espace :
- *  - Supabase actif + connecté avec un profil pro → son vrai profil (`demo: false`) ;
+ *  - production + connecté avec un profil pro → son vrai profil (`demo: false`) ;
  *  - sinon → l'artisan ou la boutique de démonstration (`demo: true`).
  */
-type Etat = { pret: boolean; pro: LignePro | null };
+type Etat = { pret: boolean; pro: Pro | null };
 
-let etat: Etat = { pret: !SUPABASE_ACTIF, pro: null };
+let etat: Etat = { pret: !BACKEND_ACTIF, pro: null };
 const abonnes = new Set<() => void>();
 let ecoute = false;
 
 async function charger() {
   const s = sessionActuelle();
   try {
+    const { monProfilPro } = await import("./backend/pros");
     etat = { pret: true, pro: s ? await monProfilPro(s.id) : null };
   } catch {
     etat = { pret: true, pro: null };
@@ -28,7 +29,7 @@ async function charger() {
 }
 
 function abonner(f: () => void) {
-  if (!ecoute && SUPABASE_ACTIF) {
+  if (!ecoute && BACKEND_ACTIF) {
     ecoute = true;
     surSession(() => void charger());
   }
@@ -37,7 +38,7 @@ function abonner(f: () => void) {
 }
 
 /** À appeler après la création ou la modification du profil pro. */
-export const rechargerProConnecte = () => (SUPABASE_ACTIF ? charger() : Promise.resolve());
+export const rechargerProConnecte = () => (BACKEND_ACTIF ? charger() : Promise.resolve());
 
 const SERVEUR: Etat = { pret: false, pro: null };
 

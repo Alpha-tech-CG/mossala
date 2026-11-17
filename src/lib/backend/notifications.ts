@@ -3,18 +3,15 @@ import type { NotificationMessage } from "./types";
 /**
  * Prévient le destinataire d'un nouveau message, par WhatsApp et SMS.
  *
- * MAQUETTE : ne fait rien de réel — les conversations vivent dans le navigateur. C'est le
- * SEUL endroit du code à brancher quand le backend sera prêt ; les composants de la
- * messagerie n'ont pas à changer. Le mode d'emploi complet est dans `supabase/` à la
- * racine du projet (schéma, Edge Function, variables d'environnement).
+ * MAQUETTE SEULEMENT (artisans de démonstration, ou Firebase non configuré) : ne fait rien
+ * de réel, les conversations vivent dans le navigateur.
  *
  * En production, on n'appelle JAMAIS un fournisseur SMS/WhatsApp depuis le navigateur (la
  * clé secrète serait exposée). Le vrai chemin est :
- *   1. le message est écrit dans Supabase (table `messages`, protégée par RLS) ;
- *   2. un trigger Postgres déclenche l'Edge Function `notifier` ;
- *   3. l'Edge Function lit les numéros du destinataire et appelle le fournisseur
- *      (Africa's Talking ou Twilio) avec une clé secrète côté serveur.
- * Cette fonction côté client se contentera donc d'écrire le message ; l'alerte part du serveur.
+ *   1. le message (ou la demande de devis) est écrit dans Firestore, protégé par les règles ;
+ *   2. une Cloud Function (firebase-functions/index.js : alerteMessage, alerteDemande,
+ *      alerteDevis) se déclenche à l'écriture ;
+ *   3. elle lit les numéros du destinataire et appelle Africa's Talking avec une clé secrète.
  */
 export async function notifierNouveauMessage(n: NotificationMessage): Promise<void> {
   if (process.env.NODE_ENV !== "production") {
@@ -26,8 +23,8 @@ export async function notifierNouveauMessage(n: NotificationMessage): Promise<vo
       `\n${texteAlerte(n)}`,
     );
   }
-  // Avec Supabase, les échanges avec les pros inscrits n'appellent pas cette fonction : le
-  // message est écrit en base et un trigger appelle l'Edge Function `notifier` (supabase/).
+  // En production, les échanges avec les pros inscrits n'appellent pas cette fonction : le
+  // message est écrit dans Firestore et une Cloud Function envoie l'alerte.
 }
 
 /** Texte de l'alerte WhatsApp/SMS envoyée au destinataire. */

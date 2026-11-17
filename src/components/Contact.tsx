@@ -23,7 +23,8 @@ import {
 } from "@/lib/data";
 import { useCompte } from "@/lib/compte";
 import { InscriptionClient, demanderAcces } from "./Acces";
-import { erreurSupabase, estDemo } from "@/lib/backend/supabase";
+import { estDemo } from "@/lib/backend/actif";
+import { messageErreur } from "@/lib/backend/erreurs";
 import { useQuota } from "@/lib/quota";
 import { envoyerMessage } from "@/lib/messagerie";
 
@@ -89,7 +90,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
   const [tel, setTel] = useState(compte.compte?.telephone ?? "");
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState("");
-  /** artisan inscrit (base Supabase) : il faut un compte, le numéro est celui du compte */
+  /** artisan inscrit (Firestore) : il faut un compte, le numéro est celui du compte */
   const reel = !estDemo(a.id);
   const [operateur, setOperateur] = useState<"MTN MoMo" | "Airtel Money">("MTN MoMo");
   const [paiementEnCours, setPaiementEnCours] = useState(false);
@@ -126,7 +127,7 @@ function ContactSheet({ a, onClose }: { a: ContactArtisan; onClose: () => void }
       if (QUOTA_ACTIF) q.consommer();
       setEtape("envoye");
     } catch (err) {
-      setErreur(erreurSupabase(err));
+      setErreur(messageErreur(err));
     } finally {
       setEnvoi(false);
     }

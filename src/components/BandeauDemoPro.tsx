@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { Info } from "lucide-react";
-import { SUPABASE_ACTIF } from "@/lib/backend/supabase";
+import { BACKEND_ACTIF } from "@/lib/backend/actif";
 import { useProConnecte } from "@/lib/pro-connecte";
 
 /** Prévient le visiteur qu'il voit l'espace de démonstration, et propose de se connecter. */
 export function BandeauDemoPro({ type }: { type: "artisan" | "boutique" }) {
   const { pret, demo, autreType } = useProConnecte(type);
-  if (!SUPABASE_ACTIF || !pret || !demo) return null;
+  if (!BACKEND_ACTIF || !pret || !demo) return null;
   return (
     <p className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-secondary p-4 text-sm text-primary">
       <Info className="size-4 shrink-0" />

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackHeader } from "@/components/ui";
 import { artisans, getArtisan, metierLabel } from "@/lib/data";
-import { Evaluation } from "./Evaluation";
+import { Evaluation } from "@/components/Evaluation";
 
 export const instant = false;
 
@@ -20,7 +20,12 @@ export default async function EvaluerPage(props: PageProps<"/artisans/[id]/evalu
   return (
     <div className="mx-auto max-w-3xl px-5 pt-4 pb-16 md:pt-8">
       <BackHeader title="Évaluer un professionnel" href={`/artisans/${a.id}`} />
-      <Evaluation id={a.id} nom={a.nom} metier={metierLabel(a.metier).artisan} quartier={a.quartier} />
+      <Evaluation
+        cibleId={a.id}
+        nom={a.nom}
+        sousTitre={`${metierLabel(a.metier).artisan} · ${a.quartier}`}
+        retour={`/artisans/${a.id}`}
+      />
     </div>
   );
 }
