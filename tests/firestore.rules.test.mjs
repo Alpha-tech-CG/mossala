@@ -325,6 +325,42 @@ await cas("le journal ne se modifie pas", assertFails(updateDoc(doc(equipe, "jou
 await cas("le journal ne s'efface pas", assertFails(deleteDoc(doc(equipe, "journal/j1"))));
 await cas("l'équipe lit le journal", assertSucceeds(getDocs(collection(equipe, "journal"))));
 
+console.log("Appli mobile : notes, appareils, photos des demandes");
+// alice a été suspendue plus haut : on la remet vérifiée
+await env.withSecurityRulesDisabled(async (c) => {
+  await updateDoc(doc(c.firestore(), "pros/alice"), { statut: "verifie" });
+  await setDoc(doc(c.firestore(), "pros/alice/realisations/r2"), realisation());
+});
+const note = (o = {}) => ({ proId: "alice", realisationId: "r2", auteurId: "bob", note: 4, majLe: serverTimestamp(), ...o });
+await cas("bob note une réalisation d'alice", assertSucceeds(setDoc(doc(bob, "notesRealisations/alice_r2_bob"), note())));
+await cas("bob change sa note", assertSucceeds(setDoc(doc(bob, "notesRealisations/alice_r2_bob"), note({ note: 5 }))));
+await cas("bob relit sa note", assertSucceeds(getDoc(doc(bob, "notesRealisations/alice_r2_bob"))));
+await cas("chloe ne lit pas la note de bob", assertFails(getDoc(doc(chloe, "notesRealisations/alice_r2_bob"))));
+await cas("pas de note à 6 étoiles", assertFails(setDoc(doc(chloe, "notesRealisations/alice_r2_chloe"), note({ auteurId: "chloe", note: 6 }))));
+await cas("pas de note à 0 étoile", assertFails(setDoc(doc(chloe, "notesRealisations/alice_r2_chloe"), note({ auteurId: "chloe", note: 0 }))));
+await cas("on ne note pas sous l'identifiant d'un autre", assertFails(setDoc(doc(chloe, "notesRealisations/alice_r2_bob"), note({ auteurId: "chloe" }))));
+await cas("alice ne note pas sa propre réalisation", assertFails(setDoc(doc(alice, "notesRealisations/alice_r2_alice"), note({ auteurId: "alice" }))));
+await cas("pas de note sur une réalisation inexistante", assertFails(setDoc(doc(bob, "notesRealisations/alice_rX_bob"), note({ realisationId: "rX" }))));
+await cas("un visiteur ne note pas", assertFails(setDoc(doc(anonyme, "notesRealisations/alice_r2_x"), note({ auteurId: "x" }))));
+await cas("les totaux des notes sont publics", assertSucceeds(getDoc(doc(anonyme, "statsRealisations/alice_r2"))));
+await cas("personne n'écrit les totaux", assertFails(setDoc(doc(bob, "statsRealisations/alice_r2"), { somme: 50, nombre: 10 })));
+
+const appareil = (o = {}) => ({ uid: "bob", plateforme: "android", majLe: serverTimestamp(), ...o });
+await cas("bob enregistre son téléphone", assertSucceeds(setDoc(doc(bob, "appareils/jeton-bob"), appareil())));
+await cas("chloe n'enregistre pas un téléphone au nom de bob", assertFails(setDoc(doc(chloe, "appareils/jeton-x"), appareil())));
+await cas("plateforme inconnue refusée", assertFails(setDoc(doc(bob, "appareils/jeton-b2"), appareil({ plateforme: "windows" }))));
+await cas("les appareils ne se lisent pas", assertFails(getDoc(doc(bob, "appareils/jeton-bob"))));
+await cas("chloe ne retire pas le téléphone de bob", assertFails(deleteDoc(doc(chloe, "appareils/jeton-bob"))));
+await cas("bob retire son téléphone", assertSucceeds(deleteDoc(doc(bob, "appareils/jeton-bob"))));
+
+await cas("chloe demande un devis avec photos", assertSucceeds(setDoc(doc(chloe, "demandes/dp1"), demande({ photos: ["https://exemple/p.jpg"] }))));
+await cas(
+  "pas plus de 3 photos par demande",
+  assertFails(setDoc(doc(chloe, "demandes/dp2"), demande({ photos: ["a", "b", "c", "d"] }))),
+);
+await env.withSecurityRulesDisabled((c) => updateDoc(doc(c.firestore(), "pros/alice"), { statut: "suspendu" }));
+await cas("pas de note pour un pro suspendu", assertFails(setDoc(doc(chloe, "notesRealisations/alice_r2_chloe"), note({ auteurId: "chloe" }))));
+
 console.log("Divers");
 await cas("les codes email sont inaccessibles", assertFails(getDoc(doc(chloe, "otpEmail/x"))));
 await cas("les autres collections sont fermées", assertFails(setDoc(doc(alice, "admin/x"), { a: 1 })));
