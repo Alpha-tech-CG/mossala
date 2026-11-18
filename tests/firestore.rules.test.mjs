@@ -289,6 +289,42 @@ await cas("l'équipe lit les comptes clients", assertSucceeds(getDoc(doc(equipe,
 await cas("l'équipe ne modifie pas un compte client", assertFails(updateDoc(doc(equipe, "comptes/bob"), { prenom: "X" })));
 await cas("l'équipe ne lit pas les messages privés", assertFails(getDocs(collection(equipe, "messages"))));
 
+console.log("Demandes annonceurs et métiers proposés");
+const demandeAnnonceur = (o = {}) => ({ nom: "Bâtiplus", type: "Boutique / quincaillerie", telephone: "+242066000000", interets: ["Bannière sur tout le site"], statut: "nouveau", recuLe: serverTimestamp(), ...o });
+await cas("un anonyme demande à être recontacté", assertSucceeds(addDoc(collection(anonyme, "demandesAnnonceurs"), demandeAnnonceur())));
+await cas("demande annonceur sans téléphone refusée", assertFails(addDoc(collection(anonyme, "demandesAnnonceurs"), demandeAnnonceur({ telephone: "" }))));
+await cas("bob ne lit pas les demandes annonceurs", assertFails(getDocs(collection(bob, "demandesAnnonceurs"))));
+await cas("l'équipe lit les demandes annonceurs", assertSucceeds(getDocs(collection(equipe, "demandesAnnonceurs"))));
+await cas("un anonyme propose un métier", assertSucceeds(addDoc(collection(anonyme, "propositionsMetiers"), { nom: "Vitrier", categorie: "batiment", statut: "nouveau", recuLe: serverTimestamp() })));
+await cas("on ne propose pas un métier déjà accepté", assertFails(addDoc(collection(anonyme, "propositionsMetiers"), { nom: "Vitrier", categorie: "batiment", statut: "accepte", recuLe: serverTimestamp() })));
+await cas("l'équipe lit les métiers proposés", assertSucceeds(getDocs(collection(equipe, "propositionsMetiers"))));
+
+console.log("Publicités");
+const pub = (o = {}) => ({
+  emplacement: "accueil-1", type: "image", src: "https://exemple/pub.jpg", poster: null, annonceur: "Bâtiplus", titre: "Promo", texte: null,
+  cta: "Voir", href: "/quincaillerie", statut: "active", debut: null, fin: "2026-12-31", creeLe: serverTimestamp(), modifieLe: serverTimestamp(), ...o,
+});
+await cas("bob ne crée pas de publicité", assertFails(setDoc(doc(bob, "publicites/p1"), pub())));
+await cas("l'équipe crée une publicité", assertSucceeds(setDoc(doc(equipe, "publicites/p1"), pub())));
+await cas("emplacement inconnu refusé", assertFails(setDoc(doc(equipe, "publicites/p2"), pub({ emplacement: "popup" }))));
+await cas("publicité sans lien refusée", assertFails(setDoc(doc(equipe, "publicites/p3"), pub({ href: "" }))));
+await cas("un anonyme lit les publicités actives", assertSucceeds(getDocs(query(collection(anonyme, "publicites"), where("statut", "==", "active")))));
+await cas("l'équipe suspend une publicité", assertSucceeds(updateDoc(doc(equipe, "publicites/p1"), { statut: "suspendue", modifieLe: serverTimestamp() })));
+await cas("un anonyme ne lit pas une publicité suspendue", assertFails(getDoc(doc(anonyme, "publicites/p1"))));
+await cas("un anonyme ne liste pas toutes les publicités", assertFails(getDocs(collection(anonyme, "publicites"))));
+await cas("l'équipe voit les publicités suspendues", assertSucceeds(getDocs(collection(equipe, "publicites"))));
+await cas("bob ne supprime pas une publicité", assertFails(deleteDoc(doc(bob, "publicites/p1"))));
+await cas("l'équipe supprime une publicité", assertSucceeds(deleteDoc(doc(equipe, "publicites/p1"))));
+
+console.log("Journal");
+const entree = (o = {}) => ({ action: "Avis publié", cible: "Avis de Bob N.", auteurId: "equipe", auteur: "+242050000001", date: serverTimestamp(), ...o });
+await cas("l'équipe note une action", assertSucceeds(setDoc(doc(equipe, "journal/j1"), entree())));
+await cas("on ne note pas au nom d'un autre", assertFails(setDoc(doc(equipe, "journal/j2"), entree({ auteurId: "alice" }))));
+await cas("bob n'écrit pas dans le journal", assertFails(setDoc(doc(bob, "journal/j3"), entree({ auteurId: "bob" }))));
+await cas("le journal ne se modifie pas", assertFails(updateDoc(doc(equipe, "journal/j1"), { action: "Rien" })));
+await cas("le journal ne s'efface pas", assertFails(deleteDoc(doc(equipe, "journal/j1"))));
+await cas("l'équipe lit le journal", assertSucceeds(getDocs(collection(equipe, "journal"))));
+
 console.log("Divers");
 await cas("les codes email sont inaccessibles", assertFails(getDoc(doc(chloe, "otpEmail/x"))));
 await cas("les autres collections sont fermées", assertFails(setDoc(doc(alice, "admin/x"), { a: 1 })));

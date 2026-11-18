@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   collectionGroup,
   deleteDoc,
@@ -11,14 +12,21 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { artisans, boutiques, metierLabel } from "../data";
 import { BACKEND_ACTIF } from "./actif";
-import { db, estAdmin } from "./firebase";
-import { lireLocal, modifierLocal } from "./local";
+import { auth, db, estAdmin, stockage } from "./firebase";
+import { idLocal, lireLocal, modifierLocal } from "./local";
 import {
   type AvisDoc,
   type ContactDoc,
+  type DemandeAnnonceurDoc,
+  type Emplacement,
+  type EntreeJournal,
   type Pro,
+  type PropositionMetierDoc,
+  type PubDoc,
+  type StatutProposition,
   type SignalementDoc,
   type StatutAvis,
   type StatutPro,
@@ -26,7 +34,11 @@ import {
   millis,
   versAvis,
   versContact,
+  versDemandeAnnonceur,
+  versEntreeJournal,
   versPro,
+  versPropositionMetier,
+  versPubDoc,
   versSignalement,
 } from "./modele";
 
@@ -52,6 +64,38 @@ export type CompteAdmin = { id: string; prenom: string; nom: string; telephone: 
 
 const MAX = 500;
 
+// ——— Journal : chaque action de l'équipe est tracée (ni modifiable ni supprimable) ———
+
+/** Trace une action. Ne bloque jamais l'action elle-même si l'écriture du journal échoue. */
+async function noter(action: string, cible: string): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({
+      ...b,
+      journal: [{ id: idLocal(), action, cible, auteurId: "maquette", auteur: "Maquette", date: Date.now() }, ...b.journal].slice(0, MAX),
+    }));
+    return;
+  }
+  const u = auth().currentUser;
+  if (!u) return;
+  try {
+    await addDoc(collection(db(), "journal"), {
+      action,
+      cible: cible.slice(0, 200),
+      auteurId: u.uid,
+      auteur: u.phoneNumber ?? u.email ?? u.uid,
+      date: serverTimestamp(),
+    });
+  } catch (e) {
+    console.error("journal", e);
+  }
+}
+
+export async function listerJournal(): Promise<EntreeJournal[]> {
+  if (!BACKEND_ACTIF) return lireLocal().journal;
+  const snap = await getDocs(query(collection(db(), "journal"), orderBy("date", "desc"), limit(MAX)));
+  return snap.docs.map((d) => versEntreeJournal(d.id, d.data()));
+}
+
 // ——— Accès ———
 
 export async function verifierAcces(): Promise<boolean> {
@@ -70,27 +114,31 @@ export async function listerAvis(): Promise<AvisDoc[]> {
 export async function modererAvis(
   id: string,
   champs: { statut: StatutAvis; verifie: boolean; motifRefus: string | null },
+  action: string,
+  libelle: string,
 ): Promise<void> {
   if (!BACKEND_ACTIF) {
     modifierLocal((b) => ({ ...b, avis: b.avis.map((v) => (v.id === id ? { ...v, ...champs, modereLe: Date.now() } : v)) }));
-    return;
+  } else {
+    await updateDoc(doc(db(), "avis", id), { ...champs, modereLe: serverTimestamp() });
   }
-  await updateDoc(doc(db(), "avis", id), { ...champs, modereLe: serverTimestamp() });
+  await noter(action, champs.motifRefus && champs.statut === "refuse" ? `${libelle} (motif : ${champs.motifRefus})` : libelle);
 }
 
-export async function supprimerAvis(id: string): Promise<void> {
+export async function supprimerAvis(id: string, libelle: string): Promise<void> {
   if (!BACKEND_ACTIF) {
     modifierLocal((b) => ({ ...b, avis: b.avis.filter((v) => v.id !== id) }));
-    return;
+  } else {
+    await deleteDoc(doc(db(), "avis", id));
   }
-  await deleteDoc(doc(db(), "avis", id));
+  await noter("Avis supprimé", libelle);
 }
 
 // ——— Professionnels ———
 
 /** Pros de démonstration (src/lib/data.ts), présentés comme ceux de la base. */
 function prosDemo(): ProAdmin[] {
-  const statuts = lireLocal().statutsPros;
+  const { statutsPros: statuts, datesPros } = lireLocal();
   return [
     ...artisans.map((a) => ({
       id: a.id,
@@ -106,7 +154,7 @@ function prosDemo(): ProAdmin[] {
       telephonePublic: a.numeroPublic ? a.telephone : null,
       image: a.image ?? null,
       statut: statuts[a.id] ?? "verifie",
-      creeLe: 0,
+      creeLe: datesPros[a.id] ?? 0,
       libelleMetier: metierLabel(a.metier).artisan,
     })),
     ...boutiques.map((b) => ({
@@ -123,7 +171,7 @@ function prosDemo(): ProAdmin[] {
       telephonePublic: b.telephone,
       image: b.image ?? null,
       statut: statuts[b.id] ?? "verifie",
-      creeLe: 0,
+      creeLe: datesPros[b.id] ?? 0,
       libelleMetier: "Quincaillerie",
     })),
   ];
@@ -147,12 +195,19 @@ export async function telephonePrive(id: string): Promise<string | null> {
   return (snap.data()?.telephone as string | undefined) ?? null;
 }
 
-export async function changerStatutPro(id: string, statut: StatutPro): Promise<void> {
+const ACTIONS_PRO: Record<StatutPro, string> = {
+  verifie: "Pro vérifié",
+  suspendu: "Pro suspendu",
+  en_verification: "Pro remis en vérification",
+};
+
+export async function changerStatutPro(id: string, statut: StatutPro, nom: string): Promise<void> {
   if (!BACKEND_ACTIF) {
     modifierLocal((b) => ({ ...b, statutsPros: { ...b.statutsPros, [id]: statut } }));
-    return;
+  } else {
+    await updateDoc(doc(db(), "pros", id), { statut });
   }
-  await updateDoc(doc(db(), "pros", id), { statut });
+  await noter(ACTIONS_PRO[statut], nom);
 }
 
 // ——— Réalisations ———
@@ -200,16 +255,17 @@ export async function listerRealisations(): Promise<RealisationAdmin[]> {
   return liste.sort((a, b) => b.creeLe - a.creeLe);
 }
 
-export async function verifierRealisation(proId: string, id: string, verifiee: boolean): Promise<void> {
+export async function verifierRealisation(proId: string, id: string, verifiee: boolean, libelle: string): Promise<void> {
   if (!BACKEND_ACTIF) {
     const cle = `${proId}/${id}`;
     modifierLocal((b) => ({
       ...b,
       realisationsVerifiees: verifiee ? [...new Set([...b.realisationsVerifiees, cle])] : b.realisationsVerifiees.filter((x) => x !== cle),
     }));
-    return;
+  } else {
+    await updateDoc(doc(db(), "pros", proId, "realisations", id), { verifiee });
   }
-  await updateDoc(doc(db(), "pros", proId, "realisations", id), { verifiee });
+  await noter(verifiee ? "Réalisation vérifiée" : "Vérification de réalisation retirée", libelle);
 }
 
 // ——— Messages de contact ———
@@ -220,12 +276,13 @@ export async function listerContacts(): Promise<ContactDoc[]> {
   return snap.docs.map((d) => versContact(d.id, d.data()));
 }
 
-export async function traiterContact(id: string, statut: StatutTraitement): Promise<void> {
+export async function traiterContact(id: string, statut: StatutTraitement, libelle: string): Promise<void> {
   if (!BACKEND_ACTIF) {
     modifierLocal((b) => ({ ...b, contacts: b.contacts.map((c) => (c.id === id ? { ...c, statut } : c)) }));
-    return;
+  } else {
+    await updateDoc(doc(db(), "contacts", id), { statut });
   }
-  await updateDoc(doc(db(), "contacts", id), { statut });
+  await noter(statut === "traite" ? "Message traité" : "Message rouvert", libelle);
 }
 
 // ——— Signalements ———
@@ -236,24 +293,133 @@ export async function listerSignalements(): Promise<SignalementDoc[]> {
   return snap.docs.map((d) => versSignalement(d.id, d.data()));
 }
 
-export async function traiterSignalement(id: string, statut: StatutTraitement): Promise<void> {
+export async function traiterSignalement(id: string, statut: StatutTraitement, libelle: string): Promise<void> {
   if (!BACKEND_ACTIF) {
     modifierLocal((b) => ({ ...b, signalements: b.signalements.map((s) => (s.id === id ? { ...s, statut } : s)) }));
-    return;
+  } else {
+    await updateDoc(doc(db(), "signalements", id), { statut });
   }
-  await updateDoc(doc(db(), "signalements", id), { statut });
+  await noter(statut === "traite" ? "Signalement traité" : "Signalement rouvert", libelle);
+}
+
+// ——— Demandes annonceurs ———
+
+export async function listerDemandesAnnonceurs(): Promise<DemandeAnnonceurDoc[]> {
+  if (!BACKEND_ACTIF) return lireLocal().demandesAnnonceurs;
+  const snap = await getDocs(query(collection(db(), "demandesAnnonceurs"), orderBy("recuLe", "desc"), limit(MAX)));
+  return snap.docs.map((d) => versDemandeAnnonceur(d.id, d.data()));
+}
+
+export async function traiterDemandeAnnonceur(id: string, statut: StatutTraitement, libelle: string): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, demandesAnnonceurs: b.demandesAnnonceurs.map((d) => (d.id === id ? { ...d, statut } : d)) }));
+  } else {
+    await updateDoc(doc(db(), "demandesAnnonceurs", id), { statut });
+  }
+  await noter(statut === "traite" ? "Demande annonceur traitée" : "Demande annonceur rouverte", libelle);
+}
+
+// ——— Métiers proposés ———
+
+export async function listerPropositionsMetiers(): Promise<PropositionMetierDoc[]> {
+  if (!BACKEND_ACTIF) return lireLocal().propositionsMetiers;
+  const snap = await getDocs(query(collection(db(), "propositionsMetiers"), orderBy("recuLe", "desc"), limit(MAX)));
+  return snap.docs.map((d) => versPropositionMetier(d.id, d.data()));
+}
+
+const ACTIONS_PROPOSITION: Record<StatutProposition, string> = {
+  accepte: "Métier proposé accepté",
+  refuse: "Métier proposé refusé",
+  nouveau: "Métier proposé remis à l’étude",
+};
+
+export async function deciderPropositionMetier(id: string, statut: StatutProposition, nom: string): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, propositionsMetiers: b.propositionsMetiers.map((p) => (p.id === id ? { ...p, statut } : p)) }));
+  } else {
+    await updateDoc(doc(db(), "propositionsMetiers", id), { statut });
+  }
+  await noter(ACTIONS_PROPOSITION[statut], nom);
+}
+
+// ——— Publicités : campagnes créées par l'équipe ———
+
+export async function listerPublicites(): Promise<PubDoc[]> {
+  if (!BACKEND_ACTIF) return [...lireLocal().publicites].sort((a, b) => b.creeLe - a.creeLe);
+  const snap = await getDocs(query(collection(db(), "publicites"), orderBy("creeLe", "desc"), limit(MAX)));
+  return snap.docs.map((d) => versPubDoc(d.id, d.data()));
+}
+
+/** Contenu d'une campagne saisi dans le formulaire. */
+export type CampagnePub = Omit<PubDoc, "id" | "creeLe" | "modifieLe">;
+
+const pourBase = (c: CampagnePub) => ({
+  ...c,
+  poster: c.poster || null,
+  texte: c.texte || null,
+  debut: c.debut || null,
+  fin: c.fin || null,
+});
+const libellePub = (c: Pick<PubDoc, "annonceur" | "titre">) => `${c.annonceur} · ${c.titre}`;
+
+export async function creerPublicite(c: CampagnePub): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    const maintenant = Date.now();
+    modifierLocal((b) => ({ ...b, publicites: [{ ...c, id: idLocal(), creeLe: maintenant, modifieLe: maintenant }, ...b.publicites] }));
+  } else {
+    await addDoc(collection(db(), "publicites"), { ...pourBase(c), creeLe: serverTimestamp(), modifieLe: serverTimestamp() });
+  }
+  await noter("Publicité créée", libellePub(c));
+}
+
+export async function modifierPublicite(id: string, c: CampagnePub): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, publicites: b.publicites.map((p) => (p.id === id ? { ...p, ...c, modifieLe: Date.now() } : p)) }));
+  } else {
+    await updateDoc(doc(db(), "publicites", id), { ...pourBase(c), modifieLe: serverTimestamp() });
+  }
+  await noter("Publicité modifiée", libellePub(c));
+}
+
+export async function changerStatutPublicite(p: PubDoc, statut: PubDoc["statut"]): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, publicites: b.publicites.map((x) => (x.id === p.id ? { ...x, statut, modifieLe: Date.now() } : x)) }));
+  } else {
+    await updateDoc(doc(db(), "publicites", p.id), { statut, modifieLe: serverTimestamp() });
+  }
+  await noter(statut === "suspendue" ? "Publicité suspendue" : "Publicité réactivée", libellePub(p));
+}
+
+export async function supprimerPublicite(p: PubDoc): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, publicites: b.publicites.filter((x) => x.id !== p.id) }));
+  } else {
+    await deleteDoc(doc(db(), "publicites", p.id));
+  }
+  await noter("Publicité supprimée", libellePub(p));
+}
+
+/** Envoie une image ou une vidéo dans le Storage (publicites/…) et renvoie son adresse publique. */
+export async function envoyerFichierPub(emplacement: Emplacement, fichier: File): Promise<string> {
+  if (!BACKEND_ACTIF) throw new Error("En maquette, collez l’adresse d’une image (ex. /images/ciment.jpg).");
+  const ext = fichier.name.split(".").pop()?.toLowerCase() || "bin";
+  const r = ref(stockage(), `publicites/${emplacement}-${Date.now()}.${ext}`);
+  await uploadBytes(r, fichier, { contentType: fichier.type });
+  return getDownloadURL(r);
 }
 
 // ——— Clients ———
 
 export async function listerComptes(): Promise<CompteAdmin[]> {
   if (!BACKEND_ACTIF) {
+    let moi: CompteAdmin[] = [];
     try {
       const c = JSON.parse(localStorage.getItem("artico-compte") ?? "{}").compte;
-      return c ? [{ id: "maquette", prenom: c.prenom ?? "", nom: c.nom ?? "", telephone: c.telephone ?? "", ville: c.ville ?? "", creeLe: c.creeLe ?? 0 }] : [];
+      if (c) moi = [{ id: "maquette", prenom: c.prenom ?? "", nom: c.nom ?? "", telephone: c.telephone ?? "", ville: c.ville ?? "", creeLe: c.creeLe ?? 0 }];
     } catch {
-      return [];
+      /* ignoré */
     }
+    return [...moi, ...lireLocal().comptes];
   }
   const snap = await getDocs(query(collection(db(), "comptes"), orderBy("creeLe", "desc"), limit(MAX)));
   return snap.docs.map((d) => {

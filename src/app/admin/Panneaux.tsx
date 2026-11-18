@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   BadgeCheck,
   Check,
+  Download,
   ExternalLink,
   EyeOff,
   Loader2,
@@ -20,19 +21,20 @@ import {
 import { boutiques } from "@/lib/data";
 import type * as Api from "@/lib/backend/admin";
 import { type AvisDoc, type ContactDoc, type SignalementDoc, moisLisible } from "@/lib/backend/modele";
-import type { Donnees, Onglet } from "./Backoffice";
+import type { Onglet } from "./Backoffice";
+import { dateCsv, telechargerCsv } from "./csv";
 
-type Agir = (action: (a: typeof Api) => Promise<void>) => Promise<void>;
+export type Agir = (action: (a: typeof Api) => Promise<void>) => Promise<void>;
 
 // ——— Outils d'affichage ———
 
-const dateHeure = (ms: number) =>
+export const dateHeure = (ms: number) =>
   ms
     ? new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(ms)
     : "";
 
 const sansAccents = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-const correspond = (recherche: string, ...champs: (string | null | undefined)[]) =>
+export const correspond = (recherche: string, ...champs: (string | null | undefined)[]) =>
   !recherche.trim() || sansAccents(champs.filter(Boolean).join(" ")).includes(sansAccents(recherche.trim()));
 
 /** Page publique d'un artisan ou d'un magasin (les boutiques inscrites n'en ont pas encore). */
@@ -41,7 +43,7 @@ function lienPublic(type: "artisan" | "magasin" | "boutique", id: string): strin
   return boutiques.some((b) => b.id === id) ? `/quincaillerie/boutique/${id}` : null;
 }
 
-function Pastille({ ton, children }: { ton: "attente" | "ok" | "non" | "neutre"; children: React.ReactNode }) {
+export function Pastille({ ton, children }: { ton: "attente" | "ok" | "non" | "neutre"; children: React.ReactNode }) {
   const tons = {
     attente: "bg-accent/20 text-accent-ink",
     ok: "bg-success/10 text-success",
@@ -52,7 +54,7 @@ function Pastille({ ton, children }: { ton: "attente" | "ok" | "non" | "neutre";
 }
 
 /** Bouton d'action : affiche un sablier pendant l'opération. */
-function Action({
+export function Action({
   onClick,
   children,
   ton = "neutre",
@@ -91,18 +93,21 @@ function Action({
   );
 }
 
-function Filtres<T extends string>({
+export function Filtres<T extends string>({
   valeur,
   options,
   onChange,
   recherche,
   onRecherche,
+  exporter,
 }: {
   valeur: T;
   options: { id: T; label: string; n: number }[];
   onChange: (v: T) => void;
   recherche: string;
   onRecherche: (v: string) => void;
+  /** exporte la liste affichée (filtre et recherche appliqués) en CSV */
+  exporter?: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -129,15 +134,24 @@ function Filtres<T extends string>({
           className="w-full min-w-0 bg-transparent text-sm outline-none"
         />
       </label>
+      {exporter && (
+        <button
+          type="button"
+          onClick={exporter}
+          className="flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-sm font-semibold ring-1 ring-border hover:ring-primary"
+        >
+          <Download className="size-4" /> Exporter (CSV)
+        </button>
+      )}
     </div>
   );
 }
 
-const Vide = ({ children }: { children: React.ReactNode }) => (
+export const Vide = ({ children }: { children: React.ReactNode }) => (
   <p className="rounded-2xl bg-card p-8 text-center text-sm text-muted-foreground shadow-sm">{children}</p>
 );
 
-const Carte = ({ children }: { children: React.ReactNode }) => (
+export const Carte = ({ children }: { children: React.ReactNode }) => (
   <li className="rounded-2xl bg-card p-4 shadow-sm ring-1 ring-black/[0.03] md:p-5">{children}</li>
 );
 
@@ -149,66 +163,6 @@ function Etoiles({ note }: { note: number }) {
       ))}
       <strong className="ml-1 text-sm">{note.toFixed(1).replace(".", ",")}</strong>
     </span>
-  );
-}
-
-// ——— Tableau de bord ———
-
-export function TableauDeBord({ d, ouvrir }: { d: Donnees; ouvrir: (o: Onglet) => void }) {
-  const publies = d.avis.filter((v) => v.statut === "publie");
-  const moyenne = publies.length ? publies.reduce((s, v) => s + v.note, 0) / publies.length : 0;
-  const aFaire = [
-    { o: "avis" as const, n: d.avis.filter((v) => v.statut === "a_moderer").length, t: "avis à modérer" },
-    { o: "pros" as const, n: d.pros.filter((p) => p.statut === "en_verification").length, t: "professionnels à vérifier" },
-    { o: "realisations" as const, n: d.realisations.filter((r) => !r.verifiee).length, t: "réalisations à vérifier" },
-    { o: "contacts" as const, n: d.contacts.filter((c) => c.statut === "nouveau").length, t: "messages non traités" },
-    { o: "signalements" as const, n: d.signalements.filter((s) => s.statut === "nouveau").length, t: "signalements à traiter" },
-  ];
-  const chiffres = [
-    { o: "avis" as const, n: String(publies.length), t: "avis publiés" },
-    { o: "avis" as const, n: publies.length ? `${moyenne.toFixed(1).replace(".", ",")}/5` : "–", t: "note moyenne des avis" },
-    { o: "pros" as const, n: String(d.pros.filter((p) => p.statut === "verifie").length), t: "professionnels vérifiés" },
-    { o: "clients" as const, n: String(d.comptes.length), t: "comptes clients" },
-  ];
-  return (
-    <div className="space-y-8">
-      <section>
-        <h2 className="text-lg font-bold">À traiter</h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {aFaire.map((x) => (
-            <li key={x.t}>
-              <button
-                type="button"
-                onClick={() => ouvrir(x.o)}
-                className={`h-full w-full rounded-2xl p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
-                  x.n ? "bg-foreground text-white" : "bg-card"
-                }`}
-              >
-                <p className="font-serif text-4xl">{x.n}</p>
-                <p className={`mt-1 text-sm ${x.n ? "text-white/75" : "text-muted-foreground"}`}>{x.t}</p>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section>
-        <h2 className="text-lg font-bold">La plateforme</h2>
-        <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {chiffres.map((x) => (
-            <li key={x.t}>
-              <button
-                type="button"
-                onClick={() => ouvrir(x.o)}
-                className="h-full w-full rounded-2xl bg-card p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="font-serif text-3xl text-primary">{x.n}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{x.t}</p>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </div>
   );
 }
 
@@ -268,13 +222,18 @@ export function PanneauAvis({ avis, agir }: { avis: AvisDoc[]; agir: Agir }) {
   const liste = avis.filter(
     (v) => (filtre === "tous" || v.statut === filtre) && correspond(recherche, v.auteur, v.cibleNom, v.texte),
   );
-  const moderer = (v: AvisDoc, champs: Partial<Pick<AvisDoc, "statut" | "verifie" | "motifRefus">>) =>
+  const moderer = (v: AvisDoc, action: string, champs: Partial<Pick<AvisDoc, "statut" | "verifie" | "motifRefus">>) =>
     agir((a) =>
-      a.modererAvis(v.id, {
-        statut: champs.statut ?? v.statut,
-        verifie: champs.verifie ?? v.verifie,
-        motifRefus: champs.motifRefus === undefined ? v.motifRefus : champs.motifRefus,
-      }),
+      a.modererAvis(
+        v.id,
+        {
+          statut: champs.statut ?? v.statut,
+          verifie: champs.verifie ?? v.verifie,
+          motifRefus: champs.motifRefus === undefined ? v.motifRefus : champs.motifRefus,
+        },
+        action,
+        `Avis de ${v.auteur} sur ${v.cibleNom}`,
+      ),
     );
 
   return (
@@ -284,6 +243,25 @@ export function PanneauAvis({ avis, agir }: { avis: AvisDoc[]; agir: Agir }) {
         onChange={setFiltre}
         recherche={recherche}
         onRecherche={setRecherche}
+        exporter={() =>
+          telechargerCsv(
+            "avis",
+            liste.map((v) => ({
+              recu_le: dateCsv(v.creeLe),
+              statut: v.statut,
+              cible: v.cibleType,
+              professionnel: v.cibleNom,
+              auteur: v.auteur,
+              note: v.note,
+              recommandation: v.recommandation,
+              experience: v.experience,
+              experience_confirmee: v.verifie,
+              mois: v.date,
+              commentaire: v.texte,
+              motif_refus: v.motifRefus,
+            })),
+          )
+        }
         options={[
           { id: "a_moderer", label: "À modérer", n: avis.filter((v) => v.statut === "a_moderer").length },
           { id: "publie", label: "Publiés", n: avis.filter((v) => v.statut === "publie").length },
@@ -361,11 +339,11 @@ export function PanneauAvis({ avis, agir }: { avis: AvisDoc[]; agir: Agir }) {
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
                   {v.statut !== "publie" && (
                     <>
-                      <Action ton="principal" onClick={() => moderer(v, { statut: "publie", motifRefus: null })}>
+                      <Action ton="principal" onClick={() => moderer(v, "Avis publié", { statut: "publie", motifRefus: null })}>
                         <Check className="size-3.5" /> Publier
                       </Action>
                       {!v.verifie && (v.experience === "prestation" || v.experience === "achat") && (
-                        <Action onClick={() => moderer(v, { statut: "publie", verifie: true, motifRefus: null })}>
+                        <Action onClick={() => moderer(v, "Avis publié (expérience confirmée)", { statut: "publie", verifie: true, motifRefus: null })}>
                           <BadgeCheck className="size-3.5" /> Publier avec expérience confirmée
                         </Action>
                       )}
@@ -373,10 +351,10 @@ export function PanneauAvis({ avis, agir }: { avis: AvisDoc[]; agir: Agir }) {
                   )}
                   {v.statut === "publie" &&
                     (v.verifie ? (
-                      <Action onClick={() => moderer(v, { verifie: false })}>Retirer la confirmation</Action>
+                      <Action onClick={() => moderer(v, "Confirmation d’expérience retirée", { verifie: false })}>Retirer la confirmation</Action>
                     ) : (
                       (v.experience === "prestation" || v.experience === "achat") && (
-                        <Action onClick={() => moderer(v, { verifie: true })}>
+                        <Action onClick={() => moderer(v, "Expérience confirmée", { verifie: true })}>
                           <BadgeCheck className="size-3.5" /> Confirmer l’expérience
                         </Action>
                       )
@@ -384,14 +362,16 @@ export function PanneauAvis({ avis, agir }: { avis: AvisDoc[]; agir: Agir }) {
                   {v.statut !== "refuse" && (
                     <Refuser
                       libelle={v.statut === "publie" ? "Dépublier" : "Refuser"}
-                      onRefuser={(motif) => moderer(v, { statut: "refuse", motifRefus: motif })}
+                      onRefuser={(motif) =>
+                        moderer(v, v.statut === "publie" ? "Avis dépublié" : "Avis refusé", { statut: "refuse", motifRefus: motif })
+                      }
                     />
                   )}
                   {v.statut === "refuse" && (
                     <Action
                       ton="danger"
                       confirmer="Supprimer définitivement cet avis ? Cette action est irréversible."
-                      onClick={() => agir((a) => a.supprimerAvis(v.id))}
+                      onClick={() => agir((a) => a.supprimerAvis(v.id, `Avis de ${v.auteur} sur ${v.cibleNom}`))}
                     >
                       <Trash2 className="size-3.5" /> Supprimer
                     </Action>
@@ -438,7 +418,7 @@ export function PanneauPros({ pros, agir }: { pros: Api.ProAdmin[]; agir: Agir }
   const liste = pros.filter(
     (p) => (filtre === "tous" || p.statut === filtre) && correspond(recherche, p.nom, p.libelleMetier, p.ville, p.quartier),
   );
-  const statut = (id: string, s: Api.ProAdmin["statut"]) => agir((a) => a.changerStatutPro(id, s));
+  const statut = (p: Api.ProAdmin, s: Api.ProAdmin["statut"]) => agir((a) => a.changerStatutPro(p.id, s, p.nom));
 
   return (
     <div className="space-y-4">
@@ -447,6 +427,21 @@ export function PanneauPros({ pros, agir }: { pros: Api.ProAdmin[]; agir: Agir }
         onChange={setFiltre}
         recherche={recherche}
         onRecherche={setRecherche}
+        exporter={() =>
+          telechargerCsv(
+            "professionnels",
+            liste.map((p) => ({
+              nom: p.nom,
+              type: p.type,
+              metier: p.libelleMetier,
+              ville: p.ville,
+              quartier: p.quartier,
+              statut: p.statut,
+              numero_public: p.telephonePublic,
+              inscrit_le: dateCsv(p.creeLe),
+            })),
+          )
+        }
         options={[
           { id: "en_verification", label: "À vérifier", n: pros.filter((p) => p.statut === "en_verification").length },
           { id: "verifie", label: "Vérifiés", n: pros.filter((p) => p.statut === "verifie").length },
@@ -480,7 +475,7 @@ export function PanneauPros({ pros, agir }: { pros: Api.ProAdmin[]; agir: Agir }
                 {p.description && <p className="mt-2 line-clamp-2 text-sm">{p.description}</p>}
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
                   {p.statut !== "verifie" && (
-                    <Action ton="principal" onClick={() => statut(p.id, "verifie")}>
+                    <Action ton="principal" onClick={() => statut(p, "verifie")}>
                       <BadgeCheck className="size-3.5" /> Vérifier
                     </Action>
                   )}
@@ -488,13 +483,13 @@ export function PanneauPros({ pros, agir }: { pros: Api.ProAdmin[]; agir: Agir }
                     <Action
                       ton="danger"
                       confirmer={`Suspendre ${p.nom} ? Son profil disparaîtra du site.`}
-                      onClick={() => statut(p.id, "suspendu")}
+                      onClick={() => statut(p, "suspendu")}
                     >
                       <ShieldOff className="size-3.5" /> Suspendre
                     </Action>
                   )}
                   {p.statut !== "en_verification" && (
-                    <Action onClick={() => statut(p.id, "en_verification")}>
+                    <Action onClick={() => statut(p, "en_verification")}>
                       <RotateCcw className="size-3.5" /> Remettre en vérification
                     </Action>
                   )}
@@ -531,6 +526,12 @@ export function PanneauRealisations({ realisations, agir }: { realisations: Api.
         onChange={setFiltre}
         recherche={recherche}
         onRecherche={setRecherche}
+        exporter={() =>
+          telechargerCsv(
+            "realisations",
+            liste.map((r) => ({ titre: r.titre, professionnel: r.proNom, quartier: r.quartier, date: r.date, verifiee: r.verifiee, photo: r.image })),
+          )
+        }
         options={[
           { id: "a_verifier", label: "À vérifier", n: realisations.filter((r) => !r.verifiee).length },
           { id: "verifiees", label: "Vérifiées", n: realisations.filter((r) => r.verifiee).length },
@@ -561,11 +562,11 @@ export function PanneauRealisations({ realisations, agir }: { realisations: Api.
                 {r.description && <p className="mt-2 line-clamp-3 text-sm">{r.description}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {r.verifiee ? (
-                    <Action onClick={() => agir((a) => a.verifierRealisation(r.proId, r.id, false))}>
+                    <Action onClick={() => agir((a) => a.verifierRealisation(r.proId, r.id, false, `${r.titre} (${r.proNom})`))}>
                       <EyeOff className="size-3.5" /> Retirer la vérification
                     </Action>
                   ) : (
-                    <Action ton="principal" onClick={() => agir((a) => a.verifierRealisation(r.proId, r.id, true))}>
+                    <Action ton="principal" onClick={() => agir((a) => a.verifierRealisation(r.proId, r.id, true, `${r.titre} (${r.proNom})`))}>
                       <BadgeCheck className="size-3.5" /> Marquer vérifiée
                     </Action>
                   )}
@@ -601,6 +602,12 @@ export function PanneauContacts({ contacts, agir }: { contacts: ContactDoc[]; ag
         onChange={setFiltre}
         recherche={recherche}
         onRecherche={setRecherche}
+        exporter={() =>
+          telechargerCsv(
+            "messages",
+            liste.map((c) => ({ recu_le: dateCsv(c.recuLe), nom: c.nom, telephone: c.telephone, email: c.email, sujet: c.sujet, message: c.message, statut: c.statut })),
+          )
+        }
         options={[
           { id: "nouveau", label: "Non traités", n: contacts.filter((c) => c.statut === "nouveau").length },
           { id: "traite", label: "Traités", n: contacts.filter((c) => c.statut === "traite").length },
@@ -636,11 +643,11 @@ export function PanneauContacts({ contacts, agir }: { contacts: ContactDoc[]; ag
                   </a>
                 )}
                 {c.statut === "nouveau" ? (
-                  <Action ton="principal" onClick={() => agir((a) => a.traiterContact(c.id, "traite"))}>
+                  <Action ton="principal" onClick={() => agir((a) => a.traiterContact(c.id, "traite", `${c.nom} · ${c.sujet}`))}>
                     <Check className="size-3.5" /> Marquer traité
                   </Action>
                 ) : (
-                  <Action onClick={() => agir((a) => a.traiterContact(c.id, "nouveau"))}>
+                  <Action onClick={() => agir((a) => a.traiterContact(c.id, "nouveau", `${c.nom} · ${c.sujet}`))}>
                     <RotateCcw className="size-3.5" /> Rouvrir
                   </Action>
                 )}
@@ -678,6 +685,12 @@ export function PanneauSignalements({
         onChange={setFiltre}
         recherche={recherche}
         onRecherche={setRecherche}
+        exporter={() =>
+          telechargerCsv(
+            "signalements",
+            liste.map((x) => ({ recu_le: dateCsv(x.creeLe), cible: x.cible, objet: x.libelle, motif: x.motif, statut: x.statut })),
+          )
+        }
         options={[
           { id: "nouveau", label: "À traiter", n: signalements.filter((s) => s.statut === "nouveau").length },
           { id: "traite", label: "Traités", n: signalements.filter((s) => s.statut === "traite").length },
@@ -706,11 +719,11 @@ export function PanneauSignalements({
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
                   {s.statut === "nouveau" ? (
-                    <Action ton="principal" onClick={() => agir((a) => a.traiterSignalement(s.id, "traite"))}>
+                    <Action ton="principal" onClick={() => agir((a) => a.traiterSignalement(s.id, "traite", s.libelle || s.cibleId))}>
                       <Check className="size-3.5" /> Marquer traité
                     </Action>
                   ) : (
-                    <Action onClick={() => agir((a) => a.traiterSignalement(s.id, "nouveau"))}>
+                    <Action onClick={() => agir((a) => a.traiterSignalement(s.id, "nouveau", s.libelle || s.cibleId))}>
                       <RotateCcw className="size-3.5" /> Rouvrir
                     </Action>
                   )}
@@ -741,11 +754,25 @@ export function PanneauClients({ comptes }: { comptes: Api.CompteAdmin[] }) {
   const liste = comptes.filter((c) => correspond(recherche, c.prenom, c.nom, c.telephone, c.ville));
   return (
     <div className="space-y-4">
-      <label className="flex max-w-xs items-center gap-2 rounded-full bg-card px-3 py-1.5 ring-1 ring-border">
-        <Search className="size-4 text-muted-foreground" />
-        <span className="sr-only">Rechercher un client</span>
-        <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher…" className="w-full bg-transparent text-sm outline-none" />
-      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex max-w-xs flex-1 items-center gap-2 rounded-full bg-card px-3 py-1.5 ring-1 ring-border">
+          <Search className="size-4 text-muted-foreground" />
+          <span className="sr-only">Rechercher un client</span>
+          <input value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher…" className="w-full bg-transparent text-sm outline-none" />
+        </label>
+        <button
+          type="button"
+          onClick={() =>
+            telechargerCsv(
+              "clients",
+              liste.map((c) => ({ prenom: c.prenom, nom: c.nom, telephone: c.telephone, ville: c.ville, inscrit_le: dateCsv(c.creeLe) })),
+            )
+          }
+          className="flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-sm font-semibold ring-1 ring-border hover:ring-primary"
+        >
+          <Download className="size-4" /> Exporter (CSV)
+        </button>
+      </div>
       {liste.length === 0 ? (
         <Vide>Aucun compte client.</Vide>
       ) : (

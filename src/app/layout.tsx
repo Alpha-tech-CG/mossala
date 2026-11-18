@@ -6,6 +6,7 @@ import { AccesModal } from "@/components/Acces";
 import { SplashLoader } from "@/components/Loader";
 import { CadrePub, PubPages } from "@/components/EspacePub";
 import { Footer } from "@/components/Footer";
+import { HorsConsole } from "@/components/HorsConsole";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
 const playfair = Playfair_Display({
@@ -29,13 +30,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <noscript>
           <style>{`.reveal{opacity:1;transform:none}.splash{display:none}`}</style>
         </noscript>
-        <SplashLoader />
-        <Header />
+        <HorsConsole>
+          <SplashLoader />
+          <Header />
+        </HorsConsole>
         <main className="flex-1">
           <CadrePub>{children}</CadrePub>
         </main>
-        <PubPages />
-        <Footer />
+        <HorsConsole>
+          <PubPages />
+          <Footer />
+        </HorsConsole>
         <AccesModal />
       </body>
     </html>

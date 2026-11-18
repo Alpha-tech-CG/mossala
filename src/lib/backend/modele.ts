@@ -199,3 +199,132 @@ export function moisLisible(date: string | null, repli = 0): string {
   const d = new Date(repli);
   return `${NOMS_MOIS[d.getMonth()]} ${d.getFullYear()}`;
 }
+
+// ——— Demandes annonceurs, métiers proposés, publicités, journal du backoffice ———
+
+/** demandesAnnonceurs/{id} : formulaire « Être recontacté » de la page Nos services. */
+export type DemandeAnnonceurDoc = {
+  id: string;
+  nom: string;
+  type: string;
+  telephone: string;
+  interets: string[];
+  statut: StatutTraitement;
+  recuLe: number;
+};
+
+export function versDemandeAnnonceur(id: string, d: Record<string, unknown>): DemandeAnnonceurDoc {
+  return {
+    id,
+    nom: String(d.nom ?? ""),
+    type: String(d.type ?? ""),
+    telephone: String(d.telephone ?? ""),
+    interets: (d.interets as string[] | undefined) ?? [],
+    statut: d.statut === "traite" ? "traite" : "nouveau",
+    recuLe: millis(d.recuLe as Horodatage),
+  };
+}
+
+export type StatutProposition = "nouveau" | "accepte" | "refuse";
+
+/** propositionsMetiers/{id} : métier manquant proposé par un visiteur (page Tous les métiers). */
+export type PropositionMetierDoc = {
+  id: string;
+  nom: string;
+  /** identifiant de catégorie (src/lib/metiers.ts) */
+  categorie: string;
+  statut: StatutProposition;
+  recuLe: number;
+};
+
+export function versPropositionMetier(id: string, d: Record<string, unknown>): PropositionMetierDoc {
+  return {
+    id,
+    nom: String(d.nom ?? ""),
+    categorie: String(d.categorie ?? ""),
+    statut: d.statut === "accepte" || d.statut === "refuse" ? d.statut : "nouveau",
+    recuLe: millis(d.recuLe as Horodatage),
+  };
+}
+
+export const EMPLACEMENTS_PUB = ["accueil-1", "accueil-2", "pages", "laterale-gauche", "laterale-droite"] as const;
+export type Emplacement = (typeof EMPLACEMENTS_PUB)[number];
+
+/** Création publicitaire affichée sur le site. */
+export type Pub = {
+  type: "image" | "video";
+  /** image, ou fichier vidéo MP4 */
+  src: string;
+  /** image affichée avant la lecture de la vidéo */
+  poster?: string;
+  annonceur: string;
+  titre: string;
+  texte?: string;
+  cta: string;
+  href: string;
+};
+
+export type StatutPub = "active" | "suspendue";
+
+/**
+ * publicites/{id} : une campagne publicitaire créée par l'équipe dans la console admin.
+ * Plusieurs campagnes actives sur le même emplacement s'affichent à tour de rôle.
+ */
+export type PubDoc = Pub & {
+  id: string;
+  emplacement: Emplacement;
+  statut: StatutPub;
+  /** dates de diffusion « 2026-11-01 » (incluses), facultatives */
+  debut: string | null;
+  fin: string | null;
+  creeLe: number;
+  modifieLe: number;
+};
+
+export function versPubDoc(id: string, d: Record<string, unknown>): PubDoc {
+  return {
+    id,
+    emplacement: (EMPLACEMENTS_PUB as readonly string[]).includes(String(d.emplacement)) ? (d.emplacement as Emplacement) : "pages",
+    type: d.type === "video" ? "video" : "image",
+    src: String(d.src ?? ""),
+    poster: (d.poster as string | undefined) || undefined,
+    annonceur: String(d.annonceur ?? ""),
+    titre: String(d.titre ?? ""),
+    texte: (d.texte as string | undefined) || undefined,
+    cta: String(d.cta ?? ""),
+    href: String(d.href ?? ""),
+    statut: d.statut === "suspendue" ? "suspendue" : "active",
+    debut: (d.debut as string | undefined) || null,
+    fin: (d.fin as string | undefined) || null,
+    creeLe: millis(d.creeLe as Horodatage),
+    modifieLe: millis(d.modifieLe as Horodatage),
+  };
+}
+
+/** La campagne est-elle à diffuser aujourd'hui (« 2026-11-18 ») ? */
+export const pubEnDiffusion = (p: PubDoc, aujourdhui: string) =>
+  p.statut === "active" && Boolean(p.src) && (!p.debut || p.debut <= aujourdhui) && (!p.fin || aujourdhui <= p.fin);
+
+/** journal/{id} : trace de chaque action de l'équipe dans le backoffice (ni modifiable ni supprimable). */
+export type EntreeJournal = {
+  id: string;
+  /** « Avis publié », « Pro suspendu »… */
+  action: string;
+  /** ce sur quoi porte l'action, lisible (« Avis de Grâce N. sur Jean-Claude Mbemba ») */
+  cible: string;
+  auteurId: string;
+  /** numéro ou email du membre de l'équipe */
+  auteur: string;
+  date: number;
+};
+
+export function versEntreeJournal(id: string, d: Record<string, unknown>): EntreeJournal {
+  return {
+    id,
+    action: String(d.action ?? ""),
+    cible: String(d.cible ?? ""),
+    auteurId: String(d.auteurId ?? ""),
+    auteur: String(d.auteur ?? ""),
+    date: millis(d.date as Horodatage),
+  };
+}

@@ -68,12 +68,19 @@ l'hébergeur. Dès que `NEXT_PUBLIC_FIREBASE_API_KEY` est rempli, le site quitte
 | `avis/{type_cible_auteur}` | avis clients (un par client et par pro) | publics une fois `statut: "publie"` ; l'équipe modère |
 | `contacts/{id}` | formulaire « Nous contacter » | tout visiteur écrit, l'équipe lit |
 | `signalements/{id}` | profils et avis signalés | tout visiteur écrit, l'équipe lit |
+| `demandesAnnonceurs/{id}` | « Être recontacté » (page Nos services) | tout visiteur écrit, l'équipe lit |
+| `propositionsMetiers/{id}` | métiers proposés (page Tous les métiers) | tout visiteur écrit, l'équipe décide |
+| `publicites/{emplacement}` | création de chaque espace publicitaire | publique ; l'équipe la règle |
+| `journal/{id}` | actions de l'équipe dans le backoffice | l'équipe lit ; ni modifiable ni supprimable |
 
 ## Backoffice `/admin`
 
 L'équipe y contrôle tout : avis (publier, refuser avec motif, confirmer l'expérience), professionnels
-(vérifier, suspendre, voir le numéro privé), réalisations (marquer vérifiées), messages du formulaire
-de contact, signalements et comptes clients. Les messages privés et les devis restent invisibles.
+(vérifier, suspendre, voir le numéro privé), réalisations (marquer vérifiées), publicités (visuel image
+ou vidéo envoyé dans le Storage `publicites/`, texte, lien, dates de diffusion), demandes d'annonceurs,
+messages du formulaire de contact, signalements, métiers proposés et comptes clients. Chaque action est
+inscrite au journal, et chaque liste s'exporte en CSV (Excel). Les messages privés et les devis restent
+invisibles.
 
 **Donner l'accès** à un membre de l'équipe (il doit s'être connecté une fois sur le site) :
 

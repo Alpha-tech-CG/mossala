@@ -290,6 +290,68 @@ service cloud.firestore {
       allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
     }
 
+    // ——— Demandes annonceurs (page Nos services) : tout visiteur écrit, l'équipe traite ———
+    match /demandesAnnonceurs/{id} {
+      allow create: if nouveau().keys().hasOnly(['nom', 'type', 'telephone', 'interets', 'statut', 'recuLe'])
+        && texte(nouveau().nom, 2, 80)
+        && texte(nouveau().type, 1, 60)
+        && texte(nouveau().telephone, 8, 20)
+        && nouveau().interets is list && nouveau().interets.size() <= 10
+        && nouveau().statut == 'nouveau'
+        && nouveau().recuLe == request.time;
+      allow read, delete: if admin();
+      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
+    }
+
+    // ——— Métiers proposés (page Tous les métiers) : tout visiteur propose, l'équipe décide ———
+    match /propositionsMetiers/{id} {
+      allow create: if nouveau().keys().hasOnly(['nom', 'categorie', 'statut', 'recuLe'])
+        && texte(nouveau().nom, 2, 80)
+        && texte(nouveau().categorie, 1, 40)
+        && nouveau().statut == 'nouveau'
+        && nouveau().recuLe == request.time;
+      allow read, delete: if admin();
+      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'accepte', 'refuse'];
+    }
+
+    // ——— Publicités : campagnes créées par l'équipe ; le public ne lit que les actives ———
+    match /publicites/{id} {
+      function pubValide(d) {
+        return d.keys().hasOnly(['emplacement', 'type', 'src', 'poster', 'annonceur', 'titre', 'texte', 'cta', 'href',
+                                 'statut', 'debut', 'fin', 'creeLe', 'modifieLe'])
+          && d.emplacement in ['accueil-1', 'accueil-2', 'pages', 'laterale-gauche', 'laterale-droite']
+          && d.type in ['image', 'video']
+          && texte(d.src, 1, 1000)
+          && texteOuNull(d.poster, 1000)
+          && texte(d.annonceur, 1, 60)
+          && texte(d.titre, 1, 80)
+          && texteOuNull(d.texte, 140)
+          && texte(d.cta, 0, 30)
+          && texte(d.href, 1, 500)
+          && d.statut in ['active', 'suspendue']
+          && texteOuNull(d.debut, 10)
+          && texteOuNull(d.fin, 10)
+          && d.modifieLe == request.time;
+      }
+      allow read: if resource.data.statut == 'active' || admin();
+      allow create: if admin() && pubValide(nouveau()) && nouveau().creeLe == request.time;
+      allow update: if admin() && pubValide(nouveau()) && !changes().hasAny(['creeLe']);
+      allow delete: if admin();
+    }
+
+    // ——— Journal du backoffice : chaque action de l'équipe, ni modifiable ni supprimable ———
+    match /journal/{id} {
+      allow read: if admin();
+      allow create: if admin()
+        && nouveau().keys().hasOnly(['action', 'cible', 'auteurId', 'auteur', 'date'])
+        && nouveau().auteurId == moi()
+        && texte(nouveau().action, 1, 100)
+        && texte(nouveau().cible, 0, 200)
+        && texte(nouveau().auteur, 1, 120)
+        && nouveau().date == request.time;
+      allow update, delete: if false;
+    }
+
     // Backoffice : toutes les réalisations à vérifier (requête collectionGroup).
     match /{chemin=**}/realisations/{rid} {
       allow read: if admin();

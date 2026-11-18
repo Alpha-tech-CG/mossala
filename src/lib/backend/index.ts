@@ -8,6 +8,8 @@ export { SUJETS_CONTACT, envoyerMessageContact } from "./contact";
 export type { MessageContact } from "./contact";
 export { AvisDejaDonne, envoyerSignalement, publierAvis } from "./avis";
 export type { NouvelAvis, NouveauSignalement } from "./avis";
+export { envoyerDemandeAnnonceur, proposerMetier } from "./demandes";
+export type { NouvelleDemandeAnnonceur } from "./demandes";
 export { messageErreur } from "./erreurs";
 export { BACKEND_ACTIF, estDemo } from "./actif";
 export { destinatairesAlerte, notifierNouveauMessage, texteAlerte } from "./notifications";

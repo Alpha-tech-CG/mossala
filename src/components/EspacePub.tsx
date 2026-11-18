@@ -3,67 +3,47 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useSyncExternalStore } from "react";
 import { ArrowRight, Film, Image as ImageIcon, Play } from "lucide-react";
+import { type Emplacement, type Pub, pubEnDiffusion } from "@/lib/backend/modele";
+import { useCampagnes } from "@/lib/backend/publicites";
 
 /**
  * Espaces publicitaires (image ou vidéo) vendus aux annonceurs.
- * MAQUETTE : les créations sont déclarées ici ; en production elles viendront d'une collection Firestore
- * « publicites » (emplacement, fichier dans le Storage, lien, dates de diffusion).
+ * Les campagnes se créent dans la console admin (/admin → Publicités) : visuel, texte, lien,
+ * dates de diffusion. Plusieurs campagnes actives sur un même emplacement s'affichent à tour de
+ * rôle (une au hasard à chaque page). Sans campagne : « Votre publicité ici ».
  */
-export type Emplacement = "accueil-1" | "accueil-2" | "pages" | "laterale-gauche" | "laterale-droite";
+export type { Emplacement };
 
-type Pub = {
-  type: "image" | "video";
-  /** image, ou fichier vidéo MP4 */
-  src: string;
-  /** image affichée avant la lecture de la vidéo */
-  poster?: string;
-  annonceur: string;
-  titre: string;
-  texte?: string;
-  cta: string;
-  href: string;
+const aujourdhui = () => {
+  const d = new Date();
+  const deux = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${deux(d.getMonth() + 1)}-${deux(d.getDate())}`;
 };
+/** Date du jour, lue dans le navigateur seulement (null au rendu serveur). */
+const useAujourdhui = () =>
+  useSyncExternalStore(
+    () => () => {},
+    aujourdhui,
+    () => null,
+  );
 
-const PUBS: Partial<Record<Emplacement, Pub>> = {
-  "accueil-1": {
-    type: "image",
-    src: "/images/peinture.jpg",
-    annonceur: "Bâtiplus Poto-Poto",
-    titre: "Repeignez tout pour la fin d’année",
-    texte: "Peinture acrylique 20 L, conseils et livraison sur chantier.",
-    cta: "Voir l’offre",
-    href: "/quincaillerie/peinture-blanche-20l",
-  },
-  pages: {
-    type: "image",
-    src: "/images/ciment.jpg",
-    annonceur: "Quincaillerie Total Bacongo",
-    titre: "Ciment 42,5 kg à 7 900 FCFA",
-    texte: "Prix promo jusqu’au 30 novembre, réservez en ligne.",
-    cta: "Réserver",
-    href: "/quincaillerie/ciment-42-5",
-  },
-  "laterale-gauche": {
-    type: "image",
-    src: "/images/patrick.jpg",
-    annonceur: "Quincaillerie Total Bacongo",
-    titre: "Câble électrique 2,5 mm²",
-    texte: "Rouleau de 100 m, conseils de pose offerts.",
-    cta: "Voir le prix",
-    href: "/quincaillerie/cable-2-5",
-  },
-  "laterale-droite": {
-    type: "image",
-    src: "/images/marcel.jpg",
-    annonceur: "Menuiserie Ngouaka",
-    titre: "Portes et meubles sur mesure",
-    texte: "Devis gratuit partout à Brazzaville.",
-    cta: "Voir le profil",
-    href: "/artisans/marcel-ngouaka",
-  },
-  // « accueil-2 » est libre : l'emplacement vidéo invite les annonceurs.
-};
+/**
+ * La campagne à afficher : « chargement » tant que les campagnes ne sont pas lues,
+ * undefined si l'espace est libre.
+ */
+function usePub(emplacement: Emplacement): Pub | undefined | "chargement" {
+  const campagnes = useCampagnes();
+  const jour = useAujourdhui();
+  const [tirage] = useState(Math.random);
+  if (!campagnes || !jour) return "chargement";
+  const enLigne = campagnes.filter((c) => c.emplacement === emplacement && pubEnDiffusion(c, jour));
+  return enLigne.length ? enLigne[Math.floor(tirage * enLigne.length)] : undefined;
+}
+
+/** Fichier envoyé dans le Storage (adresse complète) : pas d'optimisation Next.js. */
+const distant = (src: string) => /^https?:/.test(src);
 
 /**
  * Bloc publicitaire de la colonne de droite, au format des encarts LinkedIn :
@@ -76,7 +56,9 @@ export function BlocPub({
   emplacement: "laterale-gauche" | "laterale-droite";
   className?: string;
 }) {
-  const pub = PUBS[emplacement];
+  const pub = usePub(emplacement);
+  if (pub === "chargement")
+    return <div aria-hidden className={`overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-black/[0.06] ${className}`}><div className="aspect-[6/5]" /></div>;
   return (
     <aside
       aria-label="Publicité"
@@ -89,7 +71,7 @@ export function BlocPub({
         </Link>
       </p>
       {pub ? (
-        <Link href={pub.href} className="group block">
+        <Link href={pub.href || "/services"} className="group block">
           <span className="relative block aspect-[6/5] overflow-hidden bg-foreground">
             {pub.type === "video" ? (
               <video src={pub.src} poster={pub.poster} autoPlay muted loop playsInline className="absolute inset-0 size-full object-cover" />
@@ -98,6 +80,7 @@ export function BlocPub({
                 src={pub.src}
                 alt=""
                 fill
+                unoptimized={distant(pub.src)}
                 sizes="(min-width: 1280px) 300px, 50vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-105"
               />
@@ -140,16 +123,23 @@ export function PubsLateralesFil({ className = "" }: { className?: string }) {
 }
 
 export function EspacePub({ emplacement, className = "" }: { emplacement: Emplacement; className?: string }) {
-  const pub = PUBS[emplacement];
+  const pub = usePub(emplacement);
   const bandeau = emplacement === "pages";
   const libre = emplacement === "accueil-2" ? "video" : "image";
+  if (pub === "chargement")
+    return (
+      <div aria-hidden className={className}>
+        <div className="mb-1.5 h-[15px]" />
+        <div className={`rounded-2xl bg-cream/60 ${bandeau ? "aspect-[3/1] sm:aspect-[6/1]" : "aspect-[16/10] sm:aspect-[21/9]"}`} />
+      </div>
+    );
 
   return (
     <aside aria-label="Publicité" className={className}>
       <p className="mb-1.5 text-[10px] font-bold tracking-[0.2em] text-muted-foreground uppercase">Publicité</p>
       {pub ? (
         <Link
-          href={pub.href}
+          href={pub.href || "/services"}
           className={`group relative block overflow-hidden rounded-2xl bg-foreground shadow-sm ${
             bandeau ? "aspect-[3/1] sm:aspect-[6/1]" : "aspect-[16/10] sm:aspect-[21/9]"
           }`}
@@ -169,6 +159,7 @@ export function EspacePub({ emplacement, className = "" }: { emplacement: Emplac
               src={pub.src}
               alt=""
               fill
+              unoptimized={distant(pub.src)}
               sizes="(min-width: 1152px) 1152px, 100vw"
               className="object-cover transition-transform duration-700 group-hover:scale-105"
             />

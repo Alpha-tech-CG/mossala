@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
+import { envoyerDemandeAnnonceur, messageErreur } from "@/lib/backend";
 
 const field =
   "w-full rounded-xl border border-border bg-white px-4 py-3.5 text-base outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
@@ -13,6 +14,8 @@ const INTERETS = ["Vidéo sur l’accueil", "Image sur l’accueil", "Bannière 
 export function DemandeAnnonceur() {
   const [envoye, setEnvoye] = useState(false);
   const [interets, setInterets] = useState<string[]>([]);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
 
   if (envoye)
     return (
@@ -25,16 +28,27 @@ export function DemandeAnnonceur() {
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        // TODO backend : enregistrer la demande (table demandes_annonceurs) et prévenir l'équipe commerciale
-        setEnvoye(true);
+        const f = new FormData(e.currentTarget);
+        const val = (k: string) => String(f.get(k) ?? "").trim();
+        setErreur("");
+        setEnvoi(true);
+        try {
+          // enregistrée pour l'équipe commerciale (backoffice /admin → Annonceurs)
+          await envoyerDemandeAnnonceur({ nom: val("nom"), type: val("type"), telephone: val("telephone"), interets });
+          setEnvoye(true);
+        } catch (err) {
+          setErreur(messageErreur(err));
+        } finally {
+          setEnvoi(false);
+        }
       }}
       className="space-y-3"
     >
       <p className="font-serif text-2xl">Être recontacté</p>
-      <input required placeholder="Nom de l’entreprise ou votre nom" aria-label="Nom" className={field} />
-      <select required aria-label="Vous êtes" defaultValue="" className={field}>
+      <input name="nom" required minLength={2} maxLength={80} placeholder="Nom de l’entreprise ou votre nom" aria-label="Nom" className={field} />
+      <select name="type" required aria-label="Vous êtes" defaultValue="" className={field}>
         <option value="" disabled>
           Vous êtes…
         </option>
@@ -42,7 +56,7 @@ export function DemandeAnnonceur() {
           <option key={t}>{t}</option>
         ))}
       </select>
-      <input required type="tel" placeholder="Téléphone ou WhatsApp" aria-label="Téléphone" className={field} />
+      <input name="telephone" required type="tel" minLength={8} maxLength={20} placeholder="Téléphone ou WhatsApp" aria-label="Téléphone" className={field} />
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">Ce qui vous intéresse</legend>
         <div className="flex flex-wrap gap-2">
@@ -64,7 +78,17 @@ export function DemandeAnnonceur() {
           })}
         </div>
       </fieldset>
-      <button type="submit" className="w-full rounded-xl bg-accent py-4 font-bold text-accent-foreground">
+      {erreur && (
+        <p role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+          {erreur}
+        </p>
+      )}
+      <button
+        type="submit"
+        disabled={envoi}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent py-4 font-bold text-accent-foreground disabled:opacity-60"
+      >
+        {envoi && <Loader2 className="size-4 animate-spin" />}
         Envoyer ma demande
       </button>
       <p className="text-[11px] text-muted-foreground">

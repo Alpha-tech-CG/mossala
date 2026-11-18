@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { CheckCircle2, Plus, Search } from "lucide-react";
+import { CheckCircle2, Loader2, Plus, Search } from "lucide-react";
+import { messageErreur, proposerMetier } from "@/lib/backend";
 import { CategorieIcon, MetierIcon } from "@/components/ui";
 import { categories, slug } from "@/lib/metiers";
 
@@ -130,6 +131,8 @@ export function MetiersExplorer() {
 /** « Possibilité d'en ajouter » : un artisan ou un client propose un métier manquant. */
 function ProposerMetier({ initial }: { initial: string }) {
   const [envoye, setEnvoye] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState("");
   return (
     <section id="proposer" className="mt-10 rounded-2xl bg-foreground p-6 text-white md:p-8">
       <p className="text-[10px] font-semibold tracking-[0.3em] text-accent-ink uppercase">
@@ -143,21 +146,35 @@ function ProposerMetier({ initial }: { initial: string }) {
         </p>
       ) : (
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            // TODO Firebase : enregistrer la proposition pour validation dans le back-office
-            setEnvoye(true);
+            const f = new FormData(e.currentTarget);
+            setErreur("");
+            setEnvoi(true);
+            try {
+              // validée ou refusée par l'équipe dans le backoffice /admin → Métiers proposés
+              await proposerMetier(String(f.get("nom") ?? "").trim(), String(f.get("categorie") ?? ""));
+              setEnvoye(true);
+            } catch (err) {
+              setErreur(messageErreur(err));
+            } finally {
+              setEnvoi(false);
+            }
           }}
           className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]"
         >
           <input
+            name="nom"
             required
+            minLength={2}
+            maxLength={80}
             defaultValue={initial}
             placeholder="Nom du métier"
             aria-label="Nom du métier"
             className="w-full min-w-0 rounded-xl bg-white px-4 py-3.5 text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-accent"
           />
           <select
+            name="categorie"
             required
             defaultValue=""
             aria-label="Catégorie"
@@ -172,9 +189,13 @@ function ProposerMetier({ initial }: { initial: string }) {
               </option>
             ))}
           </select>
-          <button className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 font-bold text-accent-foreground sm:col-span-2 lg:col-span-1">
-            <Plus className="size-5" /> Proposer
+          <button
+            disabled={envoi}
+            className="flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 font-bold text-accent-foreground disabled:opacity-60 sm:col-span-2 lg:col-span-1"
+          >
+            {envoi ? <Loader2 className="size-5 animate-spin" /> : <Plus className="size-5" />} Proposer
           </button>
+          {erreur && <p className="text-sm font-semibold text-red-200 sm:col-span-2 lg:col-span-3">{erreur}</p>}
         </form>
       )}
     </section>
