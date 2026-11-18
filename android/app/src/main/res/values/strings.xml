@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Artopif</string>
+    <string name="title_activity_main">Artopif</string>
+    <string name="package_name">cg.artopif.app</string>
+    <string name="custom_url_scheme">cg.artopif.app</string>
+</resources>

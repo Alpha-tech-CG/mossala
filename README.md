@@ -60,3 +60,7 @@ Puis ouvrir http://localhost:3000.
 
 - Quota de messages et paiement Mobile Money (MTN MoMo, Airtel Money) côté serveur.
 - Back-office : métiers, propositions de métiers, modération des avis.
+
+## Applications mobiles
+
+Versions iOS et Android (Capacitor) qui affichent le site déployé : voir [`mobile/README.md`](mobile/README.md).
