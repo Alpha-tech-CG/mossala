@@ -164,6 +164,8 @@ export function Backoffice() {
     (async () => {
       const ok = BACKEND_ACTIF && !session.session ? false : await (await api()).verifierAcces().catch(() => false);
       if (annule) return;
+      // Maquette (site sans Firebase) : données de démonstration dès la première ouverture.
+      if (ok && !BACKEND_ACTIF) (await import("@/lib/backend/demo-console")).remplirDemoUneFois();
       setAcces(ok ? "ok" : "refuse");
       if (ok) await charger();
     })();

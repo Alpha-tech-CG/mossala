@@ -136,3 +136,20 @@ export function remplirDemo() {
     statutsPros: { ...b.statutsPros, ...statutsPros },
   }));
 }
+
+const CLE_AUTO = "artopif-demo-auto";
+
+/**
+ * MAQUETTE : à la première ouverture de la console dans un navigateur, la remplit avec les
+ * données de démonstration (pour une démo sur n'importe quel appareil, sans manipulation).
+ * Une seule fois par navigateur : si l'équipe vide les données, elles ne reviennent pas.
+ */
+export function remplirDemoUneFois(): void {
+  try {
+    if (localStorage.getItem(CLE_AUTO)) return;
+    localStorage.setItem(CLE_AUTO, "1");
+  } catch {
+    return; // stockage indisponible : pas de remplissage automatique
+  }
+  remplirDemo();
+}
