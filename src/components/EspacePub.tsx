@@ -36,7 +36,9 @@ const useAujourdhui = () =>
 function usePub(emplacement: Emplacement): Pub | undefined | "chargement" {
   const campagnes = useCampagnes();
   const jour = useAujourdhui();
-  const [tirage] = useState(Math.random);
+  // Tirage au sort dans le navigateur seulement : Next refuse Math.random() au pré-rendu
+  // (le serveur affiche de toute façon « chargement », jour étant null).
+  const [tirage] = useState(() => (typeof window === "undefined" ? 0 : Math.random()));
   if (!campagnes || !jour) return "chargement";
   const enLigne = campagnes.filter((c) => c.emplacement === emplacement && pubEnDiffusion(c, jour));
   return enLigne.length ? enLigne[Math.floor(tirage * enLigne.length)] : undefined;
