@@ -300,3 +300,29 @@
     overflow: visible;
   }
 }
+
+/* ——— Application mobile (data-appli posé sur <html>, voir src/lib/appli.ts) ——— */
+.barre-appli,
+.seulement-appli {
+  display: none;
+}
+[data-appli] .barre-appli {
+  display: flex;
+}
+[data-appli] .seulement-appli {
+  display: revert;
+}
+[data-appli] .hors-appli {
+  display: none !important;
+}
+[data-appli] body {
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+}
+/* boutons collés en bas d'écran (profil artisan) : au-dessus de la barre d'onglets */
+[data-appli] .cta-fixe {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+/* l'écran de démarrage natif de l'appli remplace celui du site */
+[data-appli] .splash {
+  display: none !important;
+}

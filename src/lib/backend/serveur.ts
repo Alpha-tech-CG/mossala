@@ -131,3 +131,37 @@ export const resumeAvis = (avis: Avis[]) => ({
   note: avis.length ? Math.round((avis.reduce((s, v) => s + v.note, 0) / avis.length) * 10) / 10 : 0,
   nbAvis: avis.length,
 });
+
+/** Une réalisation du fil de l'application, avec son artisan. */
+export type PublicationFil = { artisan: Artisan; realisation: Realisation; index: number; creeLe: number };
+
+/**
+ * Fil de l'application : dernières réalisations des artisans vérifiés inscrits
+ * (les 5 plus récentes de chacun des 40 derniers inscrits), les plus récentes d'abord.
+ */
+export async function filRealisations(): Promise<PublicationFil[]> {
+  "use cache";
+  cacheLife("minutes");
+  cacheTag("pros", "fil");
+  if (!BACKEND_ACTIF) return [];
+  try {
+    const pros = (await artisansInscrits()).slice(0, 40);
+    const parPro = await Promise.all(
+      pros.map(async (artisan) => {
+        const snap = await getDocs(
+          query(collection(db(), "pros", artisan.id, "realisations"), orderBy("creeLe", "desc"), limit(5)),
+        ).catch(() => null);
+        return (snap?.docs ?? []).map((d, index) => ({
+          artisan,
+          realisation: versRealisation(d.id, d.data()),
+          index,
+          creeLe: (d.data().creeLe as { toMillis?: () => number } | undefined)?.toMillis?.() ?? 0,
+        }));
+      }),
+    );
+    return parPro.flat().sort((a, b) => b.creeLe - a.creeLe);
+  } catch (e) {
+    console.error("filRealisations", e);
+    return [];
+  }
+}

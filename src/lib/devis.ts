@@ -16,7 +16,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { BACKEND_ACTIF, estDemo } from "./backend/actif";
-import { db } from "./backend/firebase";
+import { db, stockage } from "./backend/firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { proPublic } from "./backend/pros";
 import { sessionActuelle, surSession } from "./session";
 
@@ -97,6 +98,8 @@ export type DemandeDevis = {
   devis?: Devis;
   /** raison laissée par le pro quand il décline */
   motifDeclin?: string;
+  /** photos du problème (Devis en photo, application mobile) : URL, ou data: en maquette */
+  photos?: string[];
 };
 
 // ——— Calculs ———
@@ -275,6 +278,7 @@ type DocDemande = {
   /** dernier devis envoyé au client */
   devis: DocDevis | null;
   creeLe: Timestamp | null;
+  photos?: string[];
 };
 
 let docsDemandes = new Map<string, DocDemande>();
@@ -317,6 +321,7 @@ function versDemande(id: string, l: DocDemande, moi: string): DemandeDevis {
     creeLe: l.creeLe?.toMillis() ?? Date.now(),
     statut: l.statut,
     motifDeclin: l.motifDeclin ?? undefined,
+    photos: l.photos?.length ? l.photos : undefined,
     devis: dv ? { ...versDevis(dv), envoyeLe: l.devis?.envoyeLe?.toMillis() } : undefined,
   };
 }
@@ -396,6 +401,16 @@ export async function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "stat
     if (!s) throw new Error("Connectez-vous pour envoyer votre demande.");
     const pro = await proPublic(d.pro.id);
     if (!pro) throw new Error("Ce professionnel n’est pas encore disponible.");
+    // Photos (Devis en photo) : dans Storage demandes/{client}/…, lisibles des seuls connectés.
+    const photos = await Promise.all(
+      (d.photos ?? []).slice(0, 3).map(async (p) => {
+        if (!p.startsWith("data:")) return p;
+        const blob = await (await fetch(p)).blob();
+        const f = ref(stockage(), `demandes/${s.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`);
+        await uploadBytes(f, blob, { contentType: "image/jpeg" });
+        return getDownloadURL(f);
+      }),
+    );
     // L'alerte WhatsApp/SMS au pro part de la Cloud Function « alerteDemande ».
     await addDoc(collection(db(), "demandes"), {
       clientId: s.id,
@@ -407,6 +422,7 @@ export async function creerDemande(d: Omit<DemandeDevis, "id" | "creeLe" | "stat
       quartier: d.quartier,
       dateSouhaitee: d.dateSouhaitee || null,
       budget: d.budget || null,
+      ...(photos.length ? { photos } : {}),
       statut: "nouvelle",
       motifDeclin: null,
       devis: null,

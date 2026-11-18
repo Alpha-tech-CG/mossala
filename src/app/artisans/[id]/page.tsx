@@ -195,7 +195,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
       />
 
       {/* Bouton fixe orange */}
-      <div className="fixed inset-x-0 bottom-4 z-40 px-5 md:static md:mt-8 md:px-0">
+      <div className="cta-fixe fixed inset-x-0 bottom-4 z-40 px-5 md:static md:mt-8 md:px-0">
         <div className="grid grid-cols-[auto_1fr] gap-2">
           <Link
             href={`/devis/nouveau?artisan=${a.id}`}

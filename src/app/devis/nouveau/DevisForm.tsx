@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CheckCircle2, ChevronDown, Search, Send, Store } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, Search, Send, Store, X } from "lucide-react";
 import { InscriptionClient } from "@/components/Acces";
 import { BACKEND_ACTIF, estDemo } from "@/lib/backend/actif";
 import { messageErreur } from "@/lib/backend/erreurs";
 import { useCompte } from "@/lib/compte";
 import { creerDemande, type ProDevis } from "@/lib/devis";
+import { lireBrouillon, viderBrouillon } from "@/lib/photos-devis";
 import { getArtisan, getBoutique, getMetier, boutiques, metierLabel, quartiers } from "@/lib/data";
 
 const field =
@@ -93,6 +94,15 @@ export function DevisForm() {
   const [envoye, setEnvoye] = useState(false);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState("");
+  // Photos prises dans l'appli (Devis en photo), en attente de ce formulaire.
+  const [photos, setPhotos] = useState<string[]>([]);
+  useEffect(() => {
+    const b = lireBrouillon();
+    if (!b) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage n'existe qu'au navigateur
+    setPhotos(b.photos);
+    if (b.texte) setTexte((t) => t || b.texte);
+  }, []);
 
   if (!inscrit.charge) return <div className="mt-6 h-72 animate-pulse rounded-2xl bg-card" aria-busy />;
 
@@ -164,7 +174,9 @@ export function DevisForm() {
           quartier: String(f.get("quartier") ?? ""),
           dateSouhaitee: String(f.get("date") ?? "") || undefined,
           budget: String(f.get("budget") ?? "").trim() || undefined,
+          photos: photos.length ? photos : undefined,
           });
+          viderBrouillon();
           setEnvoye(true);
         } catch (err) {
           setErreur(messageErreur(err));
@@ -180,6 +192,30 @@ export function DevisForm() {
           <span className="block text-xs">{pro.sous}</span>
         </p>
       </div>
+
+      {photos.length > 0 && (
+        <div>
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Camera className="size-4 text-accent-ink" /> Photos jointes à la demande
+          </p>
+          <ul className="mt-2 flex gap-2">
+            {photos.map((src, i) => (
+              <li key={i} className="relative size-24 overflow-hidden rounded-xl bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`Photo ${i + 1}`} className="size-full object-cover" />
+                <button
+                  type="button"
+                  aria-label={`Retirer la photo ${i + 1}`}
+                  onClick={() => setPhotos(photos.filter((_, k) => k !== i))}
+                  className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div>
         <label className="text-xl font-bold" htmlFor="besoin">

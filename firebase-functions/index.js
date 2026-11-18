@@ -18,12 +18,13 @@
 const crypto = require("node:crypto");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { defineSecret, defineString, defineInt } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
-const { getFirestore, Timestamp } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue, Timestamp } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 const nodemailer = require("nodemailer");
 
 initializeApp();
@@ -195,22 +196,62 @@ async function alerter(dest, texte) {
   resultats.filter((r) => r.status === "rejected").forEach((r) => logger.error("alerte", r.reason));
 }
 
+/**
+ * Notification push sur les téléphones (appli mobile) du compte `uid` : appareils/{jeton}.
+ * `lien` : page ouverte quand on touche la notification. Les jetons périmés sont retirés.
+ */
+async function pousser(uid, titre, corps, lien) {
+  const snap = await db.collection("appareils").where("uid", "==", uid).get();
+  if (snap.empty) return;
+  const jetons = snap.docs.map((d) => d.id);
+  const res = await getMessaging().sendEachForMulticast({
+    tokens: jetons,
+    notification: { title: titre, body: corps },
+    data: { lien },
+    android: { priority: "high", notification: { color: "#14213d" } },
+    apns: { payload: { aps: { sound: "default" } } },
+  });
+  await Promise.all(
+    res.responses.map((r, i) =>
+      !r.success &&
+      ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"].includes(r.error?.code)
+        ? db.doc(`appareils/${jetons[i]}`).delete()
+        : null,
+    ),
+  );
+}
+
+/** Push puis SMS / WhatsApp : un échec de l'un n'empêche pas l'autre. */
+async function prevenir(uid, push, dest, texte) {
+  const r = await Promise.allSettled([pousser(uid, push.titre, push.corps, push.lien), alerter(dest, texte)]);
+  r.filter((x) => x.status === "rejected").forEach((x) => logger.error("prevenir", x.reason));
+}
+
 exports.alerteMessage = onDocumentCreated({ document: "messages/{id}", ...optionsAlerte }, async (event) => {
   const m = event.data?.data();
   if (!m) return;
   const c = (await db.doc(`conversations/${m.conversationId}`).get()).data();
   if (!c) return;
   const versPro = m.de === "client";
-  await alerter(
+  const auteur = versPro ? c.client.prenom : prenom(c.pro.nom);
+  await prevenir(
+    versPro ? c.proId : c.clientId,
+    { titre: `Message de ${auteur}`, corps: apercu(m.texte), lien: versPro ? "/pro/espace" : "/messages" },
     versPro ? await destPro(c.proId) : await destClient(c.clientId),
-    `Artopif : ${versPro ? c.client.prenom : prenom(c.pro.nom)} vous a écrit « ${apercu(m.texte)} ». Répondez sur ${SITE_URL.value()}.`,
+    `Artopif : ${auteur} vous a écrit « ${apercu(m.texte)} ». Répondez sur ${SITE_URL.value()}.`,
   );
 });
 
 exports.alerteDemande = onDocumentCreated({ document: "demandes/{id}", ...optionsAlerte }, async (event) => {
   const d = event.data?.data();
   if (!d) return;
-  await alerter(await destPro(d.proId), `Artopif : ${d.client.prenom} demande un devis : « ${apercu(d.texte)} ». Répondez sur ${SITE_URL.value()}.`);
+  const photo = d.photos?.length ? " (avec photo)" : "";
+  await prevenir(
+    d.proId,
+    { titre: `Demande de devis de ${d.client.prenom}${photo}`, corps: apercu(d.texte), lien: "/pro/espace" },
+    await destPro(d.proId),
+    `Artopif : ${d.client.prenom} demande un devis${photo} : « ${apercu(d.texte)} ». Répondez sur ${SITE_URL.value()}.`,
+  );
 });
 
 exports.alerteDevis = onDocumentUpdated({ document: "demandes/{id}", ...optionsAlerte }, async (event) => {
@@ -218,7 +259,12 @@ exports.alerteDevis = onDocumentUpdated({ document: "demandes/{id}", ...optionsA
   const apres = event.data?.after.data();
   const envoye = apres?.devis?.envoyeLe;
   if (!envoye || (avant?.devis?.envoyeLe && avant.devis.envoyeLe.isEqual(envoye))) return;
-  await alerter(await destClient(apres.clientId), `Artopif : ${apres.pro.nom} vous a envoyé son devis. Consultez-le sur ${SITE_URL.value()}.`);
+  await prevenir(
+    apres.clientId,
+    { titre: "Votre devis est arrivé", corps: `${apres.pro.nom} vous a envoyé son devis.`, lien: "/devis" },
+    await destClient(apres.clientId),
+    `Artopif : ${apres.pro.nom} vous a envoyé son devis. Consultez-le sur ${SITE_URL.value()}.`,
+  );
 });
 
 async function envoyerSms(numeros, message) {
@@ -277,3 +323,23 @@ exports.alerteContact = onDocumentCreated(
     });
   },
 );
+
+// ——— Notes des réalisations (fil de l'appli mobile) ———
+
+/**
+ * Tient à jour statsRealisations/{proId_realisationId} = { somme, nombre } à chaque note
+ * donnée, changée ou retirée dans notesRealisations/{proId_realisationId_uid}.
+ */
+exports.statsNoteRealisation = onDocumentWritten("notesRealisations/{id}", async (event) => {
+  const avant = event.data?.before.data();
+  const apres = event.data?.after.data();
+  const ref = apres ?? avant;
+  if (!ref) return;
+  const delta = (apres?.note ?? 0) - (avant?.note ?? 0);
+  const compte = (apres ? 1 : 0) - (avant ? 1 : 0);
+  if (!delta && !compte) return;
+  await db.doc(`statsRealisations/${ref.proId}_${ref.realisationId}`).set(
+    { somme: FieldValue.increment(delta), nombre: FieldValue.increment(compte), proId: ref.proId },
+    { merge: true },
+  );
+});

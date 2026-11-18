@@ -7,6 +7,8 @@ import { SplashLoader } from "@/components/Loader";
 import { CadrePub, PubPages } from "@/components/EspacePub";
 import { Footer } from "@/components/Footer";
 import { HorsConsole } from "@/components/HorsConsole";
+import { BarreAppli } from "@/components/appli/BarreAppli";
+import { SCRIPT_DETECTION } from "@/lib/appli-script";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
 const playfair = Playfair_Display({
@@ -25,7 +27,11 @@ export const viewport: Viewport = { themeColor: "#14213d" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="fr" className={`${figtree.variable} ${playfair.variable} antialiased`}>
+    <html lang="fr" className={`${figtree.variable} ${playfair.variable} antialiased`} suppressHydrationWarning>
+      <head>
+        {/* appli mobile : pose data-appli avant l'affichage (voir src/lib/appli-script.ts) */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_DETECTION }} />
+      </head>
       <body className="flex min-h-screen flex-col font-sans">
         <noscript>
           <style>{`.reveal{opacity:1;transform:none}.splash{display:none}`}</style>
@@ -38,8 +44,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <CadrePub>{children}</CadrePub>
         </main>
         <HorsConsole>
-          <PubPages />
-          <Footer />
+          <div className="hors-appli">
+            <PubPages />
+            <Footer />
+          </div>
+          <BarreAppli />
         </HorsConsole>
         <AccesModal />
       </body>

@@ -1,5 +1,6 @@
 "use client";
 
+import { PhotosDemande } from "@/components/devis/PhotosDemande";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -78,6 +79,7 @@ export function MesDevis() {
           <div className="rounded-2xl bg-card p-5 shadow-sm">
             <p className="font-bold">{d.pro.nom}</p>
             <p className="mt-2 text-sm whitespace-pre-wrap">{d.texte}</p>
+            <PhotosDemande photos={d.photos} />
             <p className="mt-4 rounded-xl bg-secondary p-3 text-sm text-primary">
               {d.statut === "declinee"
                 ? `${d.pro.nom} ne peut pas répondre à cette demande${d.motifDeclin ? ` : « ${d.motifDeclin} »` : "."}`

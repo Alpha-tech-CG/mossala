@@ -48,9 +48,15 @@
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Artopif utilise l'appareil photo pour ajouter des photos de vos réalisations.</string>
+	<string>Artopif utilise l'appareil photo pour photographier un problème à faire chiffrer, ou vos réalisations.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Artopif utilise votre position pour vous montrer les artisans les plus proches.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Artopif accède à vos photos pour ajouter des images de vos réalisations.</string>
+	<string>Artopif accède à vos photos pour les joindre à une demande de devis ou à vos réalisations.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UIRequiredDeviceCapabilities</key>

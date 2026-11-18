@@ -179,7 +179,9 @@ service cloud.firestore {
       allow read: if participant();
       allow create: if connecte()
         && nouveau().keys().hasOnly(['clientId', 'proId', 'participants', 'client', 'pro', 'texte', 'quartier',
-                                     'dateSouhaitee', 'budget', 'statut', 'motifDeclin', 'devis', 'creeLe'])
+                                     'dateSouhaitee', 'budget', 'statut', 'motifDeclin', 'devis', 'creeLe', 'photos'])
+        // photos du problème (Devis en photo, appli mobile) : 3 au plus
+        && (!('photos' in nouveau()) || (nouveau().photos is list && nouveau().photos.size() <= 3))
         && nouveau().clientId == moi()
         && nouveau().proId != moi()
         && nouveau().participants == [moi(), nouveau().proId]
@@ -353,6 +355,43 @@ service cloud.firestore {
     }
 
     // Backoffice : toutes les réalisations à vérifier (requête collectionGroup).
+    // ——— Notes des réalisations (fil de l'appli mobile) ———
+    // Une note par client et par réalisation : id = proId_realisationId_uid. Modifiable, pas
+    // sur ses propres réalisations. Les totaux (statsRealisations) sont tenus par la Cloud
+    // Function « statsNoteRealisation » : personne ne les écrit directement.
+    match /notesRealisations/{id} {
+      function noteValide(d) {
+        return d.keys().hasOnly(['proId', 'realisationId', 'auteurId', 'note', 'majLe'])
+          && d.auteurId == moi()
+          && d.proId != moi()
+          && id == d.proId + '_' + d.realisationId + '_' + moi()
+          && d.note is int && d.note >= 1 && d.note <= 5
+          && d.majLe == request.time
+          && proVerifie(d.proId)
+          && exists(/databases/$(database)/documents/pros/$(d.proId)/realisations/$(d.realisationId));
+      }
+      allow get: if connecte() && resource.data.auteurId == moi();
+      allow create: if connecte() && noteValide(nouveau());
+      allow update: if connecte() && resource.data.auteurId == moi() && noteValide(nouveau())
+        && !changes().hasAny(['proId', 'realisationId', 'auteurId']);
+      allow delete: if false;
+    }
+    match /statsRealisations/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ——— Appareils de l'appli mobile (notifications push) : id = jeton FCM ———
+    match /appareils/{jeton} {
+      allow create, update: if connecte()
+        && nouveau().keys().hasOnly(['uid', 'plateforme', 'majLe'])
+        && nouveau().uid == moi()
+        && nouveau().plateforme in ['ios', 'android']
+        && nouveau().majLe == request.time;
+      allow delete: if connecte() && resource.data.uid == moi();
+      allow read: if false;
+    }
+
     match /{chemin=**}/realisations/{rid} {
       allow read: if admin();
     }

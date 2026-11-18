@@ -174,3 +174,8 @@ export function compresserPhoto(fichier: File, largeurMax = 1200): Promise<strin
     img.src = url;
   });
 }
+
+/** Listes publiées par les artisans de démonstration depuis leur espace (fil de l'appli). `null` côté serveur. */
+export function useRealisationsDemo(): Record<string, Realisation[]> | null {
+  return useSyncExternalStore(abonner, lire, () => null);
+}

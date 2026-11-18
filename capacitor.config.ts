@@ -35,6 +35,8 @@ const config: CapacitorConfig = {
   server: appUrl
     ? {
         url: appUrl,
+        // l'appli s'ouvre sur le fil des réalisations (src/app/appli)
+        appStartPath: "/appli",
         // Liens vers d'autres domaines (WhatsApp, cartes…) : ouverts hors de l'appli.
         // Les liens tel: et sms: ouvrent le téléphone / la messagerie.
         errorPath: "hors-ligne.html",
@@ -57,6 +59,10 @@ const config: CapacitorConfig = {
     SystemBars: {
       insetsHandling: "css",
       style: "DARK",
+    },
+    FirebaseMessaging: {
+      // notification affichée même quand l'appli est ouverte (iOS)
+      presentationOptions: ["badge", "sound", "alert"],
     },
     SplashScreen: {
       launchShowDuration: 1200,

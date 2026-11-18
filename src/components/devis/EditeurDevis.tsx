@@ -1,5 +1,6 @@
 "use client";
 
+import { PhotosDemande } from "./PhotosDemande";
 import { useState } from "react";
 import { ArrowLeft, Eye, LayoutList, Pencil, Plus, Save, Send, Sparkles, Trash2, X } from "lucide-react";
 import { fcfa } from "@/lib/data";
@@ -163,6 +164,7 @@ export function EditeurDevis({
           {demande.dateSouhaitee && <> · pour le {new Date(demande.dateSouhaitee).toLocaleDateString("fr-FR")}</>}
         </p>
         <p className="mt-2 whitespace-pre-wrap text-foreground">{demande.texte}</p>
+        <PhotosDemande photos={demande.photos} />
         {demande.budget && <p className="mt-2 text-xs">Budget indicatif : {demande.budget}</p>}
         <a href={`tel:${demande.client.telephone.replace(/\s/g, "")}`} className="mt-2 inline-block text-xs font-bold underline">
           Appeler {demande.client.prenom} ({demande.client.telephone})
