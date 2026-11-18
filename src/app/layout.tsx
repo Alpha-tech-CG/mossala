@@ -8,6 +8,7 @@ import { CadrePub, PubPages } from "@/components/EspacePub";
 import { Footer } from "@/components/Footer";
 import { HorsConsole } from "@/components/HorsConsole";
 import { BarreAppli } from "@/components/appli/BarreAppli";
+import { MesureAudience } from "@/components/MesureAudience";
 import { SCRIPT_DETECTION } from "@/lib/appli-script";
 
 const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"] });
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <BarreAppli />
         </HorsConsole>
         <AccesModal />
+        <MesureAudience />
       </body>
     </html>
   );

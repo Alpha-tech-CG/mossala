@@ -135,9 +135,66 @@ export function remplirDemo() {
     datesPros: { ...b.datesPros, ...datesPros },
     statutsPros: { ...b.statutsPros, ...statutsPros },
   }));
+  ajouterAvisSuspects();
 }
 
 const CLE_AUTO = "artopif-demo-auto";
+const CLE_SUSPECTS = "artopif-demo-suspects";
+
+/**
+ * MAQUETTE : trois cas de fraude typiques, pour montrer la détection de faux avis
+ * (section Analyses ML) : un compte qui note 6 pros en une heure, une rafale de textes
+ * identiques sur une boutique, et trois 1 étoile « sans prestation » le même jour.
+ */
+export function ajouterAvisSuspects() {
+  const cibles = [
+    ...artisans.map((a) => ({ type: "artisan" as const, id: a.id, nom: a.nom, criteres: CRITERES_ARTISAN })),
+    ...boutiques.map((b) => ({ type: "magasin" as const, id: b.id, nom: b.nom, criteres: CRITERES_MAGASIN })),
+  ];
+  const maintenant = Date.now();
+  const avis = (c: (typeof cibles)[number], o: Partial<AvisDoc>): AvisDoc => {
+    const n = o.note ?? 5;
+    return {
+      id: idLocal(),
+      cibleType: c.type,
+      cibleId: c.id,
+      cibleNom: c.nom,
+      auteurId: idLocal(),
+      auteur: `${hasard(PRENOMS)} ${hasard(NOMS)[0]}.`,
+      notes: Object.fromEntries(c.criteres.map((k) => [k, n])),
+      note: n,
+      recommandation: n >= 4 ? "oui" : "non",
+      experience: "contact",
+      date: null,
+      texte: "",
+      statut: "a_moderer",
+      verifie: false,
+      motifRefus: null,
+      creeLe: maintenant,
+      modereLe: 0,
+      ...o,
+    };
+  };
+  const t0 = maintenant - 5 * 3600 * 1000;
+  const suspects: AvisDoc[] = [
+    // 1. un même compte note 6 professionnels en une heure
+    ...cibles.slice(0, 6).map((c, i) =>
+      avis(c, { auteurId: "compte-suspect-1", auteur: "Bienvenu K.", texte: "Top", creeLe: t0 + i * 9 * 60 * 1000 }),
+    ),
+    // 2. rafale de textes identiques sur une boutique, en une nuit
+    ...Array.from({ length: 6 }, (_, i) =>
+      avis(cibles[cibles.length - 1], {
+        texte: "Le meilleur de Brazzaville, allez-y les yeux fermés !!!",
+        creeLe: maintenant - 26 * 3600 * 1000 + i * 40 * 60 * 1000,
+      }),
+    ),
+    // 3. trois 1 étoile sans prestation sur le même artisan, le même jour
+    ...Array.from({ length: 3 }, (_, i) =>
+      avis(cibles[1], { note: 1, recommandation: "non", texte: "Arnaque", creeLe: maintenant - 3 * 3600 * 1000 - i * 50 * 60 * 1000 }),
+    ),
+  ];
+  modifierLocal((b) => ({ ...b, avis: [...suspects, ...b.avis].sort((x, y) => y.creeLe - x.creeLe) }));
+}
 
 /**
  * MAQUETTE : à la première ouverture de la console dans un navigateur, la remplit avec les
@@ -146,10 +203,13 @@ const CLE_AUTO = "artopif-demo-auto";
  */
 export function remplirDemoUneFois(): void {
   try {
-    if (localStorage.getItem(CLE_AUTO)) return;
+    const dejaRemplie = localStorage.getItem(CLE_AUTO);
+    const suspects = localStorage.getItem(CLE_SUSPECTS);
     localStorage.setItem(CLE_AUTO, "1");
+    localStorage.setItem(CLE_SUSPECTS, "1");
+    if (!dejaRemplie) remplirDemo();
+    else if (!suspects) ajouterAvisSuspects(); // navigateur rempli avant l'ajout des cas de fraude
   } catch {
-    return; // stockage indisponible : pas de remplissage automatique
+    /* stockage indisponible : pas de remplissage automatique */
   }
-  remplirDemo();
 }

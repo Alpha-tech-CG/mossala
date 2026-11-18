@@ -11,7 +11,7 @@ import type { Donnees, Onglet } from "./Backoffice";
  * couleurs d'état réservées aux statuts (toujours avec leur libellé).
  */
 
-const COULEURS = {
+export const COULEURS = {
   serie1: "#2a78d6", // avis reçus
   serie2: "#eb6834", // messages reçus
   serie3: "#1baf7a", // inscriptions
@@ -81,7 +81,7 @@ function graduations(max: number): number[] {
   return t;
 }
 
-const Carte = ({ titre, sousTitre, children, className = "" }: { titre: string; sousTitre?: string; children: React.ReactNode; className?: string }) => (
+export const Carte = ({ titre, sousTitre, children, className = "" }: { titre: string; sousTitre?: string; children: React.ReactNode; className?: string }) => (
   <section className={`rounded-2xl bg-card p-5 shadow-sm ring-1 ring-black/[0.04] ${className}`}>
     <h2 className="font-bold">{titre}</h2>
     {sousTitre && <p className="text-xs text-muted-foreground">{sousTitre}</p>}
@@ -91,7 +91,7 @@ const Carte = ({ titre, sousTitre, children, className = "" }: { titre: string; 
 
 // ——— Tuile chiffre + évolution + mini-courbe ———
 
-function Tuile({
+export function Tuile({
   label,
   valeur,
   delta,
@@ -134,9 +134,9 @@ function Tuile({
 
 // ——— Courbes d'activité (crosshair + info-bulle) ———
 
-type Serie = { nom: string; couleur: string; valeurs: number[] };
+export type Serie = { nom: string; couleur: string; valeurs: number[] };
 
-function CourbesActivite({ jours, series }: { jours: number[]; series: Serie[] }) {
+export function CourbesActivite({ jours, series }: { jours: number[]; series: Serie[] }) {
   const [ref, largeur] = useLargeur<HTMLDivElement>();
   const [survol, setSurvol] = useState<number | null>(null);
   const h = 240;
@@ -281,7 +281,7 @@ function CourbesActivite({ jours, series }: { jours: number[]; series: Serie[] }
 
 // ——— Barres horizontales (une série) ———
 
-function Barres({ lignes, unite }: { lignes: { label: React.ReactNode; cle: string; valeur: number }[]; unite: string }) {
+export function Barres({ lignes, unite }: { lignes: { label: React.ReactNode; cle: string; valeur: number }[]; unite: string }) {
   const max = Math.max(1, ...lignes.map((l) => l.valeur));
   const total = lignes.reduce((s, l) => s + l.valeur, 0);
   return (
@@ -307,7 +307,7 @@ function Barres({ lignes, unite }: { lignes: { label: React.ReactNode; cle: stri
 
 // ——— Barre segmentée (une répartition en parts, avec états) ———
 
-function Repartition({ parts }: { parts: { label: string; valeur: number; couleur: string }[] }) {
+export function Repartition({ parts }: { parts: { label: string; valeur: number; couleur: string }[] }) {
   const total = parts.reduce((s, p) => s + p.valeur, 0);
   return (
     <div>

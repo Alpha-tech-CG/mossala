@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
+  Activity,
+  BarChart3,
+  BrainCircuit,
   ExternalLink,
   Flag,
   Hammer,
@@ -41,6 +44,7 @@ import type {
 import { PanneauAvis, PanneauClients, PanneauContacts, PanneauPros, PanneauRealisations, PanneauSignalements } from "./Panneaux";
 import { PanneauAnnonceurs, PanneauJournal, PanneauMetiers, PanneauPublicites } from "./PanneauxSite";
 import { TableauDeBord } from "./TableauDeBord";
+import { PanneauAudience, PanneauIntelligence, PanneauMonitoring } from "./PanneauxIntelligence";
 
 export type Donnees = {
   avis: AvisDoc[];
@@ -62,6 +66,14 @@ const GROUPES = [
     sections: [
       { id: "accueil", label: "Tableau de bord", Icon: LayoutDashboard },
       { id: "journal", label: "Journal", Icon: History },
+    ],
+  },
+  {
+    titre: "Intelligence",
+    sections: [
+      { id: "audience", label: "Audience", Icon: BarChart3 },
+      { id: "monitoring", label: "Monitoring", Icon: Activity },
+      { id: "intelligence", label: "Analyses ML", Icon: BrainCircuit },
     ],
   },
   {
@@ -410,6 +422,12 @@ export function Backoffice() {
                 <PanneauAnnonceurs demandes={donnees.demandesAnnonceurs} agir={agir} />
               ) : onglet === "metiers" ? (
                 <PanneauMetiers propositions={donnees.propositionsMetiers} agir={agir} />
+              ) : onglet === "audience" ? (
+                <PanneauAudience />
+              ) : onglet === "monitoring" ? (
+                <PanneauMonitoring />
+              ) : onglet === "intelligence" ? (
+                <PanneauIntelligence d={donnees} ouvrir={ouvrir} />
               ) : onglet === "journal" ? (
                 <PanneauJournal journal={donnees.journal} />
               ) : (
