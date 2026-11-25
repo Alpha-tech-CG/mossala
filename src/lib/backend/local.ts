@@ -1,8 +1,10 @@
 import type {
   AvisDoc,
+  CommentaireDoc,
   ContactDoc,
   DemandeAnnonceurDoc,
   EntreeJournal,
+  MembreDoc,
   PropositionMetierDoc,
   PubDoc,
   SignalementDoc,
@@ -17,6 +19,8 @@ import { CAMPAGNES_DEMO } from "../publicites-demo";
  */
 export type BaseLocale = {
   avis: AvisDoc[];
+  /** commentaires sous les réalisations (fil façon réseau social) */
+  commentaires: CommentaireDoc[];
   contacts: ContactDoc[];
   signalements: SignalementDoc[];
   /** statut des pros de démonstration décidé dans le backoffice (vérifiés par défaut) */
@@ -28,6 +32,8 @@ export type BaseLocale = {
   /** campagnes publicitaires créées dans la console */
   publicites: PubDoc[];
   journal: EntreeJournal[];
+  /** membres de l'équipe de la console (délégation des tâches) */
+  membres: MembreDoc[];
   /** maquette : comptes clients et dates d'inscription des pros (données de démonstration) */
   comptes: { id: string; prenom: string; nom: string; telephone: string; ville: string; creeLe: number }[];
   datesPros: Record<string, number>;
@@ -36,6 +42,7 @@ export type BaseLocale = {
 const CLE = "artopif-maquette-base";
 const vide = (): BaseLocale => ({
   avis: [],
+  commentaires: [],
   contacts: [],
   signalements: [],
   statutsPros: {},
@@ -44,6 +51,7 @@ const vide = (): BaseLocale => ({
   propositionsMetiers: [],
   publicites: [],
   journal: [],
+  membres: [],
   comptes: [],
   datesPros: {},
 });

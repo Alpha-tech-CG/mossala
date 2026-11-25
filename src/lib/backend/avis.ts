@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc, updateDoc } from "firebase/firestore";
 import { sessionActuelle } from "../session";
 import { BACKEND_ACTIF } from "./actif";
 import { db } from "./firebase";
@@ -45,7 +45,8 @@ export async function publierAvis(a: NouvelAvis): Promise<void> {
     const auteurId = "maquette";
     const id = idAvis(a, auteurId);
     if (lireLocal().avis.some((v) => v.id === id)) throw new AvisDejaDonne();
-    modifierLocal((b) => ({ ...b, avis: [{ ...base, id, auteurId, creeLe: Date.now(), modereLe: 0 }, ...b.avis] }));
+    // reponse / reponduLe : vides tant que le pro n'a pas répondu
+    modifierLocal((b) => ({ ...b, avis: [{ ...base, id, auteurId, reponse: null, reponduLe: 0, creeLe: Date.now(), modereLe: 0 }, ...b.avis] }));
     return;
   }
 
@@ -56,8 +57,26 @@ export async function publierAvis(a: NouvelAvis): Promise<void> {
   await setDoc(ref, { ...base, auteurId: session.id, modereLe: null, creeLe: serverTimestamp() });
 }
 
+/**
+ * Réponse publique du professionnel à un avis publié le concernant (texte vide = retrait).
+ * Les règles Firestore n'autorisent que le professionnel ciblé (cibleId == son compte).
+ */
+export async function repondreAvis(avisId: string, texte: string): Promise<void> {
+  const t = texte.trim();
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({
+      ...b,
+      avis: b.avis.map((v) => (v.id === avisId ? { ...v, reponse: t || null, reponduLe: Date.now() } : v)),
+    }));
+    return;
+  }
+  const session = sessionActuelle();
+  if (!session) throw Object.assign(new Error("non connecté"), { code: "permission-denied" });
+  await updateDoc(doc(db(), "avis", avisId), { reponse: t || null, reponduLe: serverTimestamp() });
+}
+
 export type NouveauSignalement = {
-  cible: "profil" | "avis";
+  cible: "profil" | "avis" | "commentaire";
   cibleId: string;
   libelle: string;
   motif: string;

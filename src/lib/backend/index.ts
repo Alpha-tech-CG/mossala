@@ -6,8 +6,10 @@ export { envoyerCodeEmail, envoyerCodeSms, nettoyerVerification } from "./fireba
 export { creerProfilPro } from "./pros";
 export { SUJETS_CONTACT, envoyerMessageContact } from "./contact";
 export type { MessageContact } from "./contact";
-export { AvisDejaDonne, envoyerSignalement, publierAvis } from "./avis";
+export { AvisDejaDonne, envoyerSignalement, publierAvis, repondreAvis } from "./avis";
 export type { NouvelAvis, NouveauSignalement } from "./avis";
+export { estMonCommentaire, lireCommentaires, publierCommentaire, retirerCommentaire } from "./commentaires";
+export type { NouveauCommentaire } from "./commentaires";
 export { envoyerDemandeAnnonceur, proposerMetier } from "./demandes";
 export type { NouvelleDemandeAnnonceur } from "./demandes";
 export { messageErreur } from "./erreurs";

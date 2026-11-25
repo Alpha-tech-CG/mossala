@@ -110,6 +110,9 @@ export type AvisDoc = {
   /** expérience (prestation ou achat) confirmée par l'équipe : seul un avis vérifié porte le badge */
   verifie: boolean;
   motifRefus: string | null;
+  /** réponse publique du professionnel à cet avis (null tant qu'il n'a pas répondu) */
+  reponse: string | null;
+  reponduLe: number;
   creeLe: number;
   modereLe: number;
 };
@@ -131,6 +134,8 @@ export function versAvis(id: string, d: Record<string, unknown>): AvisDoc {
     statut: (d.statut as StatutAvis | undefined) ?? "a_moderer",
     verifie: Boolean(d.verifie),
     motifRefus: (d.motifRefus as string | undefined) || null,
+    reponse: (d.reponse as string | undefined) || null,
+    reponduLe: millis(d.reponduLe as Horodatage),
     creeLe: millis(d.creeLe as Horodatage),
     modereLe: millis(d.modereLe as Horodatage),
   };
@@ -163,10 +168,10 @@ export function versContact(id: string, d: Record<string, unknown>): ContactDoc 
   };
 }
 
-/** signalements/{id} : un profil ou un avis signalé par un visiteur. */
+/** signalements/{id} : un profil, un avis ou un commentaire signalé par un visiteur. */
 export type SignalementDoc = {
   id: string;
-  cible: "profil" | "avis";
+  cible: "profil" | "avis" | "commentaire";
   cibleId: string;
   /** ce qui est signalé, lisible par l'équipe (« Avis de Grâce N. sur Jean-Claude Mbemba ») */
   libelle: string;
@@ -179,7 +184,7 @@ export type SignalementDoc = {
 export function versSignalement(id: string, d: Record<string, unknown>): SignalementDoc {
   return {
     id,
-    cible: d.cible === "avis" ? "avis" : "profil",
+    cible: d.cible === "avis" ? "avis" : d.cible === "commentaire" ? "commentaire" : "profil",
     cibleId: String(d.cibleId ?? ""),
     libelle: String(d.libelle ?? ""),
     motif: String(d.motif ?? ""),
@@ -328,3 +333,126 @@ export function versEntreeJournal(id: string, d: Record<string, unknown>): Entre
     date: millis(d.date as Horodatage),
   };
 }
+
+// ——— Équipe : rôles et permissions de la console ———
+
+/**
+ * Sections d'action de la console que le responsable (owner) peut déléguer à un membre.
+ * Ces clés doivent rester synchronisées avec firestore.rules (fonction peut()) et avec
+ * la Cloud Function gererMembre (firebase-functions/index.js).
+ */
+export const PERMISSIONS = [
+  "avis",
+  "commentaires",
+  "signalements",
+  "realisations",
+  "pros",
+  "clients",
+  "publicites",
+  "annonceurs",
+  "contacts",
+  "metiers",
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+
+/** Libellé lisible de chaque permission (cases à cocher de la section Équipe). */
+export const LIBELLES_PERMISSIONS: Record<Permission, string> = {
+  avis: "Modérer les avis",
+  commentaires: "Modérer les commentaires",
+  signalements: "Traiter les signalements",
+  realisations: "Vérifier les réalisations",
+  pros: "Gérer les professionnels",
+  clients: "Voir les clients",
+  publicites: "Gérer les publicités",
+  annonceurs: "Traiter les annonceurs",
+  contacts: "Traiter les messages",
+  metiers: "Décider des métiers proposés",
+};
+
+export type RoleEquipe = "owner" | "membre";
+
+/** equipe/{uid} : un membre de l'équipe de la console, créé par le responsable. */
+export type MembreDoc = {
+  id: string;
+  nom: string;
+  /** numéro ou email qui identifie le compte (lisible dans la console) */
+  identifiant: string;
+  role: RoleEquipe;
+  permissions: Permission[];
+  actif: boolean;
+  /** uid du responsable qui a créé ou modifié ce membre */
+  parId: string;
+  creeLe: number;
+  majLe: number;
+};
+
+export function versMembre(id: string, d: Record<string, unknown>): MembreDoc {
+  const perms = (d.permissions as string[] | undefined) ?? [];
+  return {
+    id,
+    nom: String(d.nom ?? ""),
+    identifiant: String(d.identifiant ?? ""),
+    role: d.role === "owner" ? "owner" : "membre",
+    permissions: PERMISSIONS.filter((p) => perms.includes(p)),
+    actif: d.actif !== false,
+    parId: String(d.parId ?? ""),
+    creeLe: millis(d.creeLe as Horodatage),
+    majLe: millis(d.majLe as Horodatage),
+  };
+}
+
+/** Droits effectifs du compte connecté dans la console (owner : tout est permis). */
+export type ProfilEquipe = { role: RoleEquipe; permissions: Permission[] };
+
+/** Le profil a-t-il le droit `p` ? Le responsable (owner) a tous les droits. */
+export const profilPeut = (profil: ProfilEquipe, p: Permission) =>
+  profil.role === "owner" || profil.permissions.includes(p);
+
+/** Profil responsable : accès à toutes les sections. */
+export const PROFIL_OWNER: ProfilEquipe = { role: "owner", permissions: [...PERMISSIONS] };
+
+// ——— Commentaires (fil façon réseau social, sous les réalisations) ———
+
+export type StatutCommentaire = "visible" | "masque";
+
+/**
+ * commentaires/{id} : un commentaire public sous une réalisation. Un commentaire racine
+ * (parentId null) ou une réponse (parentId = id du commentaire racine, un seul niveau).
+ * Publié aussitôt (pas de modération a priori) ; l'équipe peut le masquer, chacun signale.
+ */
+export type CommentaireDoc = {
+  id: string;
+  /** cible = `${proId}_${realisationId}` : regroupe les commentaires d'une réalisation */
+  cibleId: string;
+  proId: string;
+  realisationId: string;
+  auteurId: string;
+  /** « Grâce N. » ou le nom du professionnel */
+  auteurNom: string;
+  /** true si c'est le professionnel de la réalisation qui écrit (badge « Auteur ») */
+  estPro: boolean;
+  /** null = commentaire racine ; sinon id du commentaire auquel on répond */
+  parentId: string | null;
+  texte: string;
+  statut: StatutCommentaire;
+  creeLe: number;
+};
+
+export function versCommentaire(id: string, d: Record<string, unknown>): CommentaireDoc {
+  return {
+    id,
+    cibleId: String(d.cibleId ?? ""),
+    proId: String(d.proId ?? ""),
+    realisationId: String(d.realisationId ?? ""),
+    auteurId: String(d.auteurId ?? ""),
+    auteurNom: String(d.auteurNom ?? ""),
+    estPro: Boolean(d.estPro),
+    parentId: (d.parentId as string | undefined) || null,
+    texte: String(d.texte ?? ""),
+    statut: d.statut === "masque" ? "masque" : "visible",
+    creeLe: millis(d.creeLe as Horodatage),
+  };
+}
+
+/** Identifiant de regroupement des commentaires d'une réalisation. */
+export const cibleRealisation = (proId: string, realisationId: string) => `${proId}_${realisationId}`;

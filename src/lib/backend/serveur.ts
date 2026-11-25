@@ -122,6 +122,7 @@ function versAvisPublic(v: AvisDoc): Avis {
     note: Math.round(v.note),
     date: moisLisible(v.date, v.creeLe),
     texte: v.texte,
+    reponse: v.reponse ?? undefined,
     experience: v.verifie ? (v.cibleType === "magasin" ? "achat" : "prestation") : undefined,
   };
 }

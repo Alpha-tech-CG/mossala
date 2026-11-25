@@ -114,6 +114,26 @@ export async function estAdmin(): Promise<boolean> {
   return jeton.claims.admin === true;
 }
 
+/** true si le compte connecté est le responsable de la console (jeton avec owner: true). */
+export async function estOwner(): Promise<boolean> {
+  const u = auth().currentUser;
+  if (!u) return false;
+  const jeton = await u.getIdTokenResult(true);
+  return jeton.claims.owner === true;
+}
+
+/** Données passées à la Cloud Function gererMembre (réservée au responsable). */
+export type ActionMembre =
+  | { action: "inviter"; identifiant: string; nom: string; permissions: string[] }
+  | { action: "modifier"; uid: string; nom?: string; permissions?: string[]; actif?: boolean }
+  | { action: "revoquer"; uid: string };
+
+/** Crée, modifie ou révoque un membre de l'équipe (côté serveur : pose les droits et la fiche). */
+export async function gererMembreDistant(data: ActionMembre): Promise<{ uid: string }> {
+  const { data: res } = await httpsCallable<ActionMembre, { uid: string }>(fonctions(), "gererMembre")(data);
+  return res;
+}
+
 export async function deconnexion(): Promise<void> {
   await signOut(auth());
 }
