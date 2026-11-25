@@ -271,10 +271,22 @@ await cas("un anonyme ne liste pas tous les avis", assertFails(getDocs(collectio
 await cas("l'équipe liste tous les avis", assertSucceeds(getDocs(collection(equipe, "avis"))));
 await cas("bob ne supprime pas son avis", assertFails(deleteDoc(doc(bob, "avis/artisan_alice_bob"))));
 
+console.log("Réponse du professionnel à un avis");
+await cas(
+  "alice répond publiquement à l'avis la concernant",
+  assertSucceeds(updateDoc(doc(alice, "avis/artisan_alice_bob"), { reponse: "Merci Bob !", reponduLe: serverTimestamp() })),
+);
+await cas("bob ne répond pas à la place du pro", assertFails(updateDoc(doc(bob, "avis/artisan_alice_bob"), { reponse: "Faux", reponduLe: serverTimestamp() })));
+await cas(
+  "la réponse ne permet pas de réécrire l'avis",
+  assertFails(updateDoc(doc(alice, "avis/artisan_alice_bob"), { reponse: "x", texte: "Modifié", reponduLe: serverTimestamp() })),
+);
+
 console.log("Signalements");
 const signalement = (o = {}) => ({ cible: "avis", cibleId: "artisan_alice_bob", libelle: "Avis de Bob N.", motif: "Autre", auteurId: null, statut: "nouveau", creeLe: serverTimestamp(), ...o });
 await cas("un anonyme signale un avis", assertSucceeds(addDoc(collection(anonyme, "signalements"), signalement())));
 await cas("on ne signale pas au nom d'un autre", assertFails(addDoc(collection(bob, "signalements"), signalement({ auteurId: "chloe" }))));
+await cas("un anonyme signale un commentaire", assertSucceeds(addDoc(collection(anonyme, "signalements"), signalement({ cible: "commentaire", cibleId: "c1" }))));
 await cas("bob ne lit pas les signalements", assertFails(getDocs(collection(bob, "signalements"))));
 await cas("l'équipe lit les signalements", assertSucceeds(getDocs(collection(equipe, "signalements"))));
 
@@ -288,6 +300,76 @@ await cas("l'équipe lit le numéro privé d'un pro", assertSucceeds(getDoc(doc(
 await cas("l'équipe lit les comptes clients", assertSucceeds(getDoc(doc(equipe, "comptes/bob"))));
 await cas("l'équipe ne modifie pas un compte client", assertFails(updateDoc(doc(equipe, "comptes/bob"), { prenom: "X" })));
 await cas("l'équipe ne lit pas les messages privés", assertFails(getDocs(collection(equipe, "messages"))));
+
+console.log("Rôles et permissions de l'équipe");
+// owner : responsable · moderateur : membre avec le droit « avis » · inactif : membre désactivé
+const owner = env.authenticatedContext("owner", { phone_number: "+242050000002", admin: true, owner: true }).firestore();
+const moderateur = env.authenticatedContext("moderateur", { phone_number: "+242050000003", admin: true }).firestore();
+const inactif = env.authenticatedContext("inactif", { phone_number: "+242050000004", admin: true }).firestore();
+const ficheEquipe = (o = {}) => ({ nom: "Membre", identifiant: "+242050000000", role: "membre", permissions: ["avis"], actif: true, parId: "owner", creeLe: serverTimestamp(), majLe: serverTimestamp(), ...o });
+await env.withSecurityRulesDisabled(async (c) => {
+  const f = c.firestore();
+  await setDoc(doc(f, "equipe/moderateur"), ficheEquipe({ identifiant: "+242050000003", permissions: ["avis"] }));
+  await setDoc(doc(f, "equipe/inactif"), ficheEquipe({ identifiant: "+242050000004", permissions: ["avis"], actif: false }));
+  await setDoc(doc(f, "equipe/owner"), ficheEquipe({ identifiant: "+242050000002", role: "owner", permissions: [] }));
+});
+await cas("le responsable liste l'équipe", assertSucceeds(getDocs(collection(owner, "equipe"))));
+await cas("un membre ne liste pas l'équipe", assertFails(getDocs(collection(moderateur, "equipe"))));
+await cas("un membre lit sa propre fiche", assertSucceeds(getDoc(doc(moderateur, "equipe/moderateur"))));
+await cas("un membre ne lit pas la fiche d'un autre", assertFails(getDoc(doc(moderateur, "equipe/owner"))));
+await cas("personne n'écrit une fiche d'équipe directement", assertFails(setDoc(doc(owner, "equipe/x"), ficheEquipe())));
+await cas("un membre ne s'octroie pas de droits", assertFails(setDoc(doc(moderateur, "equipe/moderateur"), { permissions: ["pros"] }, { merge: true })));
+await cas(
+  "un modérateur (droit avis) modère un avis",
+  assertSucceeds(updateDoc(doc(moderateur, "avis/artisan_alice_bob"), { statut: "publie", verifie: false, motifRefus: null, modereLe: serverTimestamp() })),
+);
+await cas("un modérateur n'a pas le droit sur les pros", assertFails(updateDoc(doc(moderateur, "pros/alice"), { statut: "verifie" })));
+await cas("un modérateur sans droit clients ne lit pas les comptes", assertFails(getDoc(doc(moderateur, "comptes/bob"))));
+await cas("le responsable lit les comptes clients", assertSucceeds(getDoc(doc(owner, "comptes/bob"))));
+await cas(
+  "un membre désactivé ne modère plus",
+  assertFails(updateDoc(doc(inactif, "avis/artisan_alice_bob"), { statut: "refuse", verifie: false, motifRefus: "x", modereLe: serverTimestamp() })),
+);
+
+console.log("Commentaires sous les réalisations");
+await env.withSecurityRulesDisabled(async (c) => {
+  const f = c.firestore();
+  await updateDoc(doc(f, "pros/alice"), { statut: "verifie" });
+  await setDoc(doc(f, "pros/alice/realisations/rc"), realisation());
+});
+const commentaire = (o = {}) => ({
+  cibleId: "alice_rc",
+  proId: "alice",
+  realisationId: "rc",
+  auteurId: "bob",
+  auteurNom: "Bob N.",
+  estPro: false,
+  parentId: null,
+  texte: "Beau travail !",
+  statut: "visible",
+  creeLe: serverTimestamp(),
+  ...o,
+});
+await cas("un anonyme ne commente pas", assertFails(setDoc(doc(anonyme, "commentaires/c1"), commentaire())));
+await cas("bob commente une réalisation", assertSucceeds(setDoc(doc(bob, "commentaires/c1"), commentaire())));
+await cas("on ne commente pas au nom d'un autre", assertFails(setDoc(doc(chloe, "commentaires/c2"), commentaire({ auteurId: "bob" }))));
+await cas("estPro doit correspondre au compte", assertFails(setDoc(doc(bob, "commentaires/c3"), commentaire({ estPro: true }))));
+await cas("le professionnel commente avec le badge pro", assertSucceeds(setDoc(doc(alice, "commentaires/c4"), commentaire({ auteurId: "alice", auteurNom: "Alice T.", estPro: true, texte: "Merci !" }))));
+await cas("cibleId incohérent refusé", assertFails(setDoc(doc(bob, "commentaires/c5"), commentaire({ cibleId: "x_y" }))));
+await cas("commentaire sur une réalisation inexistante refusé", assertFails(setDoc(doc(bob, "commentaires/c6"), commentaire({ realisationId: "zz", cibleId: "alice_zz" }))));
+await cas("statut masqué à la création refusé", assertFails(setDoc(doc(bob, "commentaires/c7"), commentaire({ statut: "masque" }))));
+await cas("chloe répond au commentaire de bob", assertSucceeds(setDoc(doc(chloe, "commentaires/c8"), commentaire({ auteurId: "chloe", auteurNom: "Chloé", parentId: "c1", texte: "D'accord" }))));
+await cas(
+  "un anonyme lit les commentaires visibles",
+  assertSucceeds(getDocs(query(collection(anonyme, "commentaires"), where("cibleId", "==", "alice_rc"), where("statut", "==", "visible")))),
+);
+await cas("bob ne change pas le statut d'un commentaire", assertFails(updateDoc(doc(bob, "commentaires/c1"), { statut: "masque" })));
+await cas("un membre sans droit commentaires ne masque pas", assertFails(updateDoc(doc(moderateur, "commentaires/c4"), { statut: "masque" })));
+await cas("l'équipe masque un commentaire", assertSucceeds(updateDoc(doc(equipe, "commentaires/c1"), { statut: "masque" })));
+await cas("un anonyme ne lit pas un commentaire masqué", assertFails(getDoc(doc(anonyme, "commentaires/c1"))));
+await cas("chloe ne supprime pas le commentaire de bob", assertFails(deleteDoc(doc(chloe, "commentaires/c1"))));
+await cas("bob supprime son commentaire", assertSucceeds(deleteDoc(doc(bob, "commentaires/c1"))));
+await cas("l'équipe supprime un commentaire", assertSucceeds(deleteDoc(doc(equipe, "commentaires/c4"))));
 
 console.log("Demandes annonceurs et métiers proposés");
 const demandeAnnonceur = (o = {}) => ({ nom: "Bâtiplus", type: "Boutique / quincaillerie", telephone: "+242066000000", interets: ["Bannière sur tout le site"], statut: "nouveau", recuLe: serverTimestamp(), ...o });

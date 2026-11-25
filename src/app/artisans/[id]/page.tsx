@@ -5,6 +5,7 @@ import { Award, BellRing, CheckCircle2, Clock, FileText, Lock, MapPin, MessageCi
 import { ProfilVerrou } from "@/components/Acces";
 import { ContactButton } from "@/components/Contact";
 import { FavoriButton, Signaler } from "@/components/Engagement";
+import { ReponseAvis } from "@/components/ReponseAvis";
 import { Avatar, BackHeader, Rating, toContact } from "@/components/ui";
 import { artisans, badgesReputation, getArtisan, metierLabel } from "@/lib/data";
 import { artisanInscrit, avisPublies } from "@/lib/backend/serveur";
@@ -131,6 +132,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
 
       <OngletsProfil
         artisanId={a.id}
+        proNom={a.nom}
         realisations={a.realisations}
         nbAvis={a.nbAvis}
         avis={
@@ -163,12 +165,7 @@ export default async function ArtisanPage(props: PageProps<"/artisans/[id]">) {
                       ))}
                     </p>
                     <p className="mt-2 text-sm">{v.texte}</p>
-                    {v.reponse && (
-                      <p className="mt-3 border-l-2 border-primary pl-3 text-sm text-muted-foreground">
-                        <span className="font-bold text-foreground">Réponse de l’artisan : </span>
-                        {v.reponse}
-                      </p>
-                    )}
+                    <ReponseAvis avisId={v.id} cibleId={a.id} reponse={v.reponse} proPrenom={a.nom.split(" ")[0]} />
                     <Signaler
                       cible="avis"
                       cibleId={v.id ?? `${a.id}/${v.auteur}`}

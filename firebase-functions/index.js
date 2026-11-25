@@ -158,6 +158,92 @@ exports.verifierCodeEmail = onCall(async (req) => {
 });
 
 // ——————————————————————————————————————————————————————————————
+// 1 bis. Équipe de la console : le responsable (owner) crée et gère les membres
+// ——————————————————————————————————————————————————————————————
+
+// Tâches déléguables (doit rester synchronisé avec src/lib/backend/modele.ts et firestore.rules).
+const PERMISSIONS = ["avis", "signalements", "realisations", "pros", "clients", "publicites", "annonceurs", "contacts", "metiers"];
+const normaliserPermissions = (x) => (Array.isArray(x) ? PERMISSIONS.filter((p) => x.includes(p)) : []);
+
+/** Donne ou retire le claim `admin` à un compte, en gardant ses autres claims. */
+async function definirAdmin(auth, uid, actif) {
+  const u = await auth.getUser(uid);
+  const claims = { ...(u.customClaims || {}) };
+  if (actif) claims.admin = true;
+  else delete claims.admin;
+  await auth.setCustomUserClaims(uid, claims);
+}
+
+exports.gererMembre = onCall(async (req) => {
+  if (req.auth?.token?.owner !== true) throw new HttpsError("permission-denied", "Réservé au responsable de la console.");
+  const auth = getAuth();
+  const action = req.data?.action;
+
+  if (action === "inviter") {
+    const nom = String(req.data?.nom ?? "").trim().slice(0, 80);
+    const identifiant = String(req.data?.identifiant ?? "").trim();
+    const permissions = normaliserPermissions(req.data?.permissions);
+    if (!nom) throw new HttpsError("invalid-argument", "Le nom du membre est obligatoire.");
+    let u;
+    try {
+      u = identifiant.includes("@")
+        ? await auth.getUserByEmail(identifiant.toLowerCase())
+        : await auth.getUserByPhoneNumber(identifiant.replace(/\s/g, ""));
+    } catch (e) {
+      if (e.code === "auth/user-not-found")
+        throw new HttpsError("not-found", "Aucun compte avec ce numéro ou cet email. La personne doit d’abord se connecter une fois sur le site.");
+      throw e;
+    }
+    if (u.uid === req.auth.uid) throw new HttpsError("invalid-argument", "Vous ne pouvez pas vous ajouter vous-même.");
+    if (u.customClaims?.owner === true) throw new HttpsError("failed-precondition", "Ce compte est déjà responsable de la console.");
+    await definirAdmin(auth, u.uid, true);
+    await db.doc(`equipe/${u.uid}`).set({
+      nom,
+      identifiant: u.phoneNumber ?? u.email ?? identifiant,
+      role: "membre",
+      permissions,
+      actif: true,
+      parId: req.auth.uid,
+      creeLe: FieldValue.serverTimestamp(),
+      majLe: FieldValue.serverTimestamp(),
+    });
+    return { uid: u.uid };
+  }
+
+  if (action === "modifier") {
+    const uid = String(req.data?.uid ?? "");
+    const snap = await db.doc(`equipe/${uid}`).get();
+    if (!snap.exists) throw new HttpsError("not-found", "Membre introuvable.");
+    if (snap.data().role === "owner") throw new HttpsError("failed-precondition", "On ne modifie pas un responsable depuis la console.");
+    const maj = { majLe: FieldValue.serverTimestamp(), parId: req.auth.uid };
+    if (req.data.nom !== undefined) maj.nom = String(req.data.nom).trim().slice(0, 80);
+    if (req.data.permissions !== undefined) maj.permissions = normaliserPermissions(req.data.permissions);
+    if (req.data.actif !== undefined) maj.actif = Boolean(req.data.actif);
+    await db.doc(`equipe/${uid}`).set(maj, { merge: true });
+    // Activer / désactiver coupe ou rétablit l'accès tout de suite (claim admin).
+    if (maj.actif === true || maj.actif === false) await definirAdmin(auth, uid, maj.actif);
+    return { uid };
+  }
+
+  if (action === "revoquer") {
+    const uid = String(req.data?.uid ?? "");
+    const snap = await db.doc(`equipe/${uid}`).get();
+    if (snap.exists && snap.data().role === "owner") throw new HttpsError("failed-precondition", "Impossible de révoquer un responsable.");
+    const u = await auth.getUser(uid).catch(() => null);
+    if (u) {
+      const claims = { ...(u.customClaims || {}) };
+      delete claims.admin;
+      delete claims.owner;
+      await auth.setCustomUserClaims(uid, claims);
+    }
+    await db.doc(`equipe/${uid}`).delete();
+    return { uid };
+  }
+
+  throw new HttpsError("invalid-argument", "Action inconnue.");
+});
+
+// ——————————————————————————————————————————————————————————————
 // 2. Alertes WhatsApp / SMS (Africa's Talking)
 // ——————————————————————————————————————————————————————————————
 
@@ -330,6 +416,25 @@ exports.alerteContact = onDocumentCreated(
  * Tient à jour statsRealisations/{proId_realisationId} = { somme, nombre } à chaque note
  * donnée, changée ou retirée dans notesRealisations/{proId_realisationId_uid}.
  */
+// ——— Commentaires des réalisations : notification push (sans SMS/WhatsApp) ———
+
+/**
+ * À chaque commentaire publié : prévient le professionnel (commentaire racine) ou l'auteur
+ * du commentaire auquel on répond (réponse). Pas d'alerte à soi-même.
+ */
+exports.alerteCommentaire = onDocumentCreated("commentaires/{id}", async (event) => {
+  const c = event.data?.data();
+  if (!c || c.statut !== "visible") return;
+  const lien = `/artisans/${c.proId}`;
+  if (c.parentId) {
+    const parent = (await db.doc(`commentaires/${c.parentId}`).get()).data();
+    if (parent?.auteurId && parent.auteurId !== c.auteurId)
+      await pousser(parent.auteurId, "Nouvelle réponse", `${c.auteurNom} a répondu à votre commentaire.`, lien);
+  } else if (c.auteurId !== c.proId) {
+    await pousser(c.proId, "Nouveau commentaire", `${c.auteurNom} a commenté votre réalisation.`, lien);
+  }
+});
+
 exports.statsNoteRealisation = onDocumentWritten("notesRealisations/{id}", async (event) => {
   const avant = event.data?.before.data();
   const apres = event.data?.after.data();

@@ -6,6 +6,7 @@ import { PhotoRealisation } from "@/components/PhotoRealisation";
 import { ChevronLeft, ChevronRight, FileText, Images, Star, X } from "lucide-react";
 import type { Realisation } from "@/lib/data";
 import { useRealisations } from "@/lib/realisations";
+import { FilCommentaires } from "@/components/FilCommentaires";
 
 const toutesLesPhotos = (r: Realisation) => [r.image, ...(r.photos ?? []).filter((p) => p !== r.image)];
 
@@ -53,7 +54,19 @@ function Visionneuse({ r, onFermer }: { r: Realisation; onFermer: () => void }) 
   );
 }
 
-function CarteRealisation({ r, artisanId, onOuvrir }: { r: Realisation; artisanId: string; onOuvrir: () => void }) {
+function CarteRealisation({
+  r,
+  artisanId,
+  realisationId,
+  proNom,
+  onOuvrir,
+}: {
+  r: Realisation;
+  artisanId: string;
+  realisationId: string;
+  proNom: string;
+  onOuvrir: () => void;
+}) {
   const nb = toutesLesPhotos(r).length;
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-black/[0.03]">
@@ -83,6 +96,7 @@ function CarteRealisation({ r, artisanId, onOuvrir }: { r: Realisation; artisanI
             <FileText className="size-4" /> Devis pour un travail similaire
           </Link>
         </div>
+        <FilCommentaires proId={artisanId} realisationId={realisationId} proNom={proNom} />
       </div>
     </article>
   );
@@ -94,11 +108,13 @@ function CarteRealisation({ r, artisanId, onOuvrir }: { r: Realisation; artisanI
  */
 export function OngletsProfil({
   artisanId,
+  proNom,
   realisations,
   nbAvis,
   avis,
 }: {
   artisanId: string;
+  proNom: string;
   realisations: Realisation[];
   nbAvis: number;
   avis: React.ReactNode;
@@ -151,7 +167,14 @@ export function OngletsProfil({
         {liste.length ? (
           <div className="grid gap-4 md:grid-cols-2">
             {liste.map((r, i) => (
-              <CarteRealisation key={`${r.titre}-${i}`} r={r} artisanId={artisanId} onOuvrir={() => setVue(r)} />
+              <CarteRealisation
+                key={`${r.titre}-${i}`}
+                r={r}
+                artisanId={artisanId}
+                realisationId={r.id ?? String(i)}
+                proNom={proNom}
+                onOuvrir={() => setVue(r)}
+              />
             ))}
           </div>
         ) : (

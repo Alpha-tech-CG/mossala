@@ -20,10 +20,12 @@ import {
   Mail,
   Megaphone,
   Menu,
+  MessageSquare,
   Presentation,
   RefreshCw,
   Star,
   Tags,
+  UserCog,
   Users,
   X,
   type LucideIcon,
@@ -34,20 +36,28 @@ import { useSession } from "@/lib/session";
 import type * as Api from "@/lib/backend/admin";
 import type {
   AvisDoc,
+  CommentaireDoc,
   ContactDoc,
   DemandeAnnonceurDoc,
   EntreeJournal,
+  MembreDoc,
+  Permission,
+  ProfilEquipe,
   PropositionMetierDoc,
   PubDoc,
   SignalementDoc,
 } from "@/lib/backend/modele";
+import { PROFIL_OWNER, profilPeut } from "@/lib/backend/modele";
 import { PanneauAvis, PanneauClients, PanneauContacts, PanneauPros, PanneauRealisations, PanneauSignalements } from "./Panneaux";
 import { PanneauAnnonceurs, PanneauJournal, PanneauMetiers, PanneauPublicites } from "./PanneauxSite";
+import { PanneauCommentaires } from "./PanneauCommentaires";
+import { PanneauEquipe } from "./PanneauEquipe";
 import { TableauDeBord } from "./TableauDeBord";
 import { PanneauAudience, PanneauIntelligence, PanneauMonitoring } from "./PanneauxIntelligence";
 
 export type Donnees = {
   avis: AvisDoc[];
+  commentaires: CommentaireDoc[];
   pros: Api.ProAdmin[];
   realisations: Api.RealisationAdmin[];
   contacts: ContactDoc[];
@@ -57,60 +67,71 @@ export type Donnees = {
   propositionsMetiers: PropositionMetierDoc[];
   publicites: PubDoc[];
   journal: EntreeJournal[];
+  membres: MembreDoc[];
 };
 
-/** Menu de la console, regroupé par métier de l'équipe. */
+/**
+ * Menu de la console, regroupé par métier de l'équipe.
+ * `perm` : permission requise pour un membre ; `ownerOnly` : réservé au responsable.
+ * Une section sans l'un ni l'autre (tableau de bord) est visible par tous.
+ */
 const GROUPES = [
   {
     titre: "Pilotage",
     sections: [
       { id: "accueil", label: "Tableau de bord", Icon: LayoutDashboard },
-      { id: "journal", label: "Journal", Icon: History },
+      { id: "equipe", label: "Équipe", Icon: UserCog, ownerOnly: true },
+      { id: "journal", label: "Journal", Icon: History, ownerOnly: true },
     ],
   },
   {
     titre: "Intelligence",
     sections: [
-      { id: "audience", label: "Audience", Icon: BarChart3 },
-      { id: "monitoring", label: "Monitoring", Icon: Activity },
-      { id: "intelligence", label: "Analyses ML", Icon: BrainCircuit },
+      { id: "audience", label: "Audience", Icon: BarChart3, ownerOnly: true },
+      { id: "monitoring", label: "Monitoring", Icon: Activity, ownerOnly: true },
+      { id: "intelligence", label: "Analyses ML", Icon: BrainCircuit, ownerOnly: true },
     ],
   },
   {
     titre: "Modération",
     sections: [
-      { id: "avis", label: "Avis", Icon: Star },
-      { id: "signalements", label: "Signalements", Icon: Flag },
-      { id: "realisations", label: "Réalisations", Icon: ImageIcon },
+      { id: "avis", label: "Avis", Icon: Star, perm: "avis" },
+      { id: "commentaires", label: "Commentaires", Icon: MessageSquare, perm: "commentaires" },
+      { id: "signalements", label: "Signalements", Icon: Flag, perm: "signalements" },
+      { id: "realisations", label: "Réalisations", Icon: ImageIcon, perm: "realisations" },
     ],
   },
   {
     titre: "Professionnels et clients",
     sections: [
-      { id: "pros", label: "Professionnels", Icon: Hammer },
-      { id: "clients", label: "Clients", Icon: Users },
+      { id: "pros", label: "Professionnels", Icon: Hammer, perm: "pros" },
+      { id: "clients", label: "Clients", Icon: Users, perm: "clients" },
     ],
   },
   {
     titre: "Commercial",
     sections: [
-      { id: "publicites", label: "Publicités", Icon: Presentation },
-      { id: "annonceurs", label: "Annonceurs", Icon: Megaphone },
+      { id: "publicites", label: "Publicités", Icon: Presentation, perm: "publicites" },
+      { id: "annonceurs", label: "Annonceurs", Icon: Megaphone, perm: "annonceurs" },
     ],
   },
   {
     titre: "Demandes",
     sections: [
-      { id: "contacts", label: "Messages", Icon: Mail },
-      { id: "metiers", label: "Métiers proposés", Icon: Tags },
+      { id: "contacts", label: "Messages", Icon: Mail, perm: "contacts" },
+      { id: "metiers", label: "Métiers proposés", Icon: Tags, perm: "metiers" },
     ],
   },
 ] as const;
 
 export type Onglet = (typeof GROUPES)[number]["sections"][number]["id"];
-type Section = { id: Onglet; label: string; Icon: LucideIcon };
+type Section = { id: Onglet; label: string; Icon: LucideIcon; perm?: Permission; ownerOnly?: boolean };
 const SECTIONS: Section[] = GROUPES.flatMap((g): readonly Section[] => g.sections);
 const estOnglet = (x: string): x is Onglet => SECTIONS.some((s) => s.id === x);
+
+/** Une section est-elle accessible au profil (owner : tout ; membre : ses permissions) ? */
+const sectionVisible = (s: Section, profil: ProfilEquipe) =>
+  profil.role === "owner" ? true : s.ownerOnly ? false : s.perm ? profilPeut(profil, s.perm) : true;
 
 /** Le module Firebase n'est chargé que dans la console. */
 const api = () => import("@/lib/backend/admin");
@@ -131,6 +152,9 @@ export function Backoffice() {
   const [erreur, setErreur] = useState("");
   const [onglet, setOngletEtat] = useState<Onglet>(sectionDeLAdresse);
   const [menuOuvert, setMenuOuvert] = useState(false);
+  // Droits réels du compte connecté, et aperçu « vue d'un membre » que le responsable peut activer.
+  const [profil, setProfil] = useState<ProfilEquipe | null>(null);
+  const [apercu, setApercu] = useState<ProfilEquipe | null>(null);
 
   const ouvrir = useCallback((o: Onglet) => {
     setOngletEtat(o);
@@ -146,6 +170,7 @@ export function Backoffice() {
       const a = await api();
       const listes = {
         avis: a.listerAvis(),
+        commentaires: a.listerCommentaires(),
         pros: a.listerPros(),
         realisations: a.listerRealisations(),
         contacts: a.listerContacts(),
@@ -155,6 +180,7 @@ export function Backoffice() {
         propositionsMetiers: a.listerPropositionsMetiers(),
         publicites: a.listerPublicites(),
         journal: a.listerJournal(),
+        membres: a.listerMembres(),
       };
       const cles = Object.keys(listes) as (keyof Donnees)[];
       // chaque liste est chargée séparément : une erreur n'empêche pas d'afficher les autres
@@ -174,10 +200,17 @@ export function Backoffice() {
     if (!session.pret) return;
     let annule = false;
     (async () => {
-      const ok = BACKEND_ACTIF && !session.session ? false : await (await api()).verifierAcces().catch(() => false);
+      const a = await api();
+      const ok = BACKEND_ACTIF && !session.session ? false : await a.verifierAcces().catch(() => false);
       if (annule) return;
       // Maquette (site sans Firebase) : données de démonstration dès la première ouverture.
       if (ok && !BACKEND_ACTIF) (await import("@/lib/backend/demo-console")).remplirDemoUneFois();
+      // Droits du compte : connus avant d'afficher la console, pour ne montrer que les sections permises.
+      if (ok) {
+        const p = await a.monProfilEquipe().catch(() => PROFIL_OWNER);
+        if (annule) return;
+        setProfil(p);
+      }
       setAcces(ok ? "ok" : "refuse");
       if (ok) await charger();
     })();
@@ -262,7 +295,16 @@ export function Backoffice() {
         return null;
     }
   };
-  const section = SECTIONS.find((s) => s.id === onglet) ?? SECTIONS[0];
+  // Droits appliqués : l'aperçu « vue d'un membre » l'emporte sur les droits réels du responsable.
+  const profilActif = apercu ?? profil ?? PROFIL_OWNER;
+  const groupesVisibles = GROUPES.map((g) => ({
+    titre: g.titre,
+    sections: (g.sections as readonly Section[]).filter((s) => sectionVisible(s, profilActif)),
+  })).filter((g) => g.sections.length > 0);
+  const sectionDemandee = SECTIONS.find((s) => s.id === onglet);
+  // Onglet ramené à une section autorisée (sinon le tableau de bord).
+  const section = sectionDemandee && sectionVisible(sectionDemandee, profilActif) ? sectionDemandee : SECTIONS[0];
+  const vue = section.id;
   const qui = session.session ? session.session.telephone || session.session.email : "Mode maquette";
 
   const menu = (
@@ -275,7 +317,7 @@ export function Backoffice() {
         </div>
       </div>
       <nav aria-label="Console d’administration" className="flex-1 overflow-y-auto px-3 pb-4">
-        {GROUPES.map((g) => (
+        {groupesVisibles.map((g) => (
           <div key={g.titre} className="mt-4">
             <p className="px-3 text-[10px] font-semibold tracking-[0.2em] text-white/45 uppercase">{g.titre}</p>
             <ul className="mt-1.5 space-y-0.5">
@@ -391,6 +433,21 @@ export function Backoffice() {
           {!BACKEND_ACTIF && (
             <MaquetteBandeau recharger={charger} />
           )}
+          {apercu && (
+            <div className="mb-5 flex flex-col items-start gap-3 rounded-xl bg-accent/15 px-4 py-3 text-sm text-accent-ink sm:flex-row sm:items-center">
+              <p className="min-w-0 sm:flex-1">
+                <strong>Aperçu membre</strong> : vous voyez la console comme un membre ayant ces droits
+                {apercu.permissions.length ? "" : " (aucun droit)"}. Vos droits de responsable ne changent pas.
+              </p>
+              <button
+                type="button"
+                onClick={() => setApercu(null)}
+                className="rounded-lg bg-accent px-3 py-2 text-xs font-bold text-accent-foreground"
+              >
+                Quitter l’aperçu
+              </button>
+            </div>
+          )}
           {erreur && (
             <p role="alert" className="mb-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
               {erreur}
@@ -404,31 +461,35 @@ export function Backoffice() {
           ) : (
             // pendant une actualisation, l'écran garde son contenu, légèrement estompé
             <div className={`transition-opacity ${chargement ? "opacity-60" : ""}`}>
-              {onglet === "accueil" ? (
+              {vue === "accueil" ? (
                 <TableauDeBord d={donnees} ouvrir={ouvrir} />
-              ) : onglet === "avis" ? (
+              ) : vue === "equipe" ? (
+                <PanneauEquipe membres={donnees.membres} agir={agir} apercu={apercu} onApercu={setApercu} />
+              ) : vue === "avis" ? (
                 <PanneauAvis avis={donnees.avis} agir={agir} />
-              ) : onglet === "pros" ? (
+              ) : vue === "commentaires" ? (
+                <PanneauCommentaires commentaires={donnees.commentaires} agir={agir} />
+              ) : vue === "pros" ? (
                 <PanneauPros pros={donnees.pros} agir={agir} />
-              ) : onglet === "realisations" ? (
+              ) : vue === "realisations" ? (
                 <PanneauRealisations realisations={donnees.realisations} agir={agir} />
-              ) : onglet === "contacts" ? (
+              ) : vue === "contacts" ? (
                 <PanneauContacts contacts={donnees.contacts} agir={agir} />
-              ) : onglet === "signalements" ? (
+              ) : vue === "signalements" ? (
                 <PanneauSignalements signalements={donnees.signalements} avis={donnees.avis} agir={agir} ouvrir={ouvrir} />
-              ) : onglet === "publicites" ? (
+              ) : vue === "publicites" ? (
                 <PanneauPublicites publicites={donnees.publicites} agir={agir} />
-              ) : onglet === "annonceurs" ? (
+              ) : vue === "annonceurs" ? (
                 <PanneauAnnonceurs demandes={donnees.demandesAnnonceurs} agir={agir} />
-              ) : onglet === "metiers" ? (
+              ) : vue === "metiers" ? (
                 <PanneauMetiers propositions={donnees.propositionsMetiers} agir={agir} />
-              ) : onglet === "audience" ? (
+              ) : vue === "audience" ? (
                 <PanneauAudience />
-              ) : onglet === "monitoring" ? (
+              ) : vue === "monitoring" ? (
                 <PanneauMonitoring />
-              ) : onglet === "intelligence" ? (
+              ) : vue === "intelligence" ? (
                 <PanneauIntelligence d={donnees} ouvrir={ouvrir} />
-              ) : onglet === "journal" ? (
+              ) : vue === "journal" ? (
                 <PanneauJournal journal={donnees.journal} />
               ) : (
                 <PanneauClients comptes={donnees.comptes} />

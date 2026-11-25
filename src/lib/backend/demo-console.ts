@@ -1,7 +1,7 @@
 import { CRITERES_ARTISAN, CRITERES_MAGASIN, artisans, boutiques } from "../data";
 import { SUJETS_CONTACT } from "./contact";
 import { idLocal, modifierLocal } from "./local";
-import type { AvisDoc, ContactDoc, DemandeAnnonceurDoc, PropositionMetierDoc, SignalementDoc } from "./modele";
+import type { AvisDoc, ContactDoc, DemandeAnnonceurDoc, MembreDoc, PropositionMetierDoc, SignalementDoc } from "./modele";
 
 /**
  * MAQUETTE uniquement : remplit la console avec 90 jours d'activité fictive (avis, messages,
@@ -60,6 +60,8 @@ export function remplirDemo() {
       statut,
       verifie: statut === "publie" && (experience === "prestation" || experience === "achat") && Math.random() < 0.7,
       motifRefus: statut === "refuse" ? hasard(["Avis faux ou suspect", "Propos injurieux ou diffamatoires", "Ne concerne pas ce professionnel"]) : null,
+      reponse: null,
+      reponduLe: 0,
       creeLe,
       modereLe: statut === "a_moderer" ? 0 : creeLe + JOUR,
     };
@@ -120,6 +122,32 @@ export function remplirDemo() {
     creeLe: dateRecente(90),
   }));
 
+  // Deux membres du staff, pour montrer la délégation : un modérateur et une personne du service client.
+  const membres: MembreDoc[] = [
+    {
+      id: idLocal(),
+      nom: "Merveille Okemba",
+      identifiant: "+242 06 555 20 11",
+      role: "membre",
+      permissions: ["avis", "signalements", "realisations"],
+      actif: true,
+      parId: "maquette",
+      creeLe: dateRecente(60),
+      majLe: dateRecente(10),
+    },
+    {
+      id: idLocal(),
+      nom: "Prisca Samba",
+      identifiant: "prisca@artopif.cg",
+      role: "membre",
+      permissions: ["contacts", "annonceurs", "metiers"],
+      actif: true,
+      parId: "maquette",
+      creeLe: dateRecente(40),
+      majLe: dateRecente(5),
+    },
+  ];
+
   const ids = [...artisans.map((a) => a.id), ...boutiques.map((b) => b.id)];
   const datesPros = Object.fromEntries(ids.map((id) => [id, dateRecente(90)]));
   const statutsPros = Object.fromEntries(ids.filter(() => Math.random() < 0.15).map((id) => [id, "en_verification" as const]));
@@ -132,6 +160,7 @@ export function remplirDemo() {
     demandesAnnonceurs: [...demandesAnnonceurs, ...b.demandesAnnonceurs].sort((x, y) => y.recuLe - x.recuLe),
     propositionsMetiers: [...propositionsMetiers, ...b.propositionsMetiers],
     comptes: [...comptes, ...b.comptes].sort((x, y) => y.creeLe - x.creeLe),
+    membres: b.membres.length ? b.membres : membres,
     datesPros: { ...b.datesPros, ...datesPros },
     statutsPros: { ...b.statutsPros, ...statutsPros },
   }));
@@ -170,6 +199,8 @@ export function ajouterAvisSuspects() {
       statut: "a_moderer",
       verifie: false,
       motifRefus: null,
+      reponse: null,
+      reponduLe: 0,
       creeLe: maintenant,
       modereLe: 0,
       ...o,

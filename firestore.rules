@@ -43,9 +43,25 @@ service cloud.firestore {
       return /databases/$(database)/documents/$(c)/$(id);
     }
     // Équipe Artopif : jeton avec admin: true (firebase-functions/donner-admin.js).
-    // Elle gère tout depuis le backoffice /admin.
+    // Peut ouvrir le backoffice /admin et lire ses données.
     function admin() {
       return connecte() && request.auth.token.get('admin', false) == true;
+    }
+    // Responsable de la console : jeton avec owner: true. Seul à gérer l'équipe.
+    function estOwner() {
+      return connecte() && request.auth.token.get('owner', false) == true;
+    }
+    // Fiche d'un membre de l'équipe (equipe/{uid}).
+    function ficheEquipe() {
+      return get(chemin('equipe', moi())).data;
+    }
+    // Droit `p` sur une action de modération. Le responsable a tout ; un administrateur
+    // sans fiche d'équipe (responsable d'origine) garde l'accès complet ; sinon le membre
+    // doit être actif et avoir reçu la permission. Clés : voir PERMISSIONS (src/lib/backend/modele.ts).
+    function peut(p) {
+      return estOwner()
+        || (admin() && !exists(chemin('equipe', moi())))
+        || (admin() && exists(chemin('equipe', moi())) && ficheEquipe().actif == true && ficheEquipe().permissions.hasAny([p]));
     }
     function proVerifie(id) {
       return exists(chemin('pros', id)) && get(chemin('pros', id)).data.statut == 'verifie';
@@ -59,7 +75,7 @@ service cloud.firestore {
           && numeroDuCompte(d.telephone)
           && d.telephones is list && d.telephones.size() <= 3;
       }
-      allow read: if proprietaire(uid) || admin();
+      allow read: if proprietaire(uid) || peut('clients');
       allow create: if proprietaire(uid) && compteValide(nouveau()) && nouveau().creeLe == request.time;
       allow update: if proprietaire(uid) && compteValide(nouveau()) && !changes().hasAny(['creeLe']);
       allow delete: if false;
@@ -93,7 +109,7 @@ service cloud.firestore {
         && profilValide(nouveau())
         && !changes().hasAny(['statut', 'type', 'creeLe']);   // seule l'équipe change le statut
       // l'équipe vérifie, suspend ou réactive un profil
-      allow update: if admin()
+      allow update: if peut('pros')
         && changes().hasOnly(['statut'])
         && nouveau().statut in ['en_verification', 'verifie', 'suspendu'];
       allow delete: if false;
@@ -123,8 +139,8 @@ service cloud.firestore {
           && nouveau().creeLe == request.time;
         allow update: if proprietaire(uid) && realisationValide(nouveau()) && !changes().hasAny(['verifiee', 'creeLe']);
         // l'équipe marque une réalisation comme vérifiée (ou retire la vérification)
-        allow update: if admin() && changes().hasOnly(['verifiee']) && nouveau().verifiee is bool;
-        allow delete: if proprietaire(uid) || admin();
+        allow update: if peut('realisations') && changes().hasOnly(['verifiee']) && nouveau().verifiee is bool;
+        allow delete: if proprietaire(uid) || peut('realisations');
       }
     }
 
@@ -233,8 +249,9 @@ service cloud.firestore {
         && texte(nouveau().message, 10, 2000)
         && nouveau().statut == 'nouveau'
         && nouveau().recuLe == request.time;
-      allow read, delete: if admin();
-      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
+      allow read: if admin();
+      allow delete: if peut('contacts');
+      allow update: if peut('contacts') && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
     }
 
     // ——— Avis clients : un par client et par professionnel, publiés après modération ———
@@ -269,27 +286,62 @@ service cloud.firestore {
         && nouveau().motifRefus == null && nouveau().modereLe == null
         && nouveau().creeLe == request.time;
       // Modération : publier, refuser (avec motif), confirmer l'expérience.
-      allow update: if admin()
+      allow update: if peut('avis')
         && changes().hasOnly(['statut', 'verifie', 'motifRefus', 'modereLe'])
         && nouveau().statut in ['a_moderer', 'publie', 'refuse']
         && nouveau().verifie is bool
         && texteOuNull(nouveau().motifRefus, 300)
         && nouveau().modereLe == request.time;
-      allow delete: if admin();
+      // Le professionnel ciblé répond publiquement à un avis publié le concernant.
+      allow update: if connecte() && moi() == resource.data.cibleId
+        && resource.data.statut == 'publie'
+        && changes().hasOnly(['reponse', 'reponduLe'])
+        && texteOuNull(nouveau().reponse, 1000)
+        && nouveau().reponduLe == request.time;
+      allow delete: if peut('avis');
     }
 
-    // ——— Signalements (profil ou avis) : tout visiteur signale, seule l'équipe lit ———
+    // ——— Commentaires sous les réalisations (fil public façon réseau social) ———
+    // Publiés aussitôt (visible), modérés a posteriori : l'équipe (droit « commentaires ») masque.
+    match /commentaires/{id} {
+      function commentaireValide(d) {
+        return d.keys().hasOnly(['cibleId', 'proId', 'realisationId', 'auteurId', 'auteurNom', 'estPro', 'parentId', 'texte', 'statut', 'creeLe'])
+          && d.cibleId == d.proId + '_' + d.realisationId
+          && texte(d.proId, 1, 128)
+          && texte(d.realisationId, 1, 128)
+          && texte(d.auteurNom, 1, 80)
+          && d.estPro == (moi() == d.proId)
+          && (d.parentId == null || texte(d.parentId, 1, 128))
+          && texte(d.texte, 1, 1000)
+          && d.statut == 'visible';
+      }
+      allow get: if resource.data.statut == 'visible' || resource.data.auteurId == moi() || peut('commentaires');
+      allow list: if resource.data.statut == 'visible' || peut('commentaires');
+      allow create: if connecte()
+        && commentaireValide(nouveau())
+        && nouveau().auteurId == moi()
+        && nouveau().creeLe == request.time
+        && proVerifie(nouveau().proId)
+        && exists(/databases/$(database)/documents/pros/$(nouveau().proId)/realisations/$(nouveau().realisationId));
+      // L'équipe masque ou réaffiche un commentaire.
+      allow update: if peut('commentaires') && changes().hasOnly(['statut']) && nouveau().statut in ['visible', 'masque'];
+      // L'auteur retire son commentaire ; l'équipe peut aussi le supprimer.
+      allow delete: if (connecte() && resource.data.auteurId == moi()) || peut('commentaires');
+    }
+
+    // ——— Signalements (profil, avis ou commentaire) : tout visiteur signale, seule l'équipe lit ———
     match /signalements/{id} {
       allow create: if nouveau().keys().hasOnly(['cible', 'cibleId', 'libelle', 'motif', 'auteurId', 'statut', 'creeLe'])
-        && nouveau().cible in ['profil', 'avis']
+        && nouveau().cible in ['profil', 'avis', 'commentaire']
         && texte(nouveau().cibleId, 1, 200)
         && texte(nouveau().libelle, 0, 200)
         && texte(nouveau().motif, 1, 100)
         && (nouveau().auteurId == null || (connecte() && nouveau().auteurId == moi()))
         && nouveau().statut == 'nouveau'
         && nouveau().creeLe == request.time;
-      allow read, delete: if admin();
-      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
+      allow read: if admin();
+      allow delete: if peut('signalements');
+      allow update: if peut('signalements') && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
     }
 
     // ——— Demandes annonceurs (page Nos services) : tout visiteur écrit, l'équipe traite ———
@@ -301,8 +353,9 @@ service cloud.firestore {
         && nouveau().interets is list && nouveau().interets.size() <= 10
         && nouveau().statut == 'nouveau'
         && nouveau().recuLe == request.time;
-      allow read, delete: if admin();
-      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
+      allow read: if admin();
+      allow delete: if peut('annonceurs');
+      allow update: if peut('annonceurs') && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'traite'];
     }
 
     // ——— Métiers proposés (page Tous les métiers) : tout visiteur propose, l'équipe décide ———
@@ -312,8 +365,9 @@ service cloud.firestore {
         && texte(nouveau().categorie, 1, 40)
         && nouveau().statut == 'nouveau'
         && nouveau().recuLe == request.time;
-      allow read, delete: if admin();
-      allow update: if admin() && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'accepte', 'refuse'];
+      allow read: if admin();
+      allow delete: if peut('metiers');
+      allow update: if peut('metiers') && changes().hasOnly(['statut']) && nouveau().statut in ['nouveau', 'accepte', 'refuse'];
     }
 
     // ——— Publicités : campagnes créées par l'équipe ; le public ne lit que les actives ———
@@ -336,9 +390,9 @@ service cloud.firestore {
           && d.modifieLe == request.time;
       }
       allow read: if resource.data.statut == 'active' || admin();
-      allow create: if admin() && pubValide(nouveau()) && nouveau().creeLe == request.time;
-      allow update: if admin() && pubValide(nouveau()) && !changes().hasAny(['creeLe']);
-      allow delete: if admin();
+      allow create: if peut('publicites') && pubValide(nouveau()) && nouveau().creeLe == request.time;
+      allow update: if peut('publicites') && pubValide(nouveau()) && !changes().hasAny(['creeLe']);
+      allow delete: if peut('publicites');
     }
 
     // ——— Journal du backoffice : chaque action de l'équipe, ni modifiable ni supprimable ———
@@ -352,6 +406,15 @@ service cloud.firestore {
         && texte(nouveau().auteur, 1, 120)
         && nouveau().date == request.time;
       allow update, delete: if false;
+    }
+
+    // ——— Équipe de la console : rôle et permissions de chaque membre ———
+    // Créée, modifiée et supprimée uniquement par la Cloud Function gererMembre (Admin SDK),
+    // pour qu'un membre ne puisse jamais s'accorder de droits lui-même.
+    match /equipe/{uid} {
+      allow get: if proprietaire(uid) || estOwner();   // un membre lit sa propre fiche (ses droits)
+      allow list: if estOwner();
+      allow write: if false;
     }
 
     // Backoffice : toutes les réalisations à vérifier (requête collectionGroup).

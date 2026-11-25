@@ -15,27 +15,35 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { artisans, boutiques, metierLabel } from "../data";
 import { BACKEND_ACTIF } from "./actif";
-import { auth, db, estAdmin, stockage } from "./firebase";
+import { auth, db, estAdmin, estOwner, gererMembreDistant, stockage } from "./firebase";
 import { idLocal, lireLocal, modifierLocal } from "./local";
 import {
   type AvisDoc,
+  type CommentaireDoc,
   type ContactDoc,
   type DemandeAnnonceurDoc,
   type Emplacement,
   type EntreeJournal,
+  type MembreDoc,
+  type Permission,
   type Pro,
+  type ProfilEquipe,
   type PropositionMetierDoc,
   type PubDoc,
+  type StatutCommentaire,
   type StatutProposition,
   type SignalementDoc,
   type StatutAvis,
   type StatutPro,
   type StatutTraitement,
+  PROFIL_OWNER,
   millis,
   versAvis,
+  versCommentaire,
   versContact,
   versDemandeAnnonceur,
   versEntreeJournal,
+  versMembre,
   versPro,
   versPropositionMetier,
   versPubDoc,
@@ -103,6 +111,72 @@ export async function verifierAcces(): Promise<boolean> {
   return estAdmin();
 }
 
+// ——— Équipe : rôles et permissions (délégation des tâches) ———
+
+/**
+ * Droits du compte connecté dans la console. Le responsable (owner) a tout ; un membre
+ * n'a que ses permissions. Un administrateur historique sans fiche équipe garde l'accès
+ * complet (cohérent avec firestore.rules).
+ */
+export async function monProfilEquipe(): Promise<ProfilEquipe> {
+  if (!BACKEND_ACTIF) return PROFIL_OWNER; // maquette : l'aperçu « membre » est géré dans la console
+  if (await estOwner()) return PROFIL_OWNER;
+  const uid = auth().currentUser?.uid;
+  if (!uid) return { role: "membre", permissions: [] };
+  const snap = await getDoc(doc(db(), "equipe", uid));
+  if (!snap.exists()) return PROFIL_OWNER; // admin sans fiche équipe = responsable d'origine
+  const m = versMembre(snap.id, snap.data());
+  return { role: m.role, permissions: m.permissions };
+}
+
+export async function listerMembres(): Promise<MembreDoc[]> {
+  if (!BACKEND_ACTIF) return lireLocal().membres;
+  const snap = await getDocs(query(collection(db(), "equipe"), orderBy("creeLe", "desc"), limit(MAX)));
+  return snap.docs.map((d) => versMembre(d.id, d.data()));
+}
+
+export async function inviterMembre(nom: string, identifiant: string, permissions: Permission[]): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    const maintenant = Date.now();
+    modifierLocal((b) => ({
+      ...b,
+      membres: [
+        { id: idLocal(), nom, identifiant, role: "membre", permissions, actif: true, parId: "maquette", creeLe: maintenant, majLe: maintenant },
+        ...b.membres,
+      ],
+    }));
+  } else {
+    await gererMembreDistant({ action: "inviter", identifiant, nom, permissions });
+  }
+  await noter("Membre ajouté à l’équipe", nom);
+}
+
+export async function modifierMembre(
+  m: MembreDoc,
+  champs: { nom?: string; permissions?: Permission[]; actif?: boolean },
+): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({
+      ...b,
+      membres: b.membres.map((x) => (x.id === m.id ? { ...x, ...champs, majLe: Date.now() } : x)),
+    }));
+  } else {
+    await gererMembreDistant({ action: "modifier", uid: m.id, ...champs });
+  }
+  const action =
+    champs.actif === false ? "Membre désactivé" : champs.actif === true ? "Membre réactivé" : "Permissions d’un membre modifiées";
+  await noter(action, m.nom);
+}
+
+export async function revoquerMembre(m: MembreDoc): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, membres: b.membres.filter((x) => x.id !== m.id) }));
+  } else {
+    await gererMembreDistant({ action: "revoquer", uid: m.id });
+  }
+  await noter("Membre retiré de l’équipe", m.nom);
+}
+
 // ——— Avis ———
 
 export async function listerAvis(): Promise<AvisDoc[]> {
@@ -132,6 +206,34 @@ export async function supprimerAvis(id: string, libelle: string): Promise<void> 
     await deleteDoc(doc(db(), "avis", id));
   }
   await noter("Avis supprimé", libelle);
+}
+
+// ——— Commentaires (fil des réalisations) ———
+
+const apercuCommentaire = (c: CommentaireDoc) => `${c.auteurNom} : « ${c.texte.slice(0, 60)}${c.texte.length > 60 ? "…" : ""} »`;
+
+export async function listerCommentaires(): Promise<CommentaireDoc[]> {
+  if (!BACKEND_ACTIF) return [...lireLocal().commentaires].sort((a, b) => b.creeLe - a.creeLe);
+  const snap = await getDocs(query(collection(db(), "commentaires"), orderBy("creeLe", "desc"), limit(MAX)));
+  return snap.docs.map((d) => versCommentaire(d.id, d.data()));
+}
+
+export async function masquerCommentaire(c: CommentaireDoc, statut: StatutCommentaire): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, commentaires: b.commentaires.map((x) => (x.id === c.id ? { ...x, statut } : x)) }));
+  } else {
+    await updateDoc(doc(db(), "commentaires", c.id), { statut });
+  }
+  await noter(statut === "masque" ? "Commentaire masqué" : "Commentaire réaffiché", apercuCommentaire(c));
+}
+
+export async function supprimerCommentaire(c: CommentaireDoc): Promise<void> {
+  if (!BACKEND_ACTIF) {
+    modifierLocal((b) => ({ ...b, commentaires: b.commentaires.filter((x) => x.id !== c.id && x.parentId !== c.id) }));
+  } else {
+    await deleteDoc(doc(db(), "commentaires", c.id));
+  }
+  await noter("Commentaire supprimé", apercuCommentaire(c));
 }
 
 // ——— Professionnels ———

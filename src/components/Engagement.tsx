@@ -26,6 +26,7 @@ export function FavoriButton({ id, className = "" }: { id: string; className?: s
 const MOTIFS = {
   profil: ["Faux profil ou usurpation", "Arnaque ou demande d’argent suspecte", "Coordonnées incorrectes", "Autre"],
   avis: ["Avis faux ou acheté", "Propos injurieux", "Ne concerne pas cet artisan", "Autre"],
+  commentaire: ["Propos injurieux ou haineux", "Spam ou publicité", "Fausse information", "Autre"],
 };
 
 /** Signalement d'un profil ou d'un avis, transmis à la modération. */
